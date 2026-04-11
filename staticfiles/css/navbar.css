@@ -1,0 +1,183 @@
+
+        :root {
+            color-scheme: light;
+        }
+
+        html.dark {
+            color-scheme: dark;
+        }
+
+        body {
+    font-family: Arial, sans-serif;
+}
+        * {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease, width 0.3s ease, margin 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+        }
+
+        .menu-item {
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        .menu-item:hover {
+            transform: translateX(4px);
+            filter: brightness(1.06);
+        }
+
+        .menu-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 0;
+            background: linear-gradient(to right, #fbbf24, #f59e0b);
+            border-radius: 0 2px 2px 0;
+            transition: height 0.25s ease;
+        }
+
+        .menu-item.active::before {
+            height: 24px;
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+        }
+
+        .menu-item.active {
+            background: rgba(255, 255, 255, 0.14);
+            backdrop-filter: blur(10px);
+            border-left: 3px solid #fbbf24;
+        }
+
+        .page-content {
+            animation: fadeIn 0.35s ease-in;
+        }
+
+        .card-hover {
+            transition: all 0.25s ease;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .pulse-dot {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .dropdown-menu {
+            animation: slideDown 0.22s ease-out;
+            transform-origin: top;
+        }
+
+        .sidebar-open {
+            width: 16rem;
+            min-width: 16rem;
+        }
+
+        .sidebar-collapsed {
+            width: 5.5rem;
+            min-width: 5.5rem;
+        }
+
+        .sidebar-collapsed .sidebar-text,
+        .sidebar-collapsed .sidebar-submenu,
+        .sidebar-collapsed .sidebar-chevron,
+        .sidebar-collapsed .sidebar-footer-text,
+        .sidebar-collapsed .brand-subtitle {
+            display: none !important;
+        }
+
+        .sidebar-collapsed .brand-title {
+            display: none !important;
+        }
+
+        .sidebar-collapsed .menu-item,
+        .sidebar-collapsed .dropdown-trigger {
+            justify-content: center;
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+
+        .sidebar-collapsed .menu-item i,
+        .sidebar-collapsed .dropdown-trigger i.main-icon {
+            margin-right: 0 !important;
+        }
+
+        .sidebar-collapsed .logo-wrap {
+            justify-content: center;
+        }
+
+        .sidebar-collapsed .brand-logo-box {
+            margin-right: 0 !important;
+        }
+
+        .sidebar-collapsed .dropdown-trigger {
+            border-radius: 0.75rem;
+        }
+
+        .sidebar-collapsed .menu-item:hover,
+        .sidebar-collapsed .dropdown-trigger:hover {
+            transform: scale(1.04);
+        }
+
+        .sidebar-collapsed .menu-item::before,
+        .sidebar-collapsed .dropdown-trigger::before {
+            left: 2px;
+        }
+
+        .sidebar-collapsed .top-logo-area {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+
+        .sidebar-collapsed .brand-logo-box {
+            margin-left: auto;
+            margin-right: auto !important;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-8px) scaleY(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scaleY(1);
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(139, 92, 246, 0.5);
+            border-radius: 999px;
+        }
+
+        html.dark ::-webkit-scrollbar-thumb {
+            background: rgba(139, 92, 246, 0.35);
+        }
+  

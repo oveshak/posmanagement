@@ -1,0 +1,550 @@
+ {% extends 'base.html' %}
+
+
+
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Role - Management{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Role{% else %}Create Role{% endif %}{% endblock %}
+{% block page_subtitle %}
+    {% if form.instance.pk %}Update role menus and permissions{% else %}Add a new role with exact permissions{% endif %}
+{% endblock %}
+
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
+
+<style>
+    .ts-wrapper.single .ts-control,
+    .ts-wrapper.multi .ts-control {
+        border-radius: 0.9rem;
+        border: 1px solid #d1d5db;
+        background: #fff;
+        padding: 0.65rem 0.85rem;
+        font-size: 0.875rem;
+        color: #111827;
+        min-height: 48px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .dark .ts-wrapper .ts-control {
+        border-color: #334155;
+        background: #0f172a;
+        color: #e2e8f0;
+    }
+
+    .ts-wrapper.focus .ts-control {
+        border-color: #f97316 !important;
+        box-shadow: 0 0 0 3px rgba(249,115,22,0.15) !important;
+    }
+
+    .ts-dropdown {
+        border-radius: 1rem;
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+        overflow: hidden;
+        z-index: 9999;
+    }
+
+    .dark .ts-dropdown {
+        border-color: #334155;
+        background: #0f172a;
+    }
+
+    .ts-dropdown .option {
+        padding: 0.65rem 0.85rem;
+        font-size: 0.875rem;
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    .ts-dropdown .option.active {
+        background: #f97316 !important;
+        color: #fff !important;
+    }
+
+    .ts-control .item {
+        background: #fff7ed;
+        color: #c2410c;
+        border-radius: .6rem;
+        font-size: .75rem;
+        padding: .2rem .45rem;
+    }
+
+    .dark .ts-control .item {
+        background: rgba(194,65,12,0.25);
+        color: #fdba74;
+    }
+
+    .modal-hidden {
+        display: none;
+    }
+
+    .modal-flex {
+        display: flex;
+    }
+</style>
+
+<div class="min-h-screen">
+    <div class="mx-auto">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-gray-200 dark:border-slate-800 p-6 md:p-8">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+
+                <div>
+                    <label for="{{ form.name.id_for_label }}" class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                        Role Name *
+                    </label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.description.id_for_label }}" class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                        Description
+                    </label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.description.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label for="{{ form.menu.id_for_label }}" class="block text-sm font-semibold text-gray-700 dark:text-slate-300">
+                            Assign Menus
+                        </label>
+
+                        <div class="flex items-center gap-2">
+                            {% if request.user.is_superuser or request.user.is_admin or perms.user.add_menu or perms.user.add_menus %}
+                                <button type="button"
+                                        id="openCreateMenuModal"
+                                        class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white transition"
+                                        title="Create Menu">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            {% endif %}
+
+                            {% if request.user.is_superuser or request.user.is_admin or perms.user.change_menu or perms.user.change_menus %}
+                                <button type="button"
+                                        id="openEditMenuModal"
+                                        class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white transition"
+                                        title="Edit Selected Menu">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {{ form.menu }}
+
+                    {% if form.menu.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.menu.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.permissions.id_for_label }}" class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                        Direct Permissions
+                    </label>
+                    {{ form.permissions }}
+                    {% if form.permissions.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.permissions.errors.0 }}</p>
+                    {% endif %}
+                    <p class="text-gray-500 dark:text-slate-400 text-sm mt-1">
+                        Example: only select <strong>change_user</strong> if you want only update access.
+                        Or only select <strong>delete_user</strong> if you want only delete access.
+                    </p>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4 mt-8 pt-6 border-t border-gray-200 dark:border-slate-800">
+                    <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl transition">
+                        {% if form.instance.pk %}Update Role{% else %}Create Role{% endif %}
+                    </button>
+                    <a href="{% url 'role_list' %}" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl transition text-center">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Create Menu Modal -->
+<div id="createMenuModal" class="fixed inset-0 z-50 modal-hidden items-center justify-center bg-black/50 px-4">
+    <div class="w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-gray-200 dark:border-slate-800">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-slate-800">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Create Menu</h3>
+            <button type="button" id="closeCreateMenuModal" class="text-gray-500 hover:text-red-500 text-2xl leading-none">&times;</button>
+        </div>
+
+        <form id="createMenuForm" class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% csrf_token %}
+
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Menu Name *</label>
+                <input type="text" name="name" required
+                       class="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">URL / URL Name *</label>
+                <input type="text" name="url" required
+                       placeholder="user_list or /users/"
+                       class="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Icon</label>
+                <input type="text" name="icon"
+                       value="fas fa-circle"
+                       placeholder="fas fa-users"
+                       class="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Order</label>
+                <input type="number" name="order" value="0"
+                       class="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Parent Menu</label>
+                <select name="parent"
+                        class="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
+                    <option value="">No Parent</option>
+                    {% for menu_item in form.menu.field.queryset %}
+                        <option value="{{ menu_item.id }}">{{ menu_item }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Description</label>
+                <textarea name="description" rows="3"
+                          class="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white"></textarea>
+            </div>
+
+            <div class="md:col-span-2 flex items-center gap-3">
+                <input type="checkbox" name="is_active" id="create_is_active" checked class="rounded border-gray-300 text-green-600">
+                <label for="create_is_active" class="text-sm font-medium text-gray-700 dark:text-slate-300">Active</label>
+            </div>
+
+            <div class="md:col-span-2 flex gap-3 pt-2">
+                <button type="submit" class="flex-1 rounded-xl bg-green-500 hover:bg-green-600 text-white font-semibold px-4 py-3">
+                    Save Menu
+                </button>
+                <button type="button" id="cancelCreateMenuModal" class="flex-1 rounded-xl bg-gray-500 hover:bg-gray-600 text-white font-semibold px-4 py-3">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Menu Modal -->
+<div id="editMenuModal" class="fixed inset-0 z-50 modal-hidden items-center justify-center bg-black/50 px-4">
+    <div class="w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-gray-200 dark:border-slate-800">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-slate-800">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Menu</h3>
+            <button type="button" id="closeEditMenuModal" class="text-gray-500 hover:text-red-500 text-2xl leading-none">&times;</button>
+        </div>
+
+        <form id="editMenuForm" class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% csrf_token %}
+            <input type="hidden" name="menu_id" id="edit_menu_id">
+
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Menu Name *</label>
+                <input type="text" name="name" id="edit_menu_name" required
+                       class="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">URL / URL Name *</label>
+                <input type="text" name="url" id="edit_menu_url" required
+                       class="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Icon</label>
+                <input type="text" name="icon" id="edit_menu_icon"
+                       class="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Order</label>
+                <input type="number" name="order" id="edit_menu_order"
+                       class="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Parent Menu</label>
+                <select name="parent" id="edit_menu_parent"
+                        class="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
+                    <option value="">No Parent</option>
+                    {% for menu_item in form.menu.field.queryset %}
+                        <option value="{{ menu_item.id }}">{{ menu_item }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Description</label>
+                <textarea name="description" id="edit_menu_description" rows="3"
+                          class="w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white"></textarea>
+            </div>
+
+            <div class="md:col-span-2 flex items-center gap-3">
+                <input type="checkbox" name="is_active" id="edit_menu_is_active" class="rounded border-gray-300 text-blue-600">
+                <label for="edit_menu_is_active" class="text-sm font-medium text-gray-700 dark:text-slate-300">Active</label>
+            </div>
+
+            <div class="md:col-span-2 flex gap-3 pt-2">
+                <button type="submit" class="flex-1 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-3">
+                    Update Menu
+                </button>
+                <button type="button" id="cancelEditMenuModal" class="flex-1 rounded-xl bg-gray-500 hover:bg-gray-600 text-white font-semibold px-4 py-3">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const menuEl = document.getElementById("{{ form.menu.id_for_label }}");
+    const permEl = document.getElementById("{{ form.permissions.id_for_label }}");
+
+    if (menuEl && !menuEl.tomselect) {
+        new TomSelect(menuEl, {
+            plugins: ["remove_button"],
+            create: false,
+            hideSelected: false,
+            maxOptions: 1000,
+            placeholder: "Search menus"
+        });
+    }
+
+    if (permEl && !permEl.tomselect) {
+        new TomSelect(permEl, {
+            plugins: ["remove_button"],
+            create: false,
+            hideSelected: false,
+            maxOptions: 3000,
+            searchField: ["text", "value"],
+            placeholder: "Search permissions"
+        });
+    }
+
+    const menuSelect = menuEl ? menuEl.tomselect : null;
+
+    const createModal = document.getElementById("createMenuModal");
+    const editModal = document.getElementById("editMenuModal");
+
+    const openCreateBtn = document.getElementById("openCreateMenuModal");
+    const closeCreateBtn = document.getElementById("closeCreateMenuModal");
+    const cancelCreateBtn = document.getElementById("cancelCreateMenuModal");
+
+    const openEditBtn = document.getElementById("openEditMenuModal");
+    const closeEditBtn = document.getElementById("closeEditMenuModal");
+    const cancelEditBtn = document.getElementById("cancelEditMenuModal");
+
+    const createForm = document.getElementById("createMenuForm");
+    const editForm = document.getElementById("editMenuForm");
+
+    function openModal(modal) {
+        if (!modal) return;
+        modal.classList.remove("modal-hidden");
+        modal.classList.add("modal-flex");
+    }
+
+    function closeModal(modal) {
+        if (!modal) return;
+        modal.classList.remove("modal-flex");
+        modal.classList.add("modal-hidden");
+    }
+
+    if (openCreateBtn) {
+        openCreateBtn.addEventListener("click", function () {
+            openModal(createModal);
+        });
+    }
+
+    if (closeCreateBtn) {
+        closeCreateBtn.addEventListener("click", function () {
+            closeModal(createModal);
+        });
+    }
+
+    if (cancelCreateBtn) {
+        cancelCreateBtn.addEventListener("click", function () {
+            closeModal(createModal);
+        });
+    }
+
+    if (openEditBtn) {
+        openEditBtn.addEventListener("click", function () {
+            if (!menuSelect || !menuSelect.items.length) {
+                alert("Please select a menu first.");
+                return;
+            }
+
+            const selectedId = menuSelect.items[0];
+
+            fetch(`/user/menu/${selectedId}/json/`, {
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.error || "Failed to load menu.");
+                    return;
+                }
+
+                document.getElementById("edit_menu_id").value = data.id;
+                document.getElementById("edit_menu_name").value = data.name || "";
+                document.getElementById("edit_menu_url").value = data.url || "";
+                document.getElementById("edit_menu_icon").value = data.icon || "";
+                document.getElementById("edit_menu_order").value = data.order ?? 0;
+                document.getElementById("edit_menu_description").value = data.description || "";
+                document.getElementById("edit_menu_parent").value = data.parent || "";
+                document.getElementById("edit_menu_is_active").checked = !!data.is_active;
+
+                openModal(editModal);
+            })
+            .catch(() => {
+                alert("Failed to load menu data.");
+            });
+        });
+    }
+
+    if (closeEditBtn) {
+        closeEditBtn.addEventListener("click", function () {
+            closeModal(editModal);
+        });
+    }
+
+    if (cancelEditBtn) {
+        cancelEditBtn.addEventListener("click", function () {
+            closeModal(editModal);
+        });
+    }
+
+    if (createForm) {
+        createForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(createForm);
+
+            fetch("{% url 'menu_ajax_create' %}", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (menuSelect) {
+                        menuSelect.addOption({
+                            value: String(data.id),
+                            text: data.text
+                        });
+                        menuSelect.addItem(String(data.id));
+                        menuSelect.refreshOptions(false);
+                    }
+
+                    const createParentSelect = createForm.querySelector('select[name="parent"]');
+                    if (createParentSelect) {
+                        const option = new Option(data.text, data.id, false, false);
+                        createParentSelect.add(option);
+                    }
+
+                    const editParentSelect = document.getElementById("edit_menu_parent");
+                    if (editParentSelect) {
+                        const option = new Option(data.text, data.id, false, false);
+                        editParentSelect.add(option);
+                    }
+
+                    createForm.reset();
+                    document.getElementById("create_is_active").checked = true;
+                    closeModal(createModal);
+                } else {
+                    alert(data.error || "Failed to create menu.");
+                }
+            })
+            .catch(() => {
+                alert("Something went wrong.");
+            });
+        });
+    }
+
+    if (editForm) {
+        editForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const menuId = document.getElementById("edit_menu_id").value;
+            const formData = new FormData(editForm);
+
+            fetch(`/user/menu/${menuId}/ajax-update/`, {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (menuSelect) {
+                        menuSelect.updateOption(String(data.id), {
+                            value: String(data.id),
+                            text: data.text
+                        });
+                        menuSelect.refreshItems();
+                        menuSelect.refreshOptions(false);
+                    }
+
+                    const createParentSelect = createForm.querySelector('select[name="parent"]');
+                    if (createParentSelect) {
+                        const opt = createParentSelect.querySelector(`option[value="${data.id}"]`);
+                        if (opt) opt.text = data.text;
+                    }
+
+                    const editParentSelect = document.getElementById("edit_menu_parent");
+                    if (editParentSelect) {
+                        const opt = editParentSelect.querySelector(`option[value="${data.id}"]`);
+                        if (opt) opt.text = data.text;
+                    }
+
+                    closeModal(editModal);
+                } else {
+                    alert(data.error || "Failed to update menu.");
+                }
+            })
+            .catch(() => {
+                alert("Something went wrong.");
+            });
+        });
+    }
+
+    [createModal, editModal].forEach(function(modal) {
+        if (modal) {
+            modal.addEventListener("click", function (e) {
+                if (e.target === modal) {
+                    closeModal(modal);
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

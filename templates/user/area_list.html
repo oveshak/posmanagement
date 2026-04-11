@@ -1,0 +1,132 @@
+
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Areas - Management{% endblock %}
+{% block page_title %}Areas{% endblock %}
+{% block page_subtitle %}Manage areas within branches{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="min-h-screen transition-colors duration-300">
+    <div class=" mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+                    🏘️ Areas
+                </h1>
+                <p class="text-gray-600 dark:text-slate-400 mt-2">
+                    Manage areas and their staff within branches
+                </p>
+            </div>
+
+            {% if request.user.is_superuser or request.user.is_admin or perms.user.add_area %}
+                <a href="{% url 'related_object_create' 'area' %}"
+                   class="inline-flex items-center justify-center bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition modal-trigger"
+                   data-modal-url="{% url 'related_object_create' 'area' %}">
+                    ➕ Create Area
+                </a>
+            {% endif %}
+        </div>
+
+        <!-- Area Table -->
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow overflow-hidden border border-gray-100 dark:border-slate-800">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 dark:bg-slate-800">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Address</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Branch</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Staff</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
+                        {% for area in areas %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ area.name }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-600 dark:text-slate-400">{{ area.address|default:"No address" }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if area.parent_branch %}
+                                        <span class="inline-block px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs">
+                                            {{ area.parent_branch.name }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-gray-500 dark:text-slate-400">Not assigned</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for user in area.area_staf.all|slice:":2" %}
+                                            <span class="inline-block px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs">
+                                                {{ user.name|default:user.email|truncatewords:2 }}
+                                            </span>
+                                        {% empty %}
+                                            <span class="text-xs text-gray-500 dark:text-slate-400">No staff</span>
+                                        {% endfor %}
+                                        {% if area.area_staf.count > 2 %}
+                                            <span class="inline-block px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs font-semibold">
+                                                +{{ area.area_staf.count|add:"-2" }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <div class="flex gap-2">
+                                        {% if request.user.is_superuser or request.user.is_admin or perms.user.change_area %}
+                                            <a href="{% url 'related_object_edit' 'area' area.pk %}"
+                                               class="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-3 py-1 rounded text-xs modal-trigger"
+                                               data-modal-url="{% url 'related_object_edit' 'area' area.pk %}">
+                                                ✏️ Edit
+                                            </a>
+                                        {% endif %}
+                                        {% if request.user.is_superuser or request.user.is_admin or perms.user.delete_area %}
+                                            <button class="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white px-3 py-1 rounded text-xs delete-btn"
+                                                    data-url="{% url 'area_delete' area.pk %}">
+                                                🗑️ Delete
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="px-6 py-12 text-center">
+                                    <p class="text-gray-600 dark:text-slate-400 text-lg">No areas found.</p>
+                                    {% if request.user.is_superuser or request.user.is_admin or perms.user.add_area %}
+                                        <a href="{% url 'related_object_create' 'area' %}"
+                                           class="inline-block mt-4 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold modal-trigger"
+                                           data-modal-url="{% url 'related_object_create' 'area' %}">
+                                            ➕ Create the first area
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Container -->
+<div id="modal-container" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm">
+    <div class="flex items-center justify-center min-h-screen px-2 sm:px-4 pt-4 pb-20 text-center">
+        <div class="fixed inset-0 transition-opacity" id="modal-backdrop"></div>
+        <div class="relative inline-block w-full max-w-md sm:max-w-xl md:max-w-2xl p-4 sm:p-6 my-4 sm:my-8 overflow-hidden text-left align-middle transition-all transform bg-white dark:bg-slate-900 shadow-2xl rounded-2xl" id="modal-content">
+            <div id="modal-body">
+                <!-- Modal content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

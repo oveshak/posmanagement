@@ -1,0 +1,504 @@
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="rounded-3xl border p-5 sm:p-6 shadow-sm"
+         style="background:var(--surface); border-color:var(--border);">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+
+            <div class="flex items-start sm:items-center gap-4">
+                {% if request.user.profile_picture %}
+                    <img src="{{ request.user.profile_picture.url }}"
+                         alt="Profile Picture"
+                         class="w-20 h-20 rounded-2xl object-cover border"
+                         style="border-color:var(--border);">
+                {% else %}
+                    <div class="w-20 h-20 rounded-2xl flex items-center justify-center text-2xl font-bold shadow-sm"
+                         style="background:linear-gradient(135deg, var(--accent-soft), var(--surface-alt)); color:var(--accent);">
+                        {{ request.user.username|default:request.user.email|slice:":1"|upper }}
+                    </div>
+                {% endif %}
+
+                <div class="min-w-0">
+                    <h2 class="text-2xl font-bold leading-tight"
+                        style="font-family:'Syne',sans-serif; color:var(--text-main);">
+                        {{ request.user.name|default:request.user.username|default:"User" }}
+                    </h2>
+
+                    <p class="text-sm mt-1 break-all" style="color:var(--text-muted);">
+                        {{ request.user.email }}
+                    </p>
+
+                    <div class="flex flex-wrap gap-2 mt-3">
+                        {% if request.user.status %}
+                            <span class="px-3 py-1 rounded-full text-xs font-medium"
+                                  style="background:var(--accent-soft); color:var(--accent);">
+                                Active Account
+                            </span>
+                        {% else %}
+                            <span class="px-3 py-1 rounded-full text-xs font-medium"
+                                  style="background:rgba(239,68,68,.12); color:#ef4444;">
+                                Inactive
+                            </span>
+                        {% endif %}
+
+                        {% if request.user.is_verified %}
+                            <span class="px-3 py-1 rounded-full text-xs font-medium"
+                                  style="background:rgba(16,185,129,.12); color:#10b981;">
+                                Verified
+                            </span>
+                        {% else %}
+                            <span class="px-3 py-1 rounded-full text-xs font-medium"
+                                  style="background:rgba(245,158,11,.12); color:#f59e0b;">
+                                Not Verified
+                            </span>
+                        {% endif %}
+
+                        {% if request.user.is_staff %}
+                            <span class="px-3 py-1 rounded-full text-xs font-medium"
+                                  style="background:rgba(59,130,246,.12); color:#3b82f6;">
+                                Staff
+                            </span>
+                        {% endif %}
+
+                        {% if request.user.is_admin %}
+                            <span class="px-3 py-1 rounded-full text-xs font-medium"
+                                  style="background:rgba(168,85,247,.12); color:#a855f7;">
+                                Admin
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+                <a href="#"
+                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium border transition-all duration-200 hover:-translate-y-0.5"
+                   style="background:var(--surface-alt); border-color:var(--border); color:var(--text-main);">
+                    <i class="fas fa-pen"></i>
+                    Edit Profile
+                </a>
+
+                <a href="#"
+                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium transition-all duration-200 hover:-translate-y-0.5"
+                   style="background:var(--accent); color:white;">
+                    <i class="fas fa-shield-halved"></i>
+                    Security
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="rounded-2xl border p-5" style="background:var(--surface); border-color:var(--border);">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">
+                        Profile Status
+                    </p>
+                    <h3 class="text-lg font-bold mt-2" style="color:var(--text-main);">
+                        {% if request.user.status %}Active{% else %}Inactive{% endif %}
+                    </h3>
+                </div>
+                <div class="w-11 h-11 rounded-xl flex items-center justify-center"
+                     style="background:var(--accent-soft); color:var(--accent);">
+                    <i class="fas fa-user-check"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border p-5" style="background:var(--surface); border-color:var(--border);">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">
+                        Role Type
+                    </p>
+                    <h3 class="text-lg font-bold mt-2" style="color:var(--text-main);">
+                        {% if request.user.is_superuser %}
+                            Superuser
+                        {% elif request.user.is_admin %}
+                            Admin
+                        {% elif request.user.is_staff %}
+                            Staff
+                        {% else %}
+                            User
+                        {% endif %}
+                    </h3>
+                </div>
+                <div class="w-11 h-11 rounded-xl flex items-center justify-center"
+                     style="background:rgba(59,130,246,.12); color:#3b82f6;">
+                    <i class="fas fa-briefcase"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border p-5" style="background:var(--surface); border-color:var(--border);">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">
+                        Joined
+                    </p>
+                    <h3 class="text-sm font-bold mt-2" style="color:var(--text-main);">
+                        {{ request.user.created_at|date:"d M Y" }}
+                    </h3>
+                </div>
+                <div class="w-11 h-11 rounded-xl flex items-center justify-center"
+                     style="background:rgba(245,158,11,.12); color:#f59e0b;">
+                    <i class="fas fa-calendar-plus"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border p-5" style="background:var(--surface); border-color:var(--border);">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">
+                        Phone
+                    </p>
+                    <h3 class="text-sm font-bold mt-2" style="color:var(--text-main);">
+                        {{ request.user.phone_number|default:"Not set" }}
+                    </h3>
+                </div>
+                <div class="w-11 h-11 rounded-xl flex items-center justify-center"
+                     style="background:rgba(16,185,129,.12); color:#10b981;">
+                    <i class="fas fa-phone"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+        <!-- Left -->
+        <div class="xl:col-span-2 space-y-6">
+
+            <!-- Personal Information -->
+            <div class="rounded-3xl border overflow-hidden"
+                 style="background:var(--surface); border-color:var(--border);">
+                <div class="px-5 py-4 border-b"
+                     style="border-color:var(--border); background:var(--surface-alt);">
+                    <h3 class="text-sm font-bold uppercase tracking-wider"
+                        style="color:var(--text-main);">
+                        Personal Information
+                    </h3>
+                </div>
+
+                <div class="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-1" style="color:var(--text-muted);">
+                            Full Name
+                        </p>
+                        <div class="rounded-2xl border px-4 py-3 text-sm font-medium"
+                             style="background:var(--surface-alt); border-color:var(--border); color:var(--text-main);">
+                            {{ request.user.name|default:"Not set yet" }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-1" style="color:var(--text-muted);">
+                            Username
+                        </p>
+                        <div class="rounded-2xl border px-4 py-3 text-sm font-medium"
+                             style="background:var(--surface-alt); border-color:var(--border); color:var(--text-main);">
+                            {{ request.user.username|default:"Not set yet" }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-1" style="color:var(--text-muted);">
+                            Email Address
+                        </p>
+                        <div class="rounded-2xl border px-4 py-3 text-sm font-medium break-all"
+                             style="background:var(--surface-alt); border-color:var(--border); color:var(--text-main);">
+                            {{ request.user.email }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-1" style="color:var(--text-muted);">
+                            Phone Number
+                        </p>
+                        <div class="rounded-2xl border px-4 py-3 text-sm font-medium"
+                             style="background:var(--surface-alt); border-color:var(--border); color:var(--text-main);">
+                            {{ request.user.phone_number|default:"Not set yet" }}
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-1" style="color:var(--text-muted);">
+                            Address
+                        </p>
+                        <div class="rounded-2xl border px-4 py-3 text-sm font-medium min-h-[52px]"
+                             style="background:var(--surface-alt); border-color:var(--border); color:var(--text-main);">
+                            {{ request.user.address|default:"Not set yet" }}
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-1" style="color:var(--text-muted);">
+                            Descriptions
+                        </p>
+                        <div class="rounded-2xl border px-4 py-3 text-sm font-medium min-h-[52px]"
+                             style="background:var(--surface-alt); border-color:var(--border); color:var(--text-main);">
+                            {{ request.user.descriptions|safe|default:"No description added yet" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Organization Information -->
+            <div class="rounded-3xl border overflow-hidden"
+                 style="background:var(--surface); border-color:var(--border);">
+                <div class="px-5 py-4 border-b"
+                     style="border-color:var(--border); background:var(--surface-alt);">
+                    <h3 class="text-sm font-bold uppercase tracking-wider"
+                        style="color:var(--text-main);">
+                        Organization Information
+                    </h3>
+                </div>
+
+                <div class="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-1" style="color:var(--text-muted);">
+                            Branch
+                        </p>
+                        <div class="rounded-2xl border px-4 py-3 text-sm font-medium"
+                             style="background:var(--surface-alt); border-color:var(--border); color:var(--text-main);">
+                            {{ request.user.branch|default:"Not assigned" }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-1" style="color:var(--text-muted);">
+                            Area
+                        </p>
+                        <div class="rounded-2xl border px-4 py-3 text-sm font-medium"
+                             style="background:var(--surface-alt); border-color:var(--border); color:var(--text-main);">
+                            {{ request.user.area|default:"Not assigned" }}
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--text-muted);">
+                            Roles
+                        </p>
+                        <div class="rounded-2xl border px-4 py-3"
+                             style="background:var(--surface-alt); border-color:var(--border); color:var(--text-main);">
+                            <div class="flex flex-wrap gap-2">
+                                {% for role in request.user.roles.all %}
+                                    <span class="px-3 py-1 rounded-full text-xs font-medium"
+                                          style="background:rgba(59,130,246,.12); color:#3b82f6;">
+                                        {{ role }}
+                                    </span>
+                                {% empty %}
+                                    <span class="text-sm">No roles assigned</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--text-muted);">
+                            Multi Branch
+                        </p>
+                        <div class="rounded-2xl border px-4 py-3"
+                             style="background:var(--surface-alt); border-color:var(--border); color:var(--text-main);">
+                            <div class="flex flex-wrap gap-2">
+                                {% for item in request.user.mult_branch.all %}
+                                    <span class="px-3 py-1 rounded-full text-xs font-medium"
+                                          style="background:rgba(16,185,129,.12); color:#10b981;">
+                                        {{ item }}
+                                    </span>
+                                {% empty %}
+                                    <span class="text-sm">No multi branch assigned</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--text-muted);">
+                            Customer Group
+                        </p>
+                        <div class="rounded-2xl border px-4 py-3"
+                             style="background:var(--surface-alt); border-color:var(--border); color:var(--text-main);">
+                            <div class="flex flex-wrap gap-2">
+                                {% for group in request.user.customer_group.all %}
+                                    <span class="px-3 py-1 rounded-full text-xs font-medium"
+                                          style="background:rgba(245,158,11,.12); color:#f59e0b;">
+                                        {{ group }}
+                                    </span>
+                                {% empty %}
+                                    <span class="text-sm">No customer group assigned</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verification Information -->
+            <div class="rounded-3xl border overflow-hidden"
+                 style="background:var(--surface); border-color:var(--border);">
+                <div class="px-5 py-4 border-b"
+                     style="border-color:var(--border); background:var(--surface-alt);">
+                    <h3 class="text-sm font-bold uppercase tracking-wider"
+                        style="color:var(--text-main);">
+                        Verification Information
+                    </h3>
+                </div>
+
+                <div class="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-1" style="color:var(--text-muted);">
+                            NID Number
+                        </p>
+                        <div class="rounded-2xl border px-4 py-3 text-sm font-medium"
+                             style="background:var(--surface-alt); border-color:var(--border); color:var(--text-main);">
+                            {{ request.user.nid_number|default:"Not provided" }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-1" style="color:var(--text-muted);">
+                            Verification Status
+                        </p>
+                        <div class="rounded-2xl border px-4 py-3 text-sm font-medium"
+                             style="background:var(--surface-alt); border-color:var(--border); color:var(--text-main);">
+                            {% if request.user.is_verified %}Verified{% else %}Pending{% endif %}
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--text-muted);">
+                            NID Front
+                        </p>
+                        <div class="rounded-2xl border p-3"
+                             style="background:var(--surface-alt); border-color:var(--border);">
+                            {% if request.user.nid_front %}
+                                <img src="{{ request.user.nid_front.url }}" alt="NID Front" class="w-full h-40 object-cover rounded-xl">
+                            {% else %}
+                                <div class="text-sm" style="color:var(--text-muted);">No image uploaded</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--text-muted);">
+                            NID Back
+                        </p>
+                        <div class="rounded-2xl border p-3"
+                             style="background:var(--surface-alt); border-color:var(--border);">
+                            {% if request.user.nid_back %}
+                                <img src="{{ request.user.nid_back.url }}" alt="NID Back" class="w-full h-40 object-cover rounded-xl">
+                            {% else %}
+                                <div class="text-sm" style="color:var(--text-muted);">No image uploaded</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right -->
+        <div class="space-y-6">
+
+            <div class="rounded-3xl border overflow-hidden"
+                 style="background:var(--surface); border-color:var(--border);">
+                <div class="px-5 py-4 border-b"
+                     style="border-color:var(--border); background:var(--surface-alt);">
+                    <h3 class="text-sm font-bold uppercase tracking-wider"
+                        style="color:var(--text-main);">
+                        Account Flags
+                    </h3>
+                </div>
+
+                <div class="p-5 space-y-3">
+                    <div class="flex items-center justify-between rounded-2xl border px-4 py-3"
+                         style="background:var(--surface-alt); border-color:var(--border);">
+                        <span class="text-sm font-medium" style="color:var(--text-main);">Active Status</span>
+                        <span style="color:{% if request.user.status %}#10b981{% else %}#ef4444{% endif %};">
+                            {% if request.user.status %}Yes{% else %}No{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="flex items-center justify-between rounded-2xl border px-4 py-3"
+                         style="background:var(--surface-alt); border-color:var(--border);">
+                        <span class="text-sm font-medium" style="color:var(--text-main);">Verified</span>
+                        <span style="color:{% if request.user.is_verified %}#10b981{% else %}#f59e0b{% endif %};">
+                            {% if request.user.is_verified %}Yes{% else %}No{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="flex items-center justify-between rounded-2xl border px-4 py-3"
+                         style="background:var(--surface-alt); border-color:var(--border);">
+                        <span class="text-sm font-medium" style="color:var(--text-main);">Deleted</span>
+                        <span style="color:{% if request.user.is_deleted %}#ef4444{% else %}#10b981{% endif %};">
+                            {% if request.user.is_deleted %}Yes{% else %}No{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="flex items-center justify-between rounded-2xl border px-4 py-3"
+                         style="background:var(--surface-alt); border-color:var(--border);">
+                        <span class="text-sm font-medium" style="color:var(--text-main);">Staff</span>
+                        <span style="color:{% if request.user.is_staff %}#3b82f6{% else %}var(--text-muted){% endif %};">
+                            {% if request.user.is_staff %}Yes{% else %}No{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="flex items-center justify-between rounded-2xl border px-4 py-3"
+                         style="background:var(--surface-alt); border-color:var(--border);">
+                        <span class="text-sm font-medium" style="color:var(--text-main);">Admin</span>
+                        <span style="color:{% if request.user.is_admin %}#a855f7{% else %}var(--text-muted){% endif %};">
+                            {% if request.user.is_admin %}Yes{% else %}No{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-3xl border overflow-hidden"
+                 style="background:var(--surface); border-color:var(--border);">
+                <div class="px-5 py-4 border-b"
+                     style="border-color:var(--border); background:var(--surface-alt);">
+                    <h3 class="text-sm font-bold uppercase tracking-wider"
+                        style="color:var(--text-main);">
+                        Quick Actions
+                    </h3>
+                </div>
+
+                <div class="p-5 space-y-3">
+                  
+
+                    
+
+                   <a href="{% url 'change_password' %}"
+   hx-get="{% url 'change_password' %}"
+   hx-target="#main-content"
+   hx-swap="innerHTML"
+   hx-push-url="true"
+   class="flex items-center justify-between rounded-2xl border px-4 py-3 transition-all duration-200 hover:-translate-y-0.5"
+   style="background:var(--surface-alt); border-color:var(--border); color:var(--text-main);">
+    <span class="flex items-center gap-3 text-sm font-medium">
+        <i class="fas fa-lock" style="color:var(--accent);"></i>
+        Change password
+    </span>
+    <i class="fas fa-angle-right text-xs" style="color:var(--text-muted);"></i>
+</a>
+
+                    <a href="{% url 'logout' %}"
+                       class="flex items-center justify-between rounded-2xl border px-4 py-3 transition-all duration-200 hover:-translate-y-0.5"
+                       style="background:rgba(239,68,68,.06); border-color:rgba(239,68,68,.16); color:#ef4444;">
+                        <span class="flex items-center gap-3 text-sm font-medium">
+                            <i class="fas fa-arrow-right-from-bracket"></i>
+                            Logout
+                        </span>
+                        <i class="fas fa-angle-right text-xs"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

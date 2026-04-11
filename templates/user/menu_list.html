@@ -1,0 +1,365 @@
+{% extends 'base.html' %}
+
+
+{% load static %}
+
+{% block title %}Menus - Management{% endblock %}
+{% block page_title %}Menus{% endblock %}
+{% block page_subtitle %}Manage navigation menus and permissions{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="min-h-screen transition-colors duration-300">
+    <div class=" mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+                    📋 Menus
+                </h1>
+                <p class="text-gray-600 dark:text-slate-400 mt-2">
+                    Manage navigation menus and their permissions
+                </p>
+            </div>
+
+            {% if request.user.is_superuser or request.user.is_admin or perms.user.add_menu %}
+                <a href="{% url 'related_object_create' 'menu' %}"
+                   class="inline-flex items-center justify-center bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition modal-trigger"
+                   data-modal-url="{% url 'related_object_create' 'menu' %}">
+                    ➕ Create Menu
+                </a>
+            {% endif %}
+        </div>
+
+        <!-- Menu Table -->
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow overflow-hidden border border-gray-100 dark:border-slate-800">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 dark:bg-slate-800">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">URL</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Order</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Active</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Parent</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Permissions</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Roles</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Description</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
+                        {% for menu in menus %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <span class="text-lg mr-2">{{ menu.icon|default:"📋" }}</span>
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white">{{ menu.name }}</div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-600 dark:text-slate-400">{{ menu.url|default:"No URL" }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-block px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs">
+                                        {{ menu.order }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if menu.is_active %}
+                                        <span class="inline-block px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs">
+                                            ✅ Active
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-block px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded text-xs">
+                                            ❌ Inactive
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if menu.parent %}
+                                        <div class="flex items-center">
+                                            <span class="inline-block px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs">
+                                                {{ menu.parent.name }}
+                                            </span>
+                                            {% if request.user.is_superuser or request.user.is_admin or perms.user.change_menu %}
+                                                <a href="{% url 'related_object_edit' 'menu' menu.parent.pk %}"
+                                                   class="inline-block ml-2 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 modal-trigger"
+                                                   data-modal-url="{% url 'related_object_edit' 'menu' menu.parent.pk %}">
+                                                    ✏️
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-gray-500 dark:text-slate-400">Root menu</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for perm in menu.permissions.all|slice:":2" %}
+                                            <span class="inline-block px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs">
+                                                {{ perm.codename }}
+                                            </span>
+                                        {% empty %}
+                                            <span class="text-xs text-gray-500 dark:text-slate-400">No permissions</span>
+                                        {% endfor %}
+                                        {% if menu.permissions.count > 2 %}
+                                            <span class="inline-block px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs font-semibold">
+                                                +{{ menu.permissions.count|add:"-2" }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for role in menu.role_menu_items.all|slice:":2" %}
+                                            <span class="inline-block px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded text-xs">
+                                                {{ role.name }}
+                                            </span>
+                                        {% empty %}
+                                            <span class="text-xs text-gray-500 dark:text-slate-400">No roles</span>
+                                        {% endfor %}
+                                        {% if menu.role_menu_items.count > 2 %}
+                                            <span class="inline-block px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded text-xs font-semibold">
+                                                +{{ menu.role_menu_items.count|add:"-2" }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="text-sm text-gray-600 dark:text-slate-400 max-w-xs truncate">
+                                        {{ menu.description|default:"No description" }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <div class="flex gap-2">
+                                        {% if request.user.is_superuser or request.user.is_admin or perms.user.change_menu %}
+                                            <a href="{% url 'related_object_edit' 'menu' menu.pk %}"
+                                               class="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-3 py-1 rounded text-xs modal-trigger"
+                                               data-modal-url="{% url 'related_object_edit' 'menu' menu.pk %}">
+                                                ✏️ Edit
+                                            </a>
+                                        {% endif %}
+                                        {% if request.user.is_superuser or request.user.is_admin or perms.user.delete_menu %}
+                                            <button class="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white px-3 py-1 rounded text-xs delete-btn"
+                                                    data-url="{% url 'menu_delete' menu.pk %}">
+                                                🗑️ Delete
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="9" class="px-6 py-12 text-center">
+                                    <p class="text-gray-600 dark:text-slate-400 text-lg">No menus found.</p>
+                                    {% if request.user.is_superuser or request.user.is_admin or perms.user.add_menu %}
+                                        <a href="{% url 'related_object_create' 'menu' %}"
+                                           class="inline-block mt-4 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold modal-trigger"
+                                           data-modal-url="{% url 'related_object_create' 'menu' %}">
+                                            ➕ Create the first menu
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Container -->
+<div id="modal-container" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm">
+    <div class="flex items-center justify-center min-h-screen px-2 sm:px-4 pt-4 pb-20 text-center">
+        <div class="fixed inset-0 transition-opacity" id="modal-backdrop"></div>
+        <div class="relative inline-block w-full max-w-md sm:max-w-xl md:max-w-2xl p-4 sm:p-6 my-4 sm:my-8 overflow-hidden text-left align-middle transition-all transform bg-white dark:bg-slate-900 shadow-2xl rounded-2xl" id="modal-content">
+            <div id="modal-body">
+                <!-- Modal content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Helper functions for modal management
+function closeModal() {
+    const modal = document.getElementById('modal-container');
+    if (modal) modal.classList.add('hidden');
+}
+
+function getFieldValue(fieldName) {
+    const field = document.querySelector(`[name="${fieldName}"]`);
+    return field ? field.value : null;
+}
+
+function autoSelectInParent(modelName, itemData) {
+    const fieldMapping = {
+        'menu': 'parent',
+        'permission': 'permissions'
+    };
+
+    const fieldName = fieldMapping[modelName];
+    if (!fieldName) return;
+
+    const field = document.querySelector(`[name="${fieldName}"]`);
+    if (field) {
+        if (field.tagName === 'SELECT') {
+            if (field.hasAttribute('multiple')) {
+                const option = document.createElement('option');
+                option.value = itemData.id;
+                option.text = itemData.text;
+                option.selected = true;
+                field.appendChild(option);
+            } else {
+                field.value = itemData.id;
+            }
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+        } else if (field.tagName === 'INPUT' && field.type === 'checkbox') {
+            const checkbox = document.querySelector(`input[name="${fieldName}"][value="${itemData.id}"]`);
+            if (checkbox) checkbox.checked = true;
+        }
+    }
+}
+
+function openRelatedModal(modelName, action, pk = null, params = {}) {
+    let url = `/user/ajax/related/${modelName}/${action}/`;
+    if (action === 'edit' && pk) url = `/user/ajax/related/${modelName}/${pk}/edit/`;
+
+    const queryParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+        if (value) queryParams.append(key, value);
+    }
+    if (queryParams.toString()) url += '?' + queryParams.toString();
+
+    window.nestedModalOpen = true;
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(response => response.ok ? response.json() : Promise.reject(`HTTP error! status: ${response.status}`))
+        .then(data => {
+            if (data.html) {
+                const modalBody = document.getElementById('modal-body');
+                if (!window.originalModalBody) window.originalModalBody = modalBody.innerHTML;
+                modalBody.innerHTML = data.html;
+                const form = modalBody.querySelector('form');
+                if (form) form.dataset.modelName = modelName;
+            }
+        })
+        .catch(error => alert('Error loading modal: ' + error));
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const modalContainer = document.getElementById('modal-container');
+    const modalBody = document.getElementById('modal-body');
+    const modalBackdrop = document.getElementById('modal-backdrop');
+
+    document.addEventListener('click', function(e) {
+        const trigger = e.target.closest('.modal-trigger');
+        if (trigger) {
+            e.preventDefault();
+            e.stopPropagation();
+            const url = trigger.getAttribute('data-modal-url');
+            if (url) {
+                fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(response => response.ok ? response.json() : Promise.reject(`HTTP error! status: ${response.status}`))
+                    .then(data => {
+                        if (data.html) {
+                            modalBody.innerHTML = data.html;
+                            modalContainer.classList.remove('hidden');
+                        }
+                    })
+                    .catch(error => alert('Error: ' + error));
+            }
+        }
+    });
+
+    if (modalBackdrop) {
+        modalBackdrop.addEventListener('click', function(e) {
+            e.stopPropagation();
+            modalContainer.classList.add('hidden');
+        });
+    }
+
+    window.closeModal = function() {
+        modalContainer.classList.add('hidden');
+    };
+
+    document.addEventListener('submit', function(e) {
+        const modal = document.getElementById('modal-container');
+        if (!modal || !modal.contains(e.target)) return;
+
+        const form = e.target;
+        if (form.tagName !== 'FORM') return;
+
+        e.preventDefault();
+        const formData = new FormData(form);
+        const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        const isNestedModal = window.nestedModalOpen === true;
+        const modelName = form.dataset.modelName;
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.ok ? response.json() : Promise.reject(`HTTP error! status: ${response.status}`))
+        .then(data => {
+            if (data.success) {
+                if (isNestedModal && modelName) {
+                    const itemData = data[modelName] || data.item;
+                    if (itemData) autoSelectInParent(modelName, itemData);
+                    if (window.originalModalBody) {
+                        modal.querySelector('#modal-body').innerHTML = window.originalModalBody;
+                        window.nestedModalOpen = false;
+                        window.originalModalBody = null;
+                    }
+                } else {
+                    modal.classList.add('hidden');
+                    location.reload();
+                }
+            } else {
+                alert('Error: ' + JSON.stringify(data.errors));
+            }
+        })
+        .catch(error => alert('Error: ' + error));
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.classList.contains('delete-btn')) return;
+        e.preventDefault();
+        const url = e.target.getAttribute('data-url');
+        const row = e.target.closest('tr');
+
+        if (confirm('Are you sure you want to delete this menu? This action cannot be undone.')) {
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'csrfmiddlewaretoken=' + (document.querySelector('[name=csrfmiddlewaretoken]')?.value || '')
+            })
+            .then(response => {
+                if (response.ok) {
+                    row.remove();
+                    showMessage('Menu deleted successfully.', 'success');
+                } else {
+                    showMessage('Error deleting menu.', 'error');
+                }
+            })
+            .catch(error => showMessage('Error deleting menu.', 'error'));
+        }
+    });
+
+    function showMessage(message, type) {
+        const existingMessages = document.querySelectorAll('.message-alert');
+        existingMessages.forEach(msg => msg.remove());
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message-alert fixed top-4 right-4 px-4 py-2 rounded-lg text-white z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+        messageDiv.textContent = message;
+        document.body.appendChild(messageDiv);
+        setTimeout(() => messageDiv.remove(), 3000);
+    }
+});
+</script>
+{% endblock %}

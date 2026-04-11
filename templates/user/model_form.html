@@ -1,0 +1,972 @@
+{% comment %} <form method="post" enctype="multipart/form-data" onsubmit="handleModalFormSubmit(this, event)">
+    {% csrf_token %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% for field in form %}
+            {% with widget=field.field.widget %}
+            <div class="{% if field.name == 'address' or field.name == 'description' or field.name == 'branchStaff' or field.name == 'total_area' or field.name == 'area_staf' or field.name == 'customer_group_Staff' or field.name == 'permissions' %}md:col-span-2{% endif %}">
+                {% if widget.input_type == 'checkbox' %}
+                    <label class="flex items-center gap-2">
+                        {{ field }}
+                        <span class="text-sm text-gray-700 dark:text-slate-300">{{ field.label }}</span>
+                    </label>
+                {% else %}
+                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                        {{ field.label }}
+                        {% if field.field.required %}
+                            <span class="text-red-500">*</span>
+                        {% endif %}
+                    </label>
+
+                    {{ field }}
+
+                    {% if widget.attrs.data_related_model %}
+                        <div class="mt-2 flex flex-wrap items-center gap-3 text-sm">
+                            {% if widget.attrs.can_add_related %}
+                                <button type="button"
+                                        class="inline-flex items-center gap-1 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium"
+                                        onclick="openRelatedModal(
+                                            '{{ widget.attrs.data_related_model }}',
+                                            'create',
+                                            null,
+                                            buildModalParams('{{ field.name }}', '{{ widget.attrs.data_related_model }}')
+                                        )">
+                                    <span>➕</span> Create
+                                </button>
+                            {% endif %}
+
+                            {% if widget.attrs.can_change_related %}
+                                <button type="button"
+                                        class="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                                        onclick="openEditRelatedFromField('{{ field.name }}', '{{ widget.attrs.data_related_model }}')">
+                                    <span>✏️</span> Edit selected
+                                </button>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+                {% if field.errors %}
+                    <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ field.errors.0 }}</p>
+                {% endif %}
+
+                {% if field.help_text %}
+                    <p class="mt-1 text-sm text-gray-500 dark:text-slate-400">{{ field.help_text }}</p>
+                {% endif %}
+            </div>
+            {% endwith %}
+        {% endfor %}
+    </div>
+</form>
+
+<script>
+function getTomInstance(field) {
+    if (!field) return null;
+    return field.tomselect || null;
+}
+
+function buildModalParams(parentFieldName, modelName) {
+    const params = { parent_field: parentFieldName };
+
+    const branchField = document.querySelector('[name="branch"]') || document.getElementById("id_branch");
+    const areaField = document.querySelector('[name="area"]') || document.getElementById("id_area");
+
+    if (branchField) params.branch = branchField.value || "";
+    if (areaField) params.area = areaField.value || "";
+
+    return params;
+}
+
+function openRelatedModal(modelName, action, pk = null, params = {}) {
+    let url = `/user/ajax/related/${modelName}/${action}/`;
+    if (action === "edit" && pk) {
+        url = `/user/ajax/related/${modelName}/${pk}/edit/`;
+    }
+
+    const queryParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+        if (value) queryParams.append(key, value);
+    }
+    if (queryParams.toString()) {
+        url += `?${queryParams.toString()}`;
+    }
+
+    window.nestedModalOpen = params["parent_field"] ? true : false;
+    window.parentFieldName = params["parent_field"] || null;
+
+    fetch(url, {
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+    .then(response => response.ok ? response.json() : Promise.reject(`HTTP error! status: ${response.status}`))
+    .then(data => {
+        if (data.html) {
+            const modalBody = document.getElementById("modal-body");
+            if (!window.originalModalBody) {
+                window.originalModalBody = modalBody.innerHTML;
+            }
+            modalBody.innerHTML = data.html;
+
+            initNestedTomSelect(modalBody);
+            bindNestedDependencyHandlers(modalBody);
+
+            const form = modalBody.querySelector("form");
+            if (form) {
+                form.dataset.modelName = modelName;
+                if (action === "edit" && pk) {
+                    form.action = `/user/ajax/related/${modelName}/${pk}/edit/`;
+                } else {
+                    form.action = `/user/ajax/related/${modelName}/create/`;
+                }
+            }
+        }
+    })
+    .catch(error => {
+        console.error("Error loading modal:", error);
+        alert("Error loading form: " + error);
+    });
+}
+
+function initNestedTomSelect(container) {
+    if (typeof TomSelect === "undefined") return;
+
+    container.querySelectorAll("select.js-enhanced-select, select.js-enhanced-multiselect").forEach((select) => {
+        if (select.tomselect) return;
+
+        new TomSelect(select, {
+            create: false,
+            plugins: select.multiple ? ["remove_button"] : [],
+            maxOptions: 500,
+            persist: false,
+            allowEmptyOption: true,
+            placeholder: select.dataset.placeholder || "Select option"
+        });
+    });
+}
+
+function bindNestedDependencyHandlers(container) {
+    const branchField = container.querySelector('[name="branch"]');
+    const areaField = container.querySelector('[name="area"]');
+
+    if (branchField && areaField) {
+        branchField.addEventListener("change", function () {
+            loadAreasForSelect(areaField, this.value, "", false);
+        });
+    }
+}
+
+function handleModalFormSubmit(form, event) {
+    event.preventDefault();
+
+    const formData = new FormData(form);
+    const csrfToken = form.querySelector("[name=csrfmiddlewaretoken]")?.value || "";
+    const isNestedModal = window.nestedModalOpen === true;
+    const modelName = form.dataset.modelName;
+    const parentFieldName = window.parentFieldName;
+
+    fetch(form.action, {
+        method: "POST",
+        body: formData,
+        headers: {
+            "X-CSRFToken": csrfToken,
+            "X-Requested-With": "XMLHttpRequest"
+        }
+    })
+    .then(async response => {
+        const data = await response.json();
+        if (!response.ok) {
+            return Promise.reject(data);
+        }
+        return data;
+    })
+    .then(data => {
+        if (data.success) {
+            if (isNestedModal && modelName && parentFieldName) {
+                const itemData = data[modelName] || data.item;
+                if (itemData) {
+                    autoSelectInParent(parentFieldName, modelName, itemData);
+                }
+
+                if (window.originalModalBody) {
+                    document.getElementById("modal-body").innerHTML = window.originalModalBody;
+                    window.nestedModalOpen = false;
+                    window.originalModalBody = null;
+                    window.parentFieldName = null;
+                }
+            } else {
+                const modal = document.getElementById("modal-container");
+                if (modal) modal.classList.add("hidden");
+                location.reload();
+            }
+        } else if (data.html) {
+            const modalBody = document.getElementById("modal-body");
+            modalBody.innerHTML = data.html;
+            initNestedTomSelect(modalBody);
+            bindNestedDependencyHandlers(modalBody);
+        }
+    })
+    .catch(error => {
+        if (error.html) {
+            const modalBody = document.getElementById("modal-body");
+            modalBody.innerHTML = error.html;
+            initNestedTomSelect(modalBody);
+            bindNestedDependencyHandlers(modalBody);
+        } else {
+            console.error("Form submission error:", error);
+            alert("Error submitting form");
+        }
+    });
+}
+
+function autoSelectInParent(fieldName, modelName, itemData) {
+    const field = document.querySelector(`[name="${fieldName}"]`);
+    if (!field) return;
+
+    const optionValue = String(itemData.id);
+    const optionText = itemData.text || itemData.name || optionValue;
+
+    let existing = Array.from(field.options).find(opt => String(opt.value) === optionValue);
+    if (!existing) {
+        existing = new Option(optionText, optionValue, true, true);
+        field.add(existing);
+    } else {
+        existing.selected = true;
+        existing.text = optionText;
+    }
+
+    if (field.tomselect) {
+        field.tomselect.addOption({ value: optionValue, text: optionText });
+        if (field.multiple) {
+            field.tomselect.addItem(optionValue);
+        } else {
+            field.tomselect.setValue(optionValue);
+        }
+        field.tomselect.refreshOptions(false);
+    } else {
+        field.value = optionValue;
+    }
+
+    field.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function openEditRelatedFromField(fieldName, modelName) {
+    const field = document.querySelector(`[name="${fieldName}"]`);
+    if (!field) return;
+
+    let selectedValue = "";
+
+    if (field.tomselect) {
+        const value = field.tomselect.getValue();
+        selectedValue = Array.isArray(value) ? (value[0] || "") : value;
+    } else {
+        selectedValue = field.value;
+    }
+
+    if (!selectedValue) {
+        alert("Please select an item first.");
+        return;
+    }
+
+    openRelatedModal(modelName, "edit", selectedValue, {
+        parent_field: fieldName
+    });
+}
+</script> {% endcomment %}
+
+
+
+
+
+{% comment %} 
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {% for field in form %}
+        {% with widget=field.field.widget %}
+        <div class="{% if field.name == 'address' or field.name == 'description' or field.name == 'branchStaff' or field.name == 'total_area' or field.name == 'area_staf' or field.name == 'customer_group_Staff' or field.name == 'permissions' %}md:col-span-2{% endif %}">
+            {% if widget.input_type == 'checkbox' %}
+                <label class="flex items-center gap-2">
+                    {{ field }}
+                    <span class="text-sm text-gray-700 dark:text-slate-300">{{ field.label }}</span>
+                </label>
+            {% else %}
+                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                    {{ field.label }}
+                    {% if field.field.required %}
+                        <span class="text-red-500">*</span>
+                    {% endif %}
+                </label>
+
+                {{ field }}
+
+                {% if widget.attrs.data_related_model %}
+                    <div class="mt-2 flex flex-wrap items-center gap-3 text-sm">
+                        {% if widget.attrs.can_add_related %}
+                            <button type="button"
+                                    class="inline-flex items-center gap-1 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium"
+                                    onclick="openRelatedModal(
+                                        '{{ widget.attrs.data_related_model }}',
+                                        'create',
+                                        null,
+                                        buildModalParams('{{ field.name }}', '{{ widget.attrs.data_related_model }}')
+                                    )">
+                                <span>➕</span> Create
+                            </button>
+                        {% endif %}
+
+                        {% if widget.attrs.can_change_related %}
+                            <button type="button"
+                                    class="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                                    onclick="openEditRelatedFromField('{{ field.name }}', '{{ widget.attrs.data_related_model }}')">
+                                <span>✏️</span> Edit selected
+                            </button>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% endif %}
+
+            {% if field.errors %}
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ field.errors.0 }}</p>
+            {% endif %}
+
+            {% if field.help_text %}
+                <p class="mt-1 text-sm text-gray-500 dark:text-slate-400">{{ field.help_text }}</p>
+            {% endif %}
+        </div>
+        {% endwith %}
+    {% endfor %}
+</div> {% endcomment %}
+
+{% comment %} <script>
+(function () {
+    function getTomInstance(field) {
+        if (!field) return null;
+        return field.tomselect || null;
+    }
+
+    function getFieldValueFromElement(field) {
+        if (!field) return "";
+        if (field.tomselect) {
+            const value = field.tomselect.getValue();
+            return Array.isArray(value) ? (value[0] || "") : (value || "");
+        }
+        return field.value || "";
+    }
+
+    window.buildModalParams = function (parentFieldName, modelName) {
+        const params = {
+            parent_field: parentFieldName,
+            model: modelName
+        };
+
+        const modalBody = document.getElementById("modal-body") || document;
+
+        const branchField =
+            modalBody.querySelector('[name="branch"]') ||
+            document.querySelector('[name="branch"]') ||
+            document.getElementById("id_branch");
+
+        const areaField =
+            modalBody.querySelector('[name="area"]') ||
+            document.querySelector('[name="area"]') ||
+            document.getElementById("id_area");
+
+        if (branchField) params.branch = getFieldValueFromElement(branchField);
+        if (areaField) params.area = getFieldValueFromElement(areaField);
+
+        return params;
+    };
+
+    function initNestedTomSelect(container) {
+        if (typeof TomSelect === "undefined" || !container) return;
+
+        container.querySelectorAll("select.js-enhanced-select, select.js-enhanced-multiselect").forEach((select) => {
+            if (select.tomselect) return;
+
+            new TomSelect(select, {
+                create: false,
+                plugins: select.multiple ? ["remove_button"] : [],
+                maxOptions: 500,
+                persist: false,
+                allowEmptyOption: true,
+                placeholder: select.dataset.placeholder || "Select option"
+            });
+        });
+    }
+
+    function bindNestedDependencyHandlers(container) {
+        if (!container) return;
+
+        const branchField = container.querySelector('[name="branch"]');
+        const areaField = container.querySelector('[name="area"]');
+
+        if (branchField && areaField) {
+            branchField.addEventListener("change", function () {
+                if (typeof loadAreasForSelect === "function") {
+                    loadAreasForSelect(areaField, getFieldValueFromElement(branchField), "", false);
+                }
+            });
+        }
+    }
+
+    window.openRelatedModal = function (modelName, action, pk = null, params = {}) {
+        let url = `/user/ajax/related/${modelName}/create/`;
+        if (action === "edit" && pk) {
+            url = `/user/ajax/related/${modelName}/${pk}/edit/`;
+        }
+
+        const queryParams = new URLSearchParams();
+        Object.entries(params || {}).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && value !== "") {
+                queryParams.append(key, value);
+            }
+        });
+
+        if (queryParams.toString()) {
+            url += `?${queryParams.toString()}`;
+        }
+
+        const modalBody = document.getElementById("modal-body");
+        if (!modalBody) return;
+
+        const isNested = !!params.parent_field;
+
+        if (isNested) {
+            window.modalStack = window.modalStack || [];
+            window.modalStack.push({
+                html: modalBody.innerHTML,
+                parentFieldName: params.parent_field || null
+            });
+            window.nestedModalOpen = true;
+            window.parentFieldName = params.parent_field || null;
+        } else {
+            window.modalStack = [];
+            window.nestedModalOpen = false;
+            window.parentFieldName = null;
+        }
+
+        fetch(url, {
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(response => response.ok ? response.json() : Promise.reject(`HTTP error! status: ${response.status}`))
+        .then(data => {
+            if (!data.html) return;
+
+            modalBody.innerHTML = data.html;
+
+            const form = modalBody.querySelector("form");
+            if (form) {
+                form.dataset.modelName = modelName;
+                form.dataset.isNested = isNested ? "true" : "false";
+            }
+
+            initNestedTomSelect(modalBody);
+            bindNestedDependencyHandlers(modalBody);
+        })
+        .catch(error => {
+            console.error("Error loading related modal:", error);
+            alert("Error loading form");
+        });
+    };
+
+    window.autoSelectInParent = function (fieldName, modelName, itemData) {
+        const field = document.querySelector(`[name="${fieldName}"]`);
+        if (!field || !itemData) return;
+
+        const optionValue = String(itemData.id);
+        const optionText = itemData.text || itemData.name || optionValue;
+
+        if (field.tagName === "SELECT") {
+            let existing = Array.from(field.options).find(opt => String(opt.value) === optionValue);
+
+            if (!existing) {
+                existing = new Option(optionText, optionValue, true, true);
+                field.add(existing);
+            } else {
+                existing.selected = true;
+                existing.text = optionText;
+            }
+
+            if (field.tomselect) {
+                field.tomselect.addOption({ value: optionValue, text: optionText });
+
+                if (field.multiple) {
+                    const current = field.tomselect.getValue();
+                    const currentValues = Array.isArray(current) ? current : (current ? [current] : []);
+                    if (!currentValues.includes(optionValue)) {
+                        field.tomselect.addItem(optionValue);
+                    }
+                } else {
+                    field.tomselect.setValue(optionValue);
+                }
+
+                field.tomselect.refreshOptions(false);
+            } else {
+                if (!field.multiple) {
+                    field.value = optionValue;
+                }
+            }
+
+            field.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+    };
+
+    window.restorePreviousModal = function () {
+        const modalBody = document.getElementById("modal-body");
+        if (!modalBody) return;
+
+        if (window.modalStack && window.modalStack.length) {
+            const previous = window.modalStack.pop();
+            modalBody.innerHTML = previous.html;
+            window.parentFieldName = previous.parentFieldName || null;
+            window.nestedModalOpen = window.modalStack.length > 0;
+
+            initNestedTomSelect(modalBody);
+            bindNestedDependencyHandlers(modalBody);
+        } else {
+            const modal = document.getElementById("modal-container");
+            if (modal) modal.classList.add("hidden");
+            window.parentFieldName = null;
+            window.nestedModalOpen = false;
+        }
+    };
+
+    window.handleModalFormSubmit = function (form, event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const formData = new FormData(form);
+        const csrfToken = form.querySelector("[name=csrfmiddlewaretoken]")?.value || "";
+        const modelName = form.dataset.modelName || "";
+        const isNestedModal = form.dataset.isNested === "true";
+        const parentFieldName = window.parentFieldName;
+
+        fetch(form.action, {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-CSRFToken": csrfToken,
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(async response => {
+            const data = await response.json();
+            if (!response.ok) {
+                throw data;
+            }
+            return data;
+        })
+        .then(data => {
+            if (data.success) {
+                if (isNestedModal && parentFieldName) {
+                    const itemData = data[modelName] || data.item;
+                    if (itemData) {
+                        window.autoSelectInParent(parentFieldName, modelName, itemData);
+                    }
+                    window.restorePreviousModal();
+                } else {
+                    const modal = document.getElementById("modal-container");
+                    if (modal) modal.classList.add("hidden");
+                    location.reload();
+                }
+                return;
+            }
+
+            if (data.html) {
+                const modalBody = document.getElementById("modal-body");
+                modalBody.innerHTML = data.html;
+
+                const newForm = modalBody.querySelector("form");
+                if (newForm) {
+                    newForm.dataset.modelName = modelName;
+                    newForm.dataset.isNested = isNestedModal ? "true" : "false";
+                }
+
+                initNestedTomSelect(modalBody);
+                bindNestedDependencyHandlers(modalBody);
+            }
+        })
+        .catch(error => {
+            if (error && error.html) {
+                const modalBody = document.getElementById("modal-body");
+                modalBody.innerHTML = error.html;
+
+                const newForm = modalBody.querySelector("form");
+                if (newForm) {
+                    newForm.dataset.modelName = modelName;
+                    newForm.dataset.isNested = isNestedModal ? "true" : "false";
+                }
+
+                initNestedTomSelect(modalBody);
+                bindNestedDependencyHandlers(modalBody);
+            } else {
+                console.error("Form submission error:", error);
+                alert("Error submitting form");
+            }
+        });
+    };
+
+    window.openEditRelatedFromField = function (fieldName, modelName) {
+        const field = document.querySelector(`[name="${fieldName}"]`);
+        if (!field) return;
+
+        let selectedValue = "";
+
+        if (field.tomselect) {
+            const value = field.tomselect.getValue();
+            selectedValue = Array.isArray(value) ? (value[0] || "") : (value || "");
+        } else {
+            selectedValue = field.value || "";
+        }
+
+        if (!selectedValue) {
+            alert("Please select an item first.");
+            return;
+        }
+
+        window.openRelatedModal(modelName, "edit", selectedValue, {
+            parent_field: fieldName
+        });
+    };
+
+    window.closeModal = function () {
+        if (window.modalStack && window.modalStack.length) {
+            window.restorePreviousModal();
+            return;
+        }
+
+        const modal = document.getElementById("modal-container");
+        if (modal) modal.classList.add("hidden");
+
+        window.modalStack = [];
+        window.parentFieldName = null;
+        window.nestedModalOpen = false;
+    };
+})();
+</script>  {% endcomment %}
+
+
+
+
+
+
+{% comment %} <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {% for field in form %}
+        {% with widget=field.field.widget %}
+        <div class="{% if field.name == 'address' or field.name == 'description' or field.name == 'branchStaff' or field.name == 'total_area' or field.name == 'area_staf' or field.name == 'customer_group_Staff' or field.name == 'permissions' %}md:col-span-2{% endif %}">
+            {% if widget.input_type == 'checkbox' %}
+                <label class="flex items-center gap-2">
+                    {{ field }}
+                    <span class="text-sm text-gray-700 dark:text-slate-300">{{ field.label }}</span>
+                </label>
+            {% else %}
+                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                    {{ field.label }}
+                    {% if field.field.required %}
+                        <span class="text-red-500">*</span>
+                    {% endif %}
+                </label>
+
+                {{ field }}
+
+                {% if widget.attrs.data_related_model %}
+                    <div class="mt-2 flex flex-wrap items-center gap-3 text-sm">
+                        {% if widget.attrs.can_add_related %}
+                            <button type="button"
+                                    class="inline-flex items-center gap-1 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium"
+                                    onclick="openRelatedModal('{{ widget.attrs.data_related_model }}', 'create', null, buildModalParams('{{ field.name }}', '{{ widget.attrs.data_related_model }}'))">
+                                <span>➕</span> Create
+                            </button>
+                        {% endif %}
+
+                        {% if widget.attrs.can_change_related %}
+                            <button type="button"
+                                    class="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                                    onclick="openEditRelatedFromField('{{ field.name }}', '{{ widget.attrs.data_related_model }}')">
+                                <span>✏️</span> Edit selected
+                            </button>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% endif %}
+
+            {% if field.errors %}
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ field.errors.0 }}</p>
+            {% endif %}
+
+            {% if field.help_text %}
+                <p class="mt-1 text-sm text-gray-500 dark:text-slate-400">{{ field.help_text }}</p>
+            {% endif %}
+        </div>
+        {% endwith %}
+    {% endfor %}
+</div> {% endcomment %}
+
+{% comment %} 
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {% for field in form %}
+        {% with widget=field.field.widget %}
+        <div class="{% if field.name == 'address' or field.name == 'description' or field.name == 'branchStaff' or field.name == 'total_area' or field.name == 'area_staf' or field.name == 'customer_group_Staff' or field.name == 'permissions' %}md:col-span-2{% endif %}">
+            {% if widget.input_type == 'checkbox' %}
+                <label class="flex items-center gap-2">
+                    {{ field }}
+                    <span class="text-sm text-gray-700 dark:text-slate-300">{{ field.label }}</span>
+                </label>
+            {% else %}
+                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                    {{ field.label }}
+                    {% if field.field.required %}
+                        <span class="text-red-500">*</span>
+                    {% endif %}
+                </label>
+
+                {{ field }}
+
+                {% if widget.attrs.data_related_model %}
+                    <div class="mt-2 flex flex-wrap items-center gap-3 text-sm">
+                        {% if widget.attrs.can_add_related %}
+                            <button type="button"
+                                    class="related-create-btn inline-flex items-center gap-1 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium"
+                                    data-model="{{ widget.attrs.data_related_model }}"
+                                    data-field-name="{{ field.name }}">
+                                <span>➕</span> Create
+                            </button>
+                        {% endif %}
+
+                        {% if widget.attrs.can_change_related %}
+                            <button type="button"
+                                    class="related-edit-btn inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                                    data-model="{{ widget.attrs.data_related_model }}"
+                                    data-field-name="{{ field.name }}">
+                                <span>✏️</span> Edit selected
+                            </button>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% endif %}
+
+            {% if field.errors %}
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ field.errors.0 }}</p>
+            {% endif %}
+
+            {% if field.help_text %}
+                <p class="mt-1 text-sm text-gray-500 dark:text-slate-400">{{ field.help_text }}</p>
+            {% endif %}
+        </div>
+        {% endwith %}
+    {% endfor %}
+</div> {% endcomment %}
+
+
+
+
+{# user/model_form.html #}
+{# Renders all form fields with searchable selects and permission-based related-object buttons #}
+
+{% comment %} <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {% for field in form %}
+        {% with widget=field.field.widget %}
+
+        {# ── Determine full-width fields ── #}
+        <div class="
+            {% if field.name == 'address'
+               or field.name == 'description'
+               or field.name == 'descriptions'
+               or field.name == 'branchStaff'
+               or field.name == 'total_area'
+               or field.name == 'area_staf'
+               or field.name == 'customer_group_Staff'
+               or field.name == 'permissions'
+               or field.name == 'multi_branch'
+               or field.name == 'menu'
+               or field.name == 'roles'
+               or field.name == 'mult_branch'
+               or field.name == 'customer_group'
+            %}md:col-span-2{% endif %}
+        ">
+
+            {# ══════════════ CHECKBOX ══════════════ #}
+            {% if widget.input_type == 'checkbox' %}
+                <label class="flex items-center gap-3 cursor-pointer select-none group">
+                    <div class="relative">
+                        {{ field }}
+                        <div class="pointer-events-none absolute inset-0"></div>
+                    </div>
+                    <span class="text-sm font-medium text-gray-700 dark:text-slate-300 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
+                        {{ field.label }}
+                    </span>
+                </label>
+
+            {# ══════════════ ALL OTHER FIELDS ══════════════ #}
+            {% else %}
+                <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">
+                    {{ field.label }}
+                    {% if field.field.required %}
+                        <span class="text-red-500 ml-0.5">*</span>
+                    {% endif %}
+                </label>
+
+                {# ── Wrap field + related buttons ── #}
+                <div class="relative">
+
+                    {# ── Detect if this is a related field with permissions ── #}
+                    {% if widget.attrs.data_related_model %}
+
+                        {# Wrapper keeps field + buttons together #}
+                        <div class="flex items-start gap-2">
+                            <div class="flex-1 min-w-0">
+                                {{ field }}
+                            </div>
+
+                            {# Permission-based Create / Edit icon buttons #}
+                            <div class="flex flex-col gap-1 pt-0.5 shrink-0">
+                                {% if widget.attrs.can_add_related %}
+                                    <button type="button"
+                                            class="related-create-btn h-9 w-9 inline-flex items-center justify-center rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700 transition-all shadow-sm hover:shadow"
+                                            data-model="{{ widget.attrs.data_related_model }}"
+                                            data-field-name="{{ field.name }}"
+                                            title="Create new {{ widget.attrs.data_related_model }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                                        </svg>
+                                    </button>
+                                {% endif %}
+
+                                {% if widget.attrs.can_change_related %}
+                                    <button type="button"
+                                            class="related-edit-btn h-9 w-9 inline-flex items-center justify-center rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-700 transition-all shadow-sm hover:shadow"
+                                            data-model="{{ widget.attrs.data_related_model }}"
+                                            data-field-name="{{ field.name }}"
+                                            title="Edit selected {{ widget.attrs.data_related_model }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-2.829 1.172H7v-2a4 4 0 011.172-2.829z"/>
+                                        </svg>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                    {% else %}
+                        {# Normal field — no related buttons #}
+                        {{ field }}
+                    {% endif %}
+
+                </div>{# end .relative #}
+            {% endif %}
+
+            {# ── Errors ── #}
+            {% if field.errors %}
+                <ul class="mt-1.5 space-y-0.5">
+                    {% for error in field.errors %}
+                        <li class="flex items-start gap-1 text-xs text-red-600 dark:text-red-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            {{ error }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {# ── Help text ── #}
+            {% if field.help_text %}
+                <p class="mt-1 text-xs text-gray-500 dark:text-slate-400 leading-relaxed">{{ field.help_text }}</p>
+            {% endif %}
+
+        </div>
+        {% endwith %}
+    {% endfor %}
+</div> {% endcomment %}
+
+
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    {% for field in form %}
+        {% with widget=field.field.widget %}
+            <div class="{% if field.name == 'address' or field.name == 'description' or field.name == 'branchStaff' or field.name == 'total_area' or field.name == 'area_staf' or field.name == 'customer_group_Staff' or field.name == 'permissions' %}md:col-span-2{% endif %}">
+                
+                {% if widget.input_type == 'checkbox' %}
+                    <label class="flex items-center gap-3 mt-2">
+                        {{ field }}
+                        <span class="text-sm font-medium text-gray-700 dark:text-slate-300">
+                            {{ field.label }}
+                        </span>
+                    </label>
+
+                {% else %}
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                        {{ field.label }}
+                        {% if field.field.required %}
+                            <span class="text-red-500">*</span>
+                        {% endif %}
+                    </label>
+
+                    {{ field }}
+
+                    {% comment %} {% if widget.attrs.data_related_model %}
+                        <div class="mt-3">
+                            <div class="related-widget-actions">
+                                {% if widget.attrs.can_add_related %}
+                                    <button type="button"
+                                            class="related-create-btn related-icon-btn related-icon-btn-create"
+                                            data-model="{{ widget.attrs.data_related_model }}"
+                                            data-field-name="{{ field.name }}"
+                                            title="Create {{ widget.attrs.data_related_model }}">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                {% endif %}
+
+                                {% if widget.attrs.can_change_related %}
+                                    <button type="button"
+                                            class="related-edit-btn related-icon-btn related-icon-btn-edit"
+                                            data-model="{{ widget.attrs.data_related_model }}"
+                                            data-field-name="{{ field.name }}"
+                                            title="Edit selected {{ widget.attrs.data_related_model }}">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %} {% endcomment %}
+                    {% if widget.attrs.data_related_model %}
+    <div class="mt-3">
+        <div class="related-widget-actions flex items-center gap-2 justify-end">
+            {% if widget.attrs.can_add_related %}
+                <button type="button"
+                        class="related-create-btn related-icon-btn related-icon-btn-create"
+                        data-model="{{ widget.attrs.data_related_model }}"
+                        data-field-name="{{ field.name }}"
+                        title="Create {{ widget.attrs.data_related_model }}">
+                    <i class="fas fa-plus"></i>
+                </button>
+            {% endif %}
+
+            {% if widget.attrs.can_change_related %}
+                <button type="button"
+                        class="related-edit-btn related-icon-btn related-icon-btn-edit"
+                        data-model="{{ widget.attrs.data_related_model }}"
+                        data-field-name="{{ field.name }}"
+                        title="Edit selected {{ widget.attrs.data_related_model }}">
+                    <i class="fas fa-pen"></i>
+                </button>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+                {% endif %}
+
+                {% if field.errors %}
+                    <p class="mt-2 text-sm text-red-600 dark:text-red-400">
+                        {{ field.errors.0 }}
+                    </p>
+                {% endif %}
+
+                {% if field.help_text %}
+                    <p class="mt-2 text-sm text-gray-500 dark:text-slate-400">
+                        {{ field.help_text }}
+                    </p>
+                {% endif %}
+            </div>
+        {% endwith %}
+    {% endfor %}
+</div>

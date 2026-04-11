@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Logged Out - Admin Dashboard{% endblock %}
+
+{% block content %}
+<!-- Alert data for SweetAlert2 -->
+{% if messages %}
+    {% for message in messages %}
+        {% if 'Goodbye' in message or 'Logout time' in message %}
+            <script>
+                // Parse logout message and show alert
+                const msg = "{{ message|escapejs }}";
+                console.log('📨 Logout message:', msg);
+                
+                // Extract data from message
+                const userMatch = msg.match(/Goodbye ([^!]+)!/);
+                const timeMatch = msg.match(/Logout time: (\d{1,2}:\d{2} (?:AM|PM))/);
+                const durationMatch = msg.match(/Session duration: ([^$]+)/);
+                
+                const userName = userMatch ? userMatch[1] : 'User';
+                const logoutTime = timeMatch ? timeMatch[1] : 'Unknown';
+                const sessionDuration = durationMatch ? durationMatch[1] : 'N/A';
+                
+                console.log('✓ Extracted:', {userName, logoutTime, sessionDuration});
+                
+                // Show alert after page loads
+                setTimeout(() => {
+                    if (typeof showLogoutAlert === 'function') {
+                        showLogoutAlert(userName, logoutTime, sessionDuration);
+                    } else {
+                        console.error('showLogoutAlert function not found');
+                    }
+                }, 1000);
+            </script>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+<div class="min-h-screen flex items-center justify-center bg-gray-100">
+    <div class="text-center">
+        <div class="mb-6">
+            <i class="fas fa-sign-out-alt text-6xl text-blue-600"></i>
+        </div>
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">You have been logged out</h2>
+        <p class="text-gray-600 mb-8">Thank you for using Admin Dashboard.</p>
+        <a href="{% url 'login' %}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">
+            Back to Login
+        </a>
+    </div>
+</div>
+{% endblock %}
