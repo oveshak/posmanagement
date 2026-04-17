@@ -1,5 +1,140 @@
 
 {% extends 'base.html' %}
+{% load static %}
+{% block app_prefix %}/user{% endblock %}
+{% block title %}Areas - Management{% endblock %}
+
+
+{% block content %}
+    {% include "user/partials/area_list_content.html" %}
+{% endblock %}
+
+{% comment %} {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Areas - Management{% endblock %}
+{% block page_title %}Areas{% endblock %}
+{% block page_subtitle %}Manage areas within branches{% endblock %}
+
+{% block content %}
+<div class="min-h-screen transition-colors duration-300">
+    <div class="mx-auto">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">🏘️ Areas</h1>
+                <p class="text-gray-600 dark:text-slate-400 mt-2">Manage areas and their staff within branches</p>
+            </div>
+
+            {% if request.user.is_superuser or request.user.is_admin or perms.user.add_area %}
+                <a href="{% url 'related_object_create' 'area' %}"
+                   class="inline-flex items-center justify-center bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition modal-trigger"
+                   data-modal-url="{% url 'related_object_create' 'area' %}">
+                    ➕ Create Area
+                </a>
+            {% endif %}
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow overflow-hidden border border-gray-100 dark:border-slate-800">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 dark:bg-slate-800">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Address</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Branch</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Staff</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Customer Groups</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
+                        {% for area in areas %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ area.name }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-600 dark:text-slate-400">{{ area.address|default:"No address" }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if area.parent_branch %}
+                                        <span class="inline-block px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs">
+                                            {{ area.parent_branch.name }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-gray-500 dark:text-slate-400">Not assigned</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for user in area.area_staff.all|slice:":2" %}
+                                            <span class="inline-block px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs">
+                                                {{ user.name|default:user.email|truncatewords:2 }}
+                                            </span>
+                                        {% empty %}
+                                            <span class="text-xs text-gray-500 dark:text-slate-400">No staff</span>
+                                        {% endfor %}
+                                        {% if area.area_staff.count > 2 %}
+                                            <span class="inline-block px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs font-semibold">
+                                                +{{ area.area_staff.count|add:"-2" }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for cg in area.total_customers.all|slice:":2" %}
+                                            <span class="inline-block px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded text-xs">
+                                                {{ cg.name }}
+                                            </span>
+                                        {% empty %}
+                                            <span class="text-xs text-gray-500 dark:text-slate-400">No groups</span>
+                                        {% endfor %}
+                                        {% if area.total_customers.count > 2 %}
+                                            <span class="inline-block px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded text-xs font-semibold">
+                                                +{{ area.total_customers.count|add:"-2" }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <div class="flex gap-2">
+                                        {% if request.user.is_superuser or request.user.is_admin or perms.user.change_area %}
+                                            <a href="{% url 'related_object_edit' 'area' area.pk %}"
+                                               class="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-3 py-1 rounded text-xs modal-trigger"
+                                               data-modal-url="{% url 'related_object_edit' 'area' area.pk %}">
+                                                ✏️ Edit
+                                            </a>
+                                        {% endif %}
+                                        {% if request.user.is_superuser or request.user.is_admin or perms.user.delete_area %}
+                                            <a href="{% url 'area_delete' area.pk %}"
+   class="delete-btn inline-flex items-center px-3 py-1 rounded bg-red-500 hover:bg-red-600 text-white text-xs"
+   data-url="{% url 'area_delete' area.pk %}">
+    Delete
+</a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="px-6 py-12 text-center">
+                                    <p class="text-gray-600 dark:text-slate-400 text-lg">No areas found.</p>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} {% endcomment %}
+
+
+
+
+{% comment %} {% extends 'base.html' %}
 
 {% load static %}
 
@@ -129,4 +264,4 @@
     </div>
 </div>
 
-{% endblock %}
+{% endblock %} {% endcomment %}

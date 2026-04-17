@@ -1,0 +1,493 @@
+{% extends "base.html" %}
+
+{% comment %} {% extends "base.html" %}
+{% load static %}
+
+{% block app_prefix %}/product{% endblock %}
+{% block title %}{% if object %}Update Product{% else %}Create Product{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+.related-icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s ease;
+}
+.related-icon-btn-create {
+    background: #10b981;
+    color: white;
+}
+.related-icon-btn-create:hover {
+    background: #059669;
+}
+.related-icon-btn-edit {
+    background: #3b82f6;
+    color: white;
+}
+.related-icon-btn-edit:hover {
+    background: #2563eb;
+}
+.variation-card {
+    border: 1px solid #e5e7eb;
+}
+.dark .variation-card {
+    border-color: #334155;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen">
+    <div class="mx-auto max-w-7xl">
+        <div class="mb-6 flex items-center justify-between gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+                    {% if object %}Update Product{% else %}Create Product{% endif %}
+                </h2>
+                <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
+                    Create product and manage all variations from one page.
+                </p>
+            </div>
+
+            <a href="{% url 'product_list' %}"
+               class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200">
+                <i class="fas fa-arrow-left mr-2"></i> Back
+            </a>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
+            <form method="post" class="p-6 md:p-8 space-y-8">
+                {% csrf_token %}
+
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Product Information</h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Product Name</label>
+                            {{ form.name }}
+                            {% for error in form.name.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">SKU</label>
+                            {{ form.sku }}
+                            {% for error in form.sku.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Unit</label>
+                            {{ form.unit_name }}
+                            <div class="mt-3 flex justify-end gap-2">
+                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="unit" data-field-name="unit_name"><i class="fas fa-plus"></i></button>
+                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="unit" data-field-name="unit_name"><i class="fas fa-pen"></i></button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Category</label>
+                            {{ form.category_name }}
+                            <div class="mt-3 flex justify-end gap-2">
+                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="category" data-field-name="category_name"><i class="fas fa-plus"></i></button>
+                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="category" data-field-name="category_name"><i class="fas fa-pen"></i></button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Brand</label>
+                            {{ form.brand_name }}
+                            <div class="mt-3 flex justify-end gap-2">
+                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="brand" data-field-name="brand_name"><i class="fas fa-plus"></i></button>
+                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="brand" data-field-name="brand_name"><i class="fas fa-pen"></i></button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Warranty</label>
+                            {{ form.warranty_name }}
+                            <div class="mt-3 flex justify-end gap-2">
+                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="warranty" data-field-name="warranty_name"><i class="fas fa-plus"></i></button>
+                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="warranty" data-field-name="warranty_name"><i class="fas fa-pen"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Variations</h3>
+                        <p class="text-sm text-gray-500 dark:text-slate-400">You can create multiple variation rows here.</p>
+                    </div>
+
+                    {{ formset.management_form }}
+
+                    <div class="space-y-4">
+                        {% for vform in formset %}
+                            <div class="variation-card rounded-2xl p-5 bg-gray-50 dark:bg-slate-950/40">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Variation Name</label>
+                                        {{ vform.name }}
+                                        {% for error in vform.name.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">SKU Suffix</label>
+                                        {{ vform.sku_suffix }}
+                                        {% for error in vform.sku_suffix.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Price</label>
+                                        {{ vform.price }}
+                                        {% for error in vform.price.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Quantity</label>
+                                        {{ vform.quantity }}
+                                        {% for error in vform.quantity.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Dealer Price</label>
+                                        {{ vform.dealer_price }}
+                                        {% for error in vform.dealer_price.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                                    </div>
+
+                                    <div class="flex items-center gap-3 pt-8">
+                                        {{ vform.isunck }}
+                                        <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Has Unique Key</label>
+                                    </div>
+
+                                    <div class="md:col-span-3">
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Unique Keys</label>
+                                        {{ vform.unickkey }}
+                                        <div class="mt-3 flex justify-end gap-2">
+                                            <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="unick" data-field-name="{{ vform.unickkey.html_name }}"><i class="fas fa-plus"></i></button>
+                                            <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="unick" data-field-name="{{ vform.unickkey.html_name }}"><i class="fas fa-pen"></i></button>
+                                        </div>
+                                        {% for error in vform.unickkey.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                                    </div>
+
+                                    {% if vform.instance.pk %}
+                                        <div class="md:col-span-3">
+                                            <label class="inline-flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                                                {{ vform.DELETE }} Delete this variation
+                                            </label>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                {% for hidden in vform.hidden_fields %}
+                                    {{ hidden }}
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
+                    <a href="{% url 'product_list' %}"
+                       class="px-5 py-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200">
+                        Cancel
+                    </a>
+                    <button type="submit"
+                            class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                        {% if object %}Update Product{% else %}Create Product{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} {% endcomment %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{% load static %}
+
+{% block app_prefix %}/product{% endblock %}
+{% block title %}{% if object %}Update Product{% else %}Create Product{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+.related-icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s ease;
+}
+.related-icon-btn-create { background: #10b981; color: white; }
+.related-icon-btn-create:hover { background: #059669; }
+.related-icon-btn-edit { background: #3b82f6; color: white; }
+.related-icon-btn-edit:hover { background: #2563eb; }
+
+.variation-card {
+    border: 1px solid #e5e7eb;
+}
+.dark .variation-card {
+    border-color: #334155;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen">
+    <div class="mx-auto max-w-7xl">
+        <div class="mb-6 flex items-center justify-between gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+                    {% if object %}Update Product{% else %}Create Product{% endif %}
+                </h2>
+                <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
+                    One page থেকে product, multiple variation, and unique keys manage করুন।
+                </p>
+            </div>
+
+            <a href="{% url 'product:product_list' %}"
+               class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200">
+                <i class="fas fa-arrow-left mr-2"></i> Back
+            </a>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
+            <form method="post" class="p-6 md:p-8 space-y-8">
+                {% csrf_token %}
+
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Product Information</h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Product Name</label>
+                            {{ form.name }}
+                            {% for error in form.name.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">SKU</label>
+                            {{ form.sku }}
+                            {% for error in form.sku.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Unit</label>
+                            {{ form.unit_name }}
+                            <div class="mt-3 flex justify-end gap-2">
+                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="unit" data-field-name="unit_name"><i class="fas fa-plus"></i></button>
+                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="unit" data-field-name="unit_name"><i class="fas fa-pen"></i></button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Category</label>
+                            {{ form.category_name }}
+                            <div class="mt-3 flex justify-end gap-2">
+                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="category" data-field-name="category_name"><i class="fas fa-plus"></i></button>
+                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="category" data-field-name="category_name"><i class="fas fa-pen"></i></button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Brand</label>
+                            {{ form.brand_name }}
+                            <div class="mt-3 flex justify-end gap-2">
+                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="brand" data-field-name="brand_name"><i class="fas fa-plus"></i></button>
+                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="brand" data-field-name="brand_name"><i class="fas fa-pen"></i></button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Warranty</label>
+                            {{ form.warranty_name }}
+                            <div class="mt-3 flex justify-end gap-2">
+                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="warranty" data-field-name="warranty_name"><i class="fas fa-plus"></i></button>
+                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="warranty" data-field-name="warranty_name"><i class="fas fa-pen"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Variations</h3>
+
+                        <button type="button"
+                                id="add-variation-row"
+                                class="inline-flex items-center rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 text-sm font-semibold">
+                            <i class="fas fa-plus mr-2"></i>
+                            Add Variation
+                        </button>
+                    </div>
+
+                    {{ formset.management_form }}
+
+                    <div id="variation-formset" class="space-y-4">
+                        {% for vform in formset %}
+                            <div class="variation-card rounded-2xl p-5 bg-gray-50 dark:bg-slate-950/40">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Variation Name</label>
+                                        {{ vform.name }}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">SKU Suffix</label>
+                                        {{ vform.sku_suffix }}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Price</label>
+                                        {{ vform.price }}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Quantity</label>
+                                        {{ vform.quantity }}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Dealer Price</label>
+                                        {{ vform.dealer_price }}
+                                    </div>
+
+                                    <div class="flex items-center gap-3 pt-8">
+                                        {{ vform.isunck }}
+                                        <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Has Unique Key</label>
+                                    </div>
+
+                                    <div class="md:col-span-3">
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Unique Keys</label>
+                                        {{ vform.unickkey }}
+
+                                        <div class="mt-3 flex justify-end gap-2">
+                                            <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="unick" data-field-name="{{ vform.unickkey.html_name }}"><i class="fas fa-plus"></i></button>
+                                            <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="unick" data-field-name="{{ vform.unickkey.html_name }}"><i class="fas fa-pen"></i></button>
+                                        </div>
+                                    </div>
+
+                                    {% if vform.instance.pk %}
+                                        <div class="md:col-span-3">
+                                            <label class="inline-flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                                                {{ vform.DELETE }} Delete this variation
+                                            </label>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                {% for hidden in vform.hidden_fields %}
+                                    {{ hidden }}
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <template id="empty-variation-form-template">
+                        <div class="variation-card rounded-2xl p-5 bg-gray-50 dark:bg-slate-950/40">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Variation Name</label>
+                                    {{ formset.empty_form.name }}
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">SKU Suffix</label>
+                                    {{ formset.empty_form.sku_suffix }}
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Price</label>
+                                    {{ formset.empty_form.price }}
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Quantity</label>
+                                    {{ formset.empty_form.quantity }}
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Dealer Price</label>
+                                    {{ formset.empty_form.dealer_price }}
+                                </div>
+
+                                <div class="flex items-center gap-3 pt-8">
+                                    {{ formset.empty_form.isunck }}
+                                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Has Unique Key</label>
+                                </div>
+
+                                <div class="md:col-span-3">
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Unique Keys</label>
+                                    {{ formset.empty_form.unickkey }}
+
+                                    <div class="mt-3 flex justify-end gap-2">
+                                        <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="unick" data-field-name="{{ formset.empty_form.unickkey.html_name }}"><i class="fas fa-plus"></i></button>
+                                        <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="unick" data-field-name="{{ formset.empty_form.unickkey.html_name }}"><i class="fas fa-pen"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% for hidden in formset.empty_form.hidden_fields %}
+                                {{ hidden }}
+                            {% endfor %}
+                        </div>
+                    </template>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
+                    <a href="{% url 'product:product_list' %}" class="px-5 py-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200">
+                        Cancel
+                    </a>
+                    <button type="submit" class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                        {% if object %}Update Product{% else %}Create Product{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const addBtn = document.getElementById("add-variation-row");
+    const totalForms = document.getElementById("id_variations-TOTAL_FORMS");
+    const container = document.getElementById("variation-formset");
+    const template = document.getElementById("empty-variation-form-template");
+
+    if (addBtn && totalForms && container && template) {
+        addBtn.addEventListener("click", function () {
+            const formIndex = parseInt(totalForms.value, 10);
+            const html = template.innerHTML.replace(/__prefix__/g, formIndex);
+            container.insertAdjacentHTML("beforeend", html);
+            totalForms.value = formIndex + 1;
+
+            if (typeof initializeDynamicUI === "function") {
+                initializeDynamicUI(container);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

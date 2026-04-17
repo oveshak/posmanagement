@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Multi Branches - Management{% endblock %}
+{% block app_prefix %}/user{% endblock %}
+{% block page_title %}Multi Branches{% endblock %}
+{% block page_subtitle %}Manage multi branch groups and assigned branches{% endblock %}
+
+{% block content %}
+    {% include "user/partials/multibranch_list_content.html" %}
+{% endblock %}
+

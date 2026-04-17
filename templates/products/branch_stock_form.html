@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block app_prefix %}/product{% endblock %}
+{% block title %}{% if object %}Update Branch Stock{% else %}Create Branch Stock{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+.related-icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s ease;
+}
+.related-icon-btn-create { background: #10b981; color: white; }
+.related-icon-btn-create:hover { background: #059669; }
+.related-icon-btn-edit { background: #3b82f6; color: white; }
+.related-icon-btn-edit:hover { background: #2563eb; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen">
+    <div class="mx-auto max-w-5xl">
+        <div class="mb-6 flex items-center justify-between gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+                    {% if object %}Update Branch Stock{% else %}Create Branch Stock{% endif %}
+                </h2>
+            </div>
+
+            <a href="{% url 'product:branch_stock_list' %}"
+               class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200">
+                <i class="fas fa-arrow-left mr-2"></i> Back
+            </a>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
+            <form method="post" class="p-6 md:p-8 space-y-8">
+                {% csrf_token %}
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Branch</label>
+                        {{ form.stock_branch }}
+                        {% for error in form.stock_branch.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Product</label>
+                        {{ form.product_name }}
+                        {% for error in form.product_name.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Variation</label>
+                        {{ form.product_variation }}
+                        {% for error in form.product_variation.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Quantity</label>
+                        {{ form.quantity }}
+                        {% for error in form.quantity.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Unique Keys</label>
+                        {{ form.unickkey }}
+                        <div class="mt-3 flex justify-end gap-2">
+                            <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="unick" data-field-name="unickkey"><i class="fas fa-plus"></i></button>
+                            <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="unick" data-field-name="unickkey"><i class="fas fa-pen"></i></button>
+                        </div>
+                        {% for error in form.unickkey.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
+                    <a href="{% url 'product:branch_stock_list' %}" class="px-5 py-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200">
+                        Cancel
+                    </a>
+                    <button type="submit" class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                        {% if object %}Update Branch Stock{% else %}Create Branch Stock{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

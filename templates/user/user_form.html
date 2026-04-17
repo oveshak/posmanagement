@@ -1,1405 +1,245 @@
-{% include "base.html" %}
+
+{% extends 'base.html' %}
 {% load static %}
 
-{% block title %}
-    {% if object %}Update User{% else %}Create User{% endif %}
-{% endblock %}
-
-{% block page_title %}
-    {% if object %}Update User{% else %}Create User{% endif %}
-{% endblock %}
-
-{% block page_subtitle %}
-    Manage user information, roles, branches, areas and related assignments
-{% endblock %}
+{% block title %}{% if object %}Update User{% else %}Create User{% endif %}{% endblock %}
+{% block app_prefix %}/user{% endblock %}
+{% block page_title %}{% if object %}Update User{% else %}Create User{% endif %}{% endblock %}
+{% block page_subtitle %}Manage user information, roles, branches, areas and customer groups{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto">
-    <div class="mb-6 flex items-center justify-between gap-4">
-        <div>
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-                {% if object %}Update User{% else %}Create User{% endif %}
-            </h2>
-            <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
-                Fill in the required details below.
-            </p>
+
+
+    <div class=" mx-auto">
+        <div class="mb-6 flex items-center justify-between gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+                    {% if object %}Update User{% else %}Create User{% endif %}
+                </h2>
+                <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
+                    Fill in the required details below.
+                </p>
+            </div>
+
+            <a href="{% url 'user:user_list' %}"
+            class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back to Users
+            </a>
         </div>
 
-        <a href="{% url 'user_list' %}"
-           class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition">
-            <i class="fas fa-arrow-left mr-2"></i>
-            Back to Users
-        </a>
-    </div>
+        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
+            <form method="post" enctype="multipart/form-data" class="p-6 md:p-8 space-y-8">
+                {% csrf_token %}
 
-    <div class="bg-white dark:bg-slate-900 shadow-sm rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
-        <form method="post" enctype="multipart/form-data" class="p-6 md:p-8 space-y-8">
-            {% csrf_token %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Name *</label>
+                        <input type="text" name="name"
+                            value="{% if request.POST.name %}{{ request.POST.name }}{% elif object %}{{ object.name|default:'' }}{% endif %}"
+                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                        {% if errors.name %}<p class="text-sm text-red-600 mt-2">{{ errors.name }}</p>{% endif %}
+                    </div>
 
-                <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Name *</label>
-                    value="{% if request.POST.name %}{{ request.POST.name }}{% elif object %}{{ object.name }}{% endif %}"
-                    {% if errors.name %}<p class="text-sm text-red-600 mt-2">{{ errors.name }}</p>{% endif %}
-                </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Email *</label>
+                        <input type="email" name="email"
+                            value="{% if request.POST.email %}{{ request.POST.email }}{% elif object %}{{ object.email|default:'' }}{% endif %}"
+                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                        {% if errors.email %}<p class="text-sm text-red-600 mt-2">{{ errors.email }}</p>{% endif %}
+                    </div>
 
-                <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Email *</label>
-                    <input type="email" name="email" value="{{ request.POST.email|default:object.email }}"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.email %}<p class="text-sm text-red-600 mt-2">{{ errors.email }}</p>{% endif %}
-                </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Username</label>
+                        <input type="text" name="username"
+                            value="{% if request.POST.username %}{{ request.POST.username }}{% elif object %}{{ object.username|default:'' }}{% endif %}"
+                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                        {% if errors.username %}<p class="text-sm text-red-600 mt-2">{{ errors.username }}</p>{% endif %}
+                    </div>
 
-                <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Username *</label>
-                    <input type="text" name="username" value="{{ request.POST.username|default:object.username }}"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.username %}<p class="text-sm text-red-600 mt-2">{{ errors.username }}</p>{% endif %}
-                </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Phone Number</label>
+                        <input type="text" name="phone_number"
+                            value="{% if request.POST.phone_number %}{{ request.POST.phone_number }}{% elif object %}{{ object.phone_number|default:'' }}{% endif %}"
+                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                        {% if errors.phone_number %}<p class="text-sm text-red-600 mt-2">{{ errors.phone_number }}</p>{% endif %}
+                    </div>
 
-                <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Phone Number</label>
-                    <input type="text" name="phone_number" value="{{ request.POST.phone_number|default:object.phone_number }}"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">
+                            {% if object %}New Password{% else %}Password *{% endif %}
+                        </label>
+                        <input type="password" name="password"
+                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                        {% if errors.password %}<p class="text-sm text-red-600 mt-2">{{ errors.password }}</p>{% endif %}
+                    </div>
 
-                <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">
-                        {% if object %}New Password{% else %}Password *{% endif %}
-                    </label>
-                    <input type="password" name="password"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.password %}<p class="text-sm text-red-600 mt-2">{{ errors.password }}</p>{% endif %}
-                </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">
+                            {% if object %}Confirm New Password{% else %}Confirm Password *{% endif %}
+                        </label>
+                        <input type="password" name="confirm_password"
+                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                        {% if errors.confirm_password %}<p class="text-sm text-red-600 mt-2">{{ errors.confirm_password }}</p>{% endif %}
+                    </div>
 
-                <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Confirm Password</label>
-                    <input type="password" name="confirm_password"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.confirm_password %}<p class="text-sm text-red-600 mt-2">{{ errors.confirm_password }}</p>{% endif %}
-                </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Profile Picture</label>
+                        <input type="file" name="profile_picture"
+                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                    </div>
 
-                <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Branch</label>
-                    <select name="branch" id="id_branch" class="js-enhanced-select w-full rounded-xl border border-gray-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                        <option value="">Select Branch</option>
-                        {% for item in branches %}
-                            <option value="{{ item.id }}"
-                                {% if request.POST.branch == item.id|stringformat:"s" or object.branch_id == item.id %}selected{% endif %}>
-                                {{ item.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">NID Number</label>
+                        <input type="text" name="nid_number"
+                            value="{% if request.POST.nid_number %}{{ request.POST.nid_number }}{% elif object %}{{ object.nid_number|default:'' }}{% endif %}"
+                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                    </div>
 
-                <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Area</label>
-                    <select name="area" id="id_area" class="js-enhanced-select w-full rounded-xl border border-gray-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                        <option value="">Select Area</option>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Branch</label>
+                        <select name="branch" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-select" data-placeholder="Search Branch">
+                            <option value="">---------</option>
+                            {% for item in branches %}
+                                <option value="{{ item.id }}" {% if request.POST.branch == item.id|stringformat:'s' %}selected{% elif object and object.branch_id == item.id %}selected{% endif %}>{{ item.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="mt-3 flex justify-end gap-2">
+                            <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="branch" data-field-name="branch"><i class="fas fa-plus"></i></button>
+                            <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="branch" data-field-name="branch"><i class="fas fa-pen"></i></button>
+                        </div>
+                    </div>
+
+                    {% comment %} <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Area</label>
+                        <select name="area" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-select" data-placeholder="Search Area">
+                            <option value="">---------</option>
+                            {% for item in areas %}
+                                <option value="{{ item.id }}" {% if request.POST.area == item.id|stringformat:'s' %}selected{% elif object and object.area_id == item.id %}selected{% endif %}>{{item.id}}-{{ item.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="mt-3 flex justify-end gap-2">
+                            <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="area" data-field-name="area"><i class="fas fa-plus"></i></button>
+                            <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="area" data-field-name="area"><i class="fas fa-pen"></i></button>
+                        </div>
+                    </div> {% endcomment %}
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Area</label>
+                    <select
+                        name="area"
+                        id="id_area"
+                        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-select"
+                        data-placeholder="Search Area"
+                        data-selected-value="{% if request.POST.area %}{{ request.POST.area }}{% elif object and object.area_id %}{{ object.area_id }}{% endif %}"
+                    >
+                        <option value="">---------</option>
                         {% for item in areas %}
                             <option value="{{ item.id }}"
-                                {% if request.POST.area == item.id|stringformat:"s" or object.area_id == item.id %}selected{% endif %}>
-                                {{ item.name }}
+                                {% if request.POST.area == item.id|stringformat:'s' %}
+                                    selected
+                                {% elif object and object.area_id == item.id %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ item.id }}-{{ item.name }}
                             </option>
                         {% endfor %}
                     </select>
-                    {% if errors.area %}<p class="text-sm text-red-600 mt-2">{{ errors.area }}</p>{% endif %}
-                </div>
 
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Roles</label>
-                    <select name="roles" multiple class="js-enhanced-multiselect w-full rounded-xl border border-gray-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                        {% for item in roles %}
-                            <option value="{{ item.id }}"
-                                {% if request.POST %}
-                                    {% if item.id|stringformat:"s" in request.POST.getlist.roles %}selected{% endif %}
-                                {% else %}
-                                    {% if item in object.roles.all %}selected{% endif %}
-                                {% endif %}>
-                                {{ item.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
+                        <div class="mt-3 flex justify-end gap-2">
+                            <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="area" data-field-name="area">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="area" data-field-name="area">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                        </div>
+                    </div>
 
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Multi Branch</label>
-                    <select name="mult_branch" multiple class="js-enhanced-multiselect w-full rounded-xl border border-gray-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Roles</label>
+                        <select name="roles" multiple class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-multiselect" data-placeholder="Search Roles">
+                            {% for item in roles %}
+                                <option value="{{ item.id }}" {% if item.id|stringformat:'s' in selected_role_ids %}selected{% endif %}>{{ item.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="mt-3 flex justify-end gap-2">
+                            <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="role" data-field-name="roles"><i class="fas fa-plus"></i></button>
+                            <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="role" data-field-name="roles"><i class="fas fa-pen"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Multi Branch</label>
+                    
+                        <select name="mult_branch" multiple class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-multiselect" data-placeholder="Search Multi Branch">
                         {% for item in multibranches %}
-                            <option value="{{ item.id }}"
-                                {% if object and item in object.mult_branch.all %}selected{% endif %}>
-                                {{ item.title }}
-                            </option>
+                            <option value="{{ item.id }}" {% if item.id|stringformat:'s' in selected_mult_branch_ids %}selected{% endif %}>{{ item.title }}</option>
                         {% endfor %}
-                    </select>
-                </div>
-
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Customer Group</label>
-                    <select name="customer_group" multiple class="js-enhanced-multiselect w-full rounded-xl border border-gray-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                        {% for item in customer_groups %}
-                            <option value="{{ item.id }}"
-                                {% if object and item in object.customer_group.all %}selected{% endif %}>
-                                {{ item.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Profile Picture</label>
-                    <input type="file" name="profile_picture"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">NID Number</label>
-                    <input type="text" name="nid_number" value="{{ request.POST.nid_number|default:object.nid_number }}"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">NID Front</label>
-                    <input type="file" name="nid_front"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">NID Back</label>
-                    <input type="file" name="nid_back"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                </div>
-
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Address</label>
-                    <textarea name="address" rows="3"
-                              class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">{{ request.POST.address|default:object.address }}</textarea>
-                </div>
-
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Descriptions</label>
-                    <textarea name="descriptions" rows="3"
-                              class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">{{ request.POST.descriptions|default:object.descriptions }}</textarea>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" name="status" {% if request.POST.status or object.status %}checked{% endif %}>
-                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Status</label>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" name="is_verified" {% if request.POST.is_verified or object.is_verified %}checked{% endif %}>
-                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Is Verified</label>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" name="is_staff" {% if request.POST.is_staff or object.is_staff %}checked{% endif %}>
-                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Is Staff</label>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" name="is_admin" {% if request.POST.is_admin or object.is_admin %}checked{% endif %}>
-                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Is Admin</label>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" name="is_deleted" {% if request.POST.is_deleted or object.is_deleted %}checked{% endif %}>
-                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Is Deleted</label>
-                </div>
-
-            </div>
-
-            <div class="flex flex-col sm:flex-row gap-3 sm:justify-end pt-4 border-t border-gray-200 dark:border-slate-800">
-                <a href="{% url 'user_list' %}"
-                   class="inline-flex items-center justify-center px-5 py-3 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition">
-                    Cancel
-                </a>
-
-                <button type="submit"
-                        class="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-sm transition">
-                    {% if object %}
-                        <i class="fas fa-save mr-2"></i> Update User
-                    {% else %}
-                        <i class="fas fa-plus mr-2"></i> Create User
-                    {% endif %}
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-{% endblock %} 
-
-
-{% comment %} 
-{% load static %}
-
-{% block title %}
-    {% if object and object.pk %}Update User{% else %}Create User{% endif %}
-{% endblock %}
-
-{% block page_title %}
-    {% if object and object.pk %}Update User{% else %}Create User{% endif %}
-{% endblock %}
-
-{% block page_subtitle %}
-    Manage user information, roles, branches, areas and related assignments
-{% endblock %}
-
-{% block content %}
-<div class="max-w-7xl mx-auto">
-    <div class="mb-6 flex items-center justify-between gap-4">
-        <div>
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-                {% if object and object.pk %}Update User{% else %}Create User{% endif %}
-            </h2>
-            <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
-                Fill in the required details below.
-            </p>
-        </div>
-
-        <a href="{% url 'user_list' %}"
-           class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition">
-            <i class="fas fa-arrow-left mr-2"></i>
-            Back to Users
-        </a>
-    </div>
-
-    <div class="bg-white dark:bg-slate-900 shadow-sm rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
-        <form method="post" enctype="multipart/form-data" class="p-6 md:p-8 space-y-8">
-            {% csrf_token %}
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Full Name</label>
-                    <input type="text" name="name"
-                           value="{% if request.POST.name %}{{ request.POST.name }}{% elif object and object.name %}{{ object.name }}{% endif %}"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.name %}<p class="text-sm text-red-600 mt-2">{{ errors.name }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Email <span class="text-red-500">*</span></label>
-                    <input type="email" name="email"
-                           value="{% if request.POST.email %}{{ request.POST.email }}{% elif object and object.email %}{{ object.email }}{% endif %}"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.email %}<p class="text-sm text-red-600 mt-2">{{ errors.email }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Username</label>
-                    <input type="text" name="username"
-                           value="{% if request.POST.username %}{{ request.POST.username }}{% elif object and object.username %}{{ object.username }}{% endif %}"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.username %}<p class="text-sm text-red-600 mt-2">{{ errors.username }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Phone Number</label>
-                    <input type="text" name="phone_number"
-                           value="{% if request.POST.phone_number %}{{ request.POST.phone_number }}{% elif object and object.phone_number %}{{ object.phone_number }}{% endif %}"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.phone_number %}<p class="text-sm text-red-600 mt-2">{{ errors.phone_number }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
-                        {% if object and object.pk %}New Password{% else %}Password <span class="text-red-500">*</span>{% endif %}
-                    </label>
-                    <input type="password" name="password"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.password %}<p class="text-sm text-red-600 mt-2">{{ errors.password }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Confirm Password</label>
-                    <input type="password" name="confirm_password"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.confirm_password %}<p class="text-sm text-red-600 mt-2">{{ errors.confirm_password }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Branch</label>
-                    <select name="branch" id="id_branch"
-                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-select"
-                            data-placeholder="Select Branch">
-                        <option value="">Select Branch</option>
-                        {% for item in branches %}
-                            <option value="{{ item.id }}"
-                                {% if request.POST.branch == item.id|stringformat:"s" or object and object.branch_id == item.id %}selected{% endif %}>
-                                {{ item.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Area</label>
-                    <select name="area" id="id_area"
-                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-select"
-                            data-placeholder="Select Area">
-                        <option value="">Select Area</option>
-                        {% for item in areas %}
-                            <option value="{{ item.id }}"
-                                {% if request.POST.area == item.id|stringformat:"s" or object and object.area_id == item.id %}selected{% endif %}>
-                                {{ item.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                    {% if errors.area %}<p class="text-sm text-red-600 mt-2">{{ errors.area }}</p>{% endif %}
-                </div>
-
-               <div class="md:col-span-2">
-    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Roles</label>
-    <select name="roles" multiple
-            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-multiselect"
-            data-placeholder="Select Roles">
-        {% for item in roles %}
-            <option value="{{ item.id }}"
-                {% if item.id|stringformat:"s" in selected_role_ids %}selected{% endif %}>
-                {{ item.name }}
-            </option>
-        {% endfor %}
-    </select>
-</div>
-
-                <div class="md:col-span-2">
-    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Multi Branch</label>
-    <select name="mult_branch" multiple
-            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-multiselect"
-            data-placeholder="Select Multi Branch">
-        {% for item in multibranches %}
-            <option value="{{ item.id }}"
-                {% if item.id|stringformat:"s" in selected_mult_branch_ids %}selected{% endif %}>
-                {{ item.title }}
-            </option>
-        {% endfor %}
-    </select>
-</div>
-
-                <div class="md:col-span-2">
-    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Customer Group</label>
-    <select name="customer_group" multiple
-            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-multiselect"
-            data-placeholder="Select Customer Group">
-        {% for item in customer_groups %}
-            <option value="{{ item.id }}"
-                {% if item.id|stringformat:"s" in selected_customer_group_ids %}selected{% endif %}>
-                {{ item.name }}
-            </option>
-        {% endfor %}
-    </select>
-    {% if errors.customer_group %}<p class="text-sm text-red-600 mt-2">{{ errors.customer_group }}</p>{% endif %}
-</div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Profile Picture</label>
-                    <input type="file" name="profile_picture"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">NID Number</label>
-                    <input type="text" name="nid_number"
-                           value="{% if request.POST.nid_number %}{{ request.POST.nid_number }}{% elif object and object.nid_number %}{{ object.nid_number }}{% endif %}"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">NID Front</label>
-                    <input type="file" name="nid_front"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">NID Back</label>
-                    <input type="file" name="nid_back"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                </div>
-
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Address</label>
-                    <textarea name="address" rows="3"
-                              class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">{% if request.POST.address %}{{ request.POST.address }}{% elif object and object.address %}{{ object.address }}{% endif %}</textarea>
-                </div>
-
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Descriptions</label>
-                    <textarea name="descriptions" rows="4"
-                              class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">{% if request.POST.descriptions %}{{ request.POST.descriptions }}{% elif object and object.descriptions %}{{ object.descriptions|striptags }}{% endif %}</textarea>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" name="status"
-                           class="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                           {% if request.POST.status or object and object.status %}checked{% endif %}>
-                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Active Status</label>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" name="is_verified"
-                           class="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                           {% if request.POST.is_verified or object and object.is_verified %}checked{% endif %}>
-                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Verified</label>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" name="is_staff"
-                           class="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                           {% if request.POST.is_staff or object and object.is_staff %}checked{% endif %}>
-                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Staff Status</label>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" name="is_admin"
-                           class="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                           {% if request.POST.is_admin or object and object.is_admin %}checked{% endif %}>
-                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Admin Status</label>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" name="is_deleted"
-                           class="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                           {% if request.POST.is_deleted or object and object.is_deleted %}checked{% endif %}>
-                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Deleted</label>
-                </div>
-            </div>
-
-            <div class="flex flex-col sm:flex-row gap-3 sm:justify-end pt-4 border-t border-gray-200 dark:border-slate-800">
-                <a href="{% url 'user_list' %}"
-                   class="inline-flex items-center justify-center px-5 py-3 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition">
-                    Cancel
-                </a>
-
-                <button type="submit"
-                        class="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-sm transition">
-                    {% if object and object.pk %}
-                        <i class="fas fa-save mr-2"></i> Update User
-                    {% else %}
-                        <i class="fas fa-plus mr-2"></i> Create User
-                    {% endif %}
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-.select2-container { width: 100% !important; }
-.select2-container .select2-selection--single,
-.select2-container .select2-selection--multiple {
-    min-height: 48px !important;
-    border-radius: 14px !important;
-    border: 1px solid #334155 !important;
-    background: #0f172a !important;
-    color: #e2e8f0 !important;
-}
-.select2-container .select2-selection--single {
-    display: flex !important;
-    align-items: center !important;
-    padding: 0 12px !important;
-}
-.select2-container .select2-selection--multiple {
-    padding: 6px 8px !important;
-}
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    color: #e2e8f0 !important;
-    line-height: 46px !important;
-}
-.select2-container--default .select2-selection--single .select2-selection__placeholder {
-    color: #94a3b8 !important;
-}
-.select2-container--default .select2-selection--multiple .select2-selection__choice {
-    background: #2563eb !important;
-    color: #fff !important;
-    border: none !important;
-    border-radius: 999px !important;
-}
-.select2-dropdown {
-    border-radius: 14px !important;
-    border: 1px solid #334155 !important;
-    background: #0f172a !important;
-    color: #e2e8f0 !important;
-}
-.select2-search--dropdown .select2-search__field {
-    border: 1px solid #334155 !important;
-    border-radius: 10px !important;
-    background: #020617 !important;
-    color: #e2e8f0 !important;
-    padding: 8px 10px !important;
-}
-.select2-results__option--highlighted[aria-selected] {
-    background: #2563eb !important;
-}
-</style>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    function initMainSelect2() {
-        if (typeof window.$ === 'undefined' || !window.$.fn.select2) return;
-
-        document.querySelectorAll('.js-enhanced-select').forEach(function (select) {
-            if (window.$(select).data('select2')) return;
-            window.$(select).select2({
-                width: '100%',
-                placeholder: select.getAttribute('data-placeholder') || 'Search and select',
-                allowClear: true,
-                minimumResultsForSearch: 0
-            });
-        });
-
-        document.querySelectorAll('.js-enhanced-multiselect').forEach(function (select) {
-            if (window.$(select).data('select2')) return;
-            window.$(select).select2({
-                width: '100%',
-                placeholder: select.getAttribute('data-placeholder') || 'Search and select',
-                minimumResultsForSearch: 0
-            });
-        });
-    }
-
-    async function loadAreasForSelect(areaSelect, branchId, selectedValue = '') {
-        if (!areaSelect) return;
-
-        areaSelect.innerHTML = '<option value="">Select Area</option>';
-
-        if (typeof window.$ !== 'undefined' && window.$.fn.select2 && window.$(areaSelect).data('select2')) {
-            window.$(areaSelect).val(null).trigger('change');
-        }
-
-        if (!branchId) return;
-
-        try {
-            const response = await fetch(`/user/ajax/options/areas/?branch_id=${branchId}`, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-
-            if (!response.ok) return;
-
-            const data = await response.json();
-            const areas = Array.isArray(data) ? data : (data.results || []);
-
-            areas.forEach(item => {
-                const option = new Option(item.text || item.name || item.label, item.id, false, false);
-                areaSelect.add(option);
-            });
-
-            if (selectedValue) {
-                areaSelect.value = selectedValue;
-            }
-
-            if (typeof window.$ !== 'undefined' && window.$.fn.select2 && window.$(areaSelect).data('select2')) {
-                window.$(areaSelect).trigger('change');
-            }
-        } catch (error) {
-            console.error('Failed to load areas:', error);
-        }
-    }
-
-    const branchField = document.getElementById('id_branch');
-    const areaField = document.getElementById('id_area');
-
-    if (branchField && areaField) {
-        branchField.addEventListener('change', function () {
-            loadAreasForSelect(areaField, this.value, '');
-        });
-    }
-
-    initMainSelect2();
-});
-</script>
-{% endblock %} 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-{% comment %} 
-
-{% load static %}
-
-{% block title %}
-    {% if object and object.pk %}Update User{% else %}Create User{% endif %}
-{% endblock %}
-
-{% block page_title %}
-    {% if object and object.pk %}Update User{% else %}Create User{% endif %}
-{% endblock %}
-
-{% block page_subtitle %}
-    Manage user information, roles, branches, areas and related assignments
-{% endblock %}
-
-{% block content %}
-<div class="max-w-7xl mx-auto">
-    <div class="mb-6 flex items-center justify-between gap-4">
-        <div>
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-                {% if object and object.pk %}Update User{% else %}Create User{% endif %}
-            </h2>
-            <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
-                Fill in the required details below.
-            </p>
-        </div>
-
-        <a href="{% url 'user_list' %}"
-           class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition">
-            <i class="fas fa-arrow-left mr-2"></i>
-            Back to Users
-        </a>
-    </div>
-
-    <div class="bg-white dark:bg-slate-900 shadow-sm rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
-        <form method="post" enctype="multipart/form-data" class="p-6 md:p-8 space-y-8">
-            {% csrf_token %}
-
-            {% if errors.non_field %}
-                <div class="rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 dark:bg-red-950 dark:border-red-900 dark:text-red-300">
-                    {{ errors.non_field }}
-                </div>
-            {% endif %}
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Full Name</label>
-                    <input type="text" name="name"
-                           value="{% if request.POST.name %}{{ request.POST.name }}{% elif object and object.name %}{{ object.name }}{% endif %}"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.name %}<p class="text-sm text-red-600 mt-2">{{ errors.name }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
-                        Email <span class="text-red-500">*</span>
-                    </label>
-                    <input type="email" name="email"
-                           value="{% if request.POST.email %}{{ request.POST.email }}{% elif object and object.email %}{{ object.email }}{% endif %}"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.email %}<p class="text-sm text-red-600 mt-2">{{ errors.email }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Username</label>
-                    <input type="text" name="username"
-                           value="{% if request.POST.username %}{{ request.POST.username }}{% elif object and object.username %}{{ object.username }}{% endif %}"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.username %}<p class="text-sm text-red-600 mt-2">{{ errors.username }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Phone Number</label>
-                    <input type="text" name="phone_number"
-                           value="{% if request.POST.phone_number %}{{ request.POST.phone_number }}{% elif object and object.phone_number %}{{ object.phone_number }}{% endif %}"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.phone_number %}<p class="text-sm text-red-600 mt-2">{{ errors.phone_number }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
-                        {% if object and object.pk %}New Password{% else %}Password <span class="text-red-500">*</span>{% endif %}
-                    </label>
-                    <input type="password" name="password"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.password %}<p class="text-sm text-red-600 mt-2">{{ errors.password }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Confirm Password</label>
-                    <input type="password" name="confirm_password"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                    {% if errors.confirm_password %}<p class="text-sm text-red-600 mt-2">{{ errors.confirm_password }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Branch</label>
-                    <select name="branch" id="id_branch"
-                            class="js-enhanced-select w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-                            data-placeholder="Search Branch"
-                            data-related-model="branch">
-                        <option value="">Select Branch</option>
-                        {% for item in branches %}
-                            <option value="{{ item.id }}"
-                                {% if request.POST.branch == item.id|stringformat:"s" or object and object.branch_id == item.id %}selected{% endif %}>
-                                {{ item.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-
-                    <div class="related-widget-actions flex items-center gap-2 justify-end mt-3">
-                        <button type="button"
-                                class="related-create-btn related-icon-btn related-icon-btn-create"
-                                data-model="branch"
-                                data-field-name="branch"
-                                title="Create Branch">
-                            <i class="fas fa-plus"></i>
-                        </button>
-
-                        <button type="button"
-                                class="related-edit-btn related-icon-btn related-icon-btn-edit"
-                                data-model="branch"
-                                data-field-name="branch"
-                                title="Edit selected Branch">
-                            <i class="fas fa-pen"></i>
-                        </button>
+                        </select>
+                        <div class="mt-3 flex justify-end gap-2">
+                            <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="multibranch" data-field-name="mult_branch"><i class="fas fa-plus"></i></button>
+                            <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="multibranch" data-field-name="mult_branch"><i class="fas fa-pen"></i></button>
+                        </div>
                     </div>
 
-                    {% if errors.branch %}<p class="text-sm text-red-600 mt-2">{{ errors.branch }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Area</label>
-                    <select name="area" id="id_area"
-                            class="js-enhanced-select w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-                            data-placeholder="Search Area"
-                            data-related-model="area">
-                        <option value="">Select Area</option>
-                        {% for item in areas %}
-                            <option value="{{ item.id }}"
-                                {% if request.POST.area == item.id|stringformat:"s" or object and object.area_id == item.id %}selected{% endif %}>
-                                {{ item.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-
-                    <div class="related-widget-actions flex items-center gap-2 justify-end mt-3">
-                        <button type="button"
-                                class="related-create-btn related-icon-btn related-icon-btn-create"
-                                data-model="area"
-                                data-field-name="area"
-                                title="Create Area">
-                            <i class="fas fa-plus"></i>
-                        </button>
-
-                        <button type="button"
-                                class="related-edit-btn related-icon-btn related-icon-btn-edit"
-                                data-model="area"
-                                data-field-name="area"
-                                title="Edit selected Area">
-                            <i class="fas fa-pen"></i>
-                        </button>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Customer Group</label>
+                        <select name="customer_group" multiple class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-multiselect" data-placeholder="Search Customer Group">
+                            {% for item in customer_groups %}
+                                <option value="{{ item.id }}" {% if item.id|stringformat:'s' in selected_customer_group_ids %}selected{% endif %}>{{ item.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="mt-3 flex justify-end gap-2">
+                            <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="customergroup" data-field-name="customer_group"><i class="fas fa-plus"></i></button>
+                            <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="customergroup" data-field-name="customer_group"><i class="fas fa-pen"></i></button>
+                        </div>
                     </div>
 
-                    {% if errors.area %}<p class="text-sm text-red-600 mt-2">{{ errors.area }}</p>{% endif %}
-                </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Address</label>
+                        <textarea name="address" rows="3" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">{% if request.POST.address %}{{ request.POST.address }}{% elif object %}{{ object.address|default:'' }}{% endif %}</textarea>
+                    </div>
 
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Roles</label>
-                    <select name="roles" id="id_roles" multiple
-                            class="js-enhanced-multiselect w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-                            data-placeholder="Search Roles"
-                            data-related-model="role">
-                        {% for item in roles %}
-                            <option value="{{ item.id }}"
-                                {% if item.id|stringformat:"s" in selected_role_ids %}selected{% endif %}>
-                                {{ item.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Descriptions</label>
+                        <textarea name="descriptions" rows="4" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">{% if request.POST.descriptions %}{{ request.POST.descriptions }}{% elif object %}{{ object.descriptions|default:'' }}{% endif %}</textarea>
+                    </div>
 
-                    <div class="related-widget-actions flex items-center gap-2 justify-end mt-3">
-                        <button type="button"
-                                class="related-create-btn related-icon-btn related-icon-btn-create"
-                                data-model="role"
-                                data-field-name="roles"
-                                title="Create Role">
-                            <i class="fas fa-plus"></i>
-                        </button>
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" name="status" value="1" {% if request.POST.status %}checked{% elif object and object.status %}checked{% endif %}>
+                        <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Active Status</label>
+                    </div>
 
-                        <button type="button"
-                                class="related-edit-btn related-icon-btn related-icon-btn-edit"
-                                data-model="role"
-                                data-field-name="roles"
-                                title="Edit selected Role">
-                            <i class="fas fa-pen"></i>
-                        </button>
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" name="is_verified" value="1" {% if request.POST.is_verified %}checked{% elif object and object.is_verified %}checked{% endif %}>
+                        <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Verified</label>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" name="is_staff" value="1" {% if request.POST.is_staff %}checked{% elif object and object.is_staff %}checked{% endif %}>
+                        <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Staff</label>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" name="is_admin" value="1" {% if request.POST.is_admin %}checked{% elif object and object.is_admin %}checked{% endif %}>
+                        <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Admin</label>
                     </div>
                 </div>
 
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Multi Branch</label>
-                    <select name="mult_branch" id="id_mult_branch" multiple
-                            class="js-enhanced-multiselect w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-                            data-placeholder="Search Multi Branch"
-                            data-related-model="multibranch">
-                        {% for item in multibranches %}
-                            <option value="{{ item.id }}"
-                                {% if item.id|stringformat:"s" in selected_mult_branch_ids %}selected{% endif %}>
-                                {{ item.title }}
-                            </option>
-                        {% endfor %}
-                    </select>
-
-                    <div class="related-widget-actions flex items-center gap-2 justify-end mt-3">
-                        <button type="button"
-                                class="related-create-btn related-icon-btn related-icon-btn-create"
-                                data-model="multibranch"
-                                data-field-name="mult_branch"
-                                title="Create Multi Branch">
-                            <i class="fas fa-plus"></i>
-                        </button>
-
-                        <button type="button"
-                                class="related-edit-btn related-icon-btn related-icon-btn-edit"
-                                data-model="multibranch"
-                                data-field-name="mult_branch"
-                                title="Edit selected Multi Branch">
-                            <i class="fas fa-pen"></i>
-                        </button>
-                    </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
+                    <a href="{% url 'user:user_list' %}" class="px-5 py-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-700 transition">
+                        Cancel
+                    </a>
+                    <button type="submit" class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition">
+                        {% if object %}Update User{% else %}Create User{% endif %}
+                    </button>
                 </div>
-
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Customer Group</label>
-                    <select name="customer_group" id="id_customer_group" multiple
-                            class="js-enhanced-multiselect w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-                            data-placeholder="Search Customer Group"
-                            data-related-model="customergroup">
-                        {% for item in customer_groups %}
-                            <option value="{{ item.id }}"
-                                {% if item.id|stringformat:"s" in selected_customer_group_ids %}selected{% endif %}>
-                                {{ item.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-
-                    <div class="related-widget-actions flex items-center gap-2 justify-end mt-3">
-                        <button type="button"
-                                class="related-create-btn related-icon-btn related-icon-btn-create"
-                                data-model="customergroup"
-                                data-field-name="customer_group"
-                                title="Create Customer Group">
-                            <i class="fas fa-plus"></i>
-                        </button>
-
-                        <button type="button"
-                                class="related-edit-btn related-icon-btn related-icon-btn-edit"
-                                data-model="customergroup"
-                                data-field-name="customer_group"
-                                title="Edit selected Customer Group">
-                            <i class="fas fa-pen"></i>
-                        </button>
-                    </div>
-
-                    {% if errors.customer_group %}<p class="text-sm text-red-600 mt-2">{{ errors.customer_group }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Profile Picture</label>
-                    <input type="file" name="profile_picture"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">NID Number</label>
-                    <input type="text" name="nid_number"
-                           value="{% if request.POST.nid_number %}{{ request.POST.nid_number }}{% elif object and object.nid_number %}{{ object.nid_number }}{% endif %}"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">NID Front</label>
-                    <input type="file" name="nid_front"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">NID Back</label>
-                    <input type="file" name="nid_back"
-                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                </div>
-
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Address</label>
-                    <textarea name="address" rows="3"
-                              class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">{% if request.POST.address %}{{ request.POST.address }}{% elif object and object.address %}{{ object.address }}{% endif %}</textarea>
-                </div>
-
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Descriptions</label>
-                    <textarea name="descriptions" rows="4"
-                              class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white">{% if request.POST.descriptions %}{{ request.POST.descriptions }}{% elif object and object.descriptions %}{{ object.descriptions|striptags }}{% endif %}</textarea>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" name="status"
-                           class="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                           {% if request.POST.status or object and object.status %}checked{% endif %}>
-                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Active Status</label>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" name="is_verified"
-                           class="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                           {% if request.POST.is_verified or object and object.is_verified %}checked{% endif %}>
-                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Verified</label>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" name="is_staff"
-                           class="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                           {% if request.POST.is_staff or object and object.is_staff %}checked{% endif %}>
-                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Staff Status</label>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" name="is_admin"
-                           class="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                           {% if request.POST.is_admin or object and object.is_admin %}checked{% endif %}>
-                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Admin Status</label>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" name="is_deleted"
-                           class="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                           {% if request.POST.is_deleted or object and object.is_deleted %}checked{% endif %}>
-                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Deleted</label>
-                </div>
-            </div>
-
-            <div class="flex flex-col sm:flex-row gap-3 sm:justify-end pt-4 border-t border-gray-200 dark:border-slate-800">
-                <a href="{% url 'user_list' %}"
-                   class="inline-flex items-center justify-center px-5 py-3 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition">
-                    Cancel
-                </a>
-
-                <button type="submit"
-                        class="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-sm transition">
-                    {% if object and object.pk %}
-                        <i class="fas fa-save mr-2"></i> Update User
-                    {% else %}
-                        <i class="fas fa-plus mr-2"></i> Create User
-                    {% endif %}
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div id="modal-container" class="fixed inset-0 z-[9999] hidden bg-black/50 backdrop-blur-sm">
-    <div class="flex items-center justify-center min-h-screen px-2 sm:px-4 pt-4 pb-20 text-center">
-        <div class="fixed inset-0 transition-opacity" id="modal-backdrop"></div>
-
-        <div id="modal-content"
-             class="relative inline-block w-full max-w-md sm:max-w-xl md:max-w-2xl p-4 sm:p-6 my-4 sm:my-8 overflow-hidden text-left align-middle transition-all transform bg-white dark:bg-slate-900 shadow-2xl rounded-2xl border border-gray-200 dark:border-slate-800">
-            <div id="modal-body"></div>
+            </form>
         </div>
     </div>
-</div>
+
 {% endblock %}
 
-{% block extra_css %}
-<style>
-.related-widget-actions {
-    min-height: 2.5rem;
-}
-
-.related-icon-btn {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 0.75rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid transparent;
-    color: #fff;
-    transition: all 0.2s ease;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
-}
-
-.related-icon-btn i {
-    font-size: 0.85rem;
-}
-
-.related-icon-btn-create {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-}
-
-.related-icon-btn-create:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 22px rgba(34, 197, 94, 0.28);
-}
-
-.related-icon-btn-edit {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-}
-
-.related-icon-btn-edit:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 22px rgba(245, 158, 11, 0.28);
-}
-
-.select2-container {
-    width: 100% !important;
-}
-
-.select2-container .select2-selection--single {
-    min-height: 48px !important;
-    border-radius: 14px !important;
-    border: 1px solid #334155 !important;
-    background: #0f172a !important;
-    display: flex !important;
-    align-items: center !important;
-    padding: 0 12px !important;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
-}
-
-.select2-container .select2-selection--multiple {
-    min-height: 48px !important;
-    border-radius: 14px !important;
-    border: 1px solid #334155 !important;
-    background: #0f172a !important;
-    padding: 6px 8px !important;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    color: #e2e8f0 !important;
-    line-height: 46px !important;
-    padding-left: 0 !important;
-    padding-right: 24px !important;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__placeholder {
-    color: #94a3b8 !important;
-}
-
-.select2-container--default .select2-selection--multiple .select2-selection__choice {
-    background: #2563eb !important;
-    border: none !important;
-    color: #fff !important;
-    border-radius: 999px !important;
-    padding: 3px 10px !important;
-    margin-top: 4px !important;
-}
-
-.select2-dropdown {
-    border-radius: 14px !important;
-    border: 1px solid #334155 !important;
-    overflow: hidden !important;
-    background: #0f172a !important;
-    color: #e2e8f0 !important;
-}
-
-.select2-search--dropdown .select2-search__field {
-    border: 1px solid #334155 !important;
-    border-radius: 10px !important;
-    background: #020617 !important;
-    color: #e2e8f0 !important;
-    padding: 8px 10px !important;
-}
-
-.select2-results__option--highlighted[aria-selected] {
-    background: #2563eb !important;
-}
-</style>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const modalContainer = document.getElementById('modal-container');
-    const modalBody = document.getElementById('modal-body');
-    const modalStack = [];
-
-    function initSelect2(scope = document) {
-        if (typeof window.$ === 'undefined' || !window.$.fn.select2) return;
-
-        scope.querySelectorAll('.js-enhanced-select').forEach(function (select) {
-            if (window.$(select).data('select2')) return;
-
-            window.$(select).select2({
-                width: '100%',
-                placeholder: select.getAttribute('data-placeholder') || 'Search and select',
-                allowClear: true,
-                minimumResultsForSearch: 0,
-                dropdownParent: window.$(select).closest('#modal-content').length
-                    ? window.$('#modal-content')
-                    : window.$('body')
-            });
-        });
-
-        scope.querySelectorAll('.js-enhanced-multiselect').forEach(function (select) {
-            if (window.$(select).data('select2')) return;
-
-            window.$(select).select2({
-                width: '100%',
-                placeholder: select.getAttribute('data-placeholder') || 'Search and select',
-                minimumResultsForSearch: 0,
-                dropdownParent: window.$(select).closest('#modal-content').length
-                    ? window.$('#modal-content')
-                    : window.$('body')
-            });
-        });
-    }
-
-    function getFieldElement(fieldName) {
-        return document.getElementById(`id_${fieldName}`) || document.querySelector(`[name="${fieldName}"]`);
-    }
-
-    function getSelectedValue(fieldEl) {
-        if (!fieldEl) return '';
-        if (fieldEl.multiple) {
-            return Array.from(fieldEl.selectedOptions).map(opt => opt.value).filter(Boolean);
-        }
-        return fieldEl.value || '';
-    }
-
-    function ensureOption(select, value, text, selected = true) {
-        if (!select) return;
-
-        let existing = Array.from(select.options).find(opt => String(opt.value) === String(value));
-
-        if (!existing) {
-            existing = new Option(text, value, false, false);
-            select.add(existing);
-        } else {
-            existing.text = text;
-        }
-
-        if (select.multiple) {
-            existing.selected = selected;
-        } else {
-            select.value = value;
-        }
-
-        if (typeof window.$ !== 'undefined' && window.$.fn.select2) {
-            window.$(select).trigger('change');
-        } else {
-            select.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-    }
-
-    function buildModalUrl(model, pk = '') {
-        if (pk) {
-            return `/user/ajax/related/${model}/${pk}/edit/`;
-        }
-        return `/user/ajax/related/${model}/create/`;
-    }
-
-    function buildQueryParams(fieldName) {
-        const params = new URLSearchParams();
-
-        const branchField = getFieldElement('branch');
-        const areaField = getFieldElement('area');
-
-        if (branchField && branchField.value) {
-            params.set('branch_id', branchField.value);
-        }
-
-        if (areaField && areaField.value) {
-            params.set('area_id', areaField.value);
-        }
-
-        return params.toString();
-    }
-
-    function showModalContainer() {
-        if (!modalContainer) return;
-        modalContainer.classList.remove('hidden');
-        modalContainer.classList.add('flex');
-        document.body.classList.add('overflow-hidden');
-    }
-
-    function hideModalContainer() {
-        if (!modalContainer) return;
-        modalContainer.classList.add('hidden');
-        modalContainer.classList.remove('flex');
-        document.body.classList.remove('overflow-hidden');
-        modalBody.innerHTML = '';
-    }
-
-    async function openRelatedModal(model, fieldName, pk = '') {
-        try {
-            const url = buildModalUrl(model, pk);
-            const query = buildQueryParams(fieldName);
-            const finalUrl = query ? `${url}?${query}` : url;
-
-            const response = await fetch(finalUrl, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-
-            const data = await response.json();
-
-            if (!response.ok || !data.success) {
-                alert(data.message || 'Failed to open modal.');
-                return;
-            }
-
-            modalStack.push({ model, fieldName, pk });
-            modalBody.innerHTML = data.html;
-            showModalContainer();
-
-            initSelect2(modalBody);
-            bindModalForm();
-        } catch (error) {
-            console.error('Open modal error:', error);
-            alert('Failed to open modal.');
-        }
-    }
-
-    function closeTopModal() {
-        if (modalStack.length > 0) {
-            modalStack.pop();
-        }
-
-        if (modalStack.length === 0) {
-            hideModalContainer();
-        }
-    }
-
-    function attachRelatedButtonEvents(scope = document) {
-        scope.querySelectorAll('.related-create-btn').forEach(btn => {
-            if (btn.dataset.bound === '1') return;
-            btn.dataset.bound = '1';
-
-            btn.addEventListener('click', async function () {
-                const model = this.dataset.model;
-                const fieldName = this.dataset.fieldName;
-                await openRelatedModal(model, fieldName);
-            });
-        });
-
-        scope.querySelectorAll('.related-edit-btn').forEach(btn => {
-            if (btn.dataset.bound === '1') return;
-            btn.dataset.bound = '1';
-
-            btn.addEventListener('click', async function () {
-                const model = this.dataset.model;
-                const fieldName = this.dataset.fieldName;
-                const fieldEl = getFieldElement(fieldName);
-
-                if (!fieldEl) {
-                    alert('Field not found.');
-                    return;
-                }
-
-                let selectedValue = '';
-
-                if (fieldEl.multiple) {
-                    const selected = getSelectedValue(fieldEl);
-                    selectedValue = selected.length ? selected[selected.length - 1] : '';
-                } else {
-                    selectedValue = fieldEl.value;
-                }
-
-                if (!selectedValue) {
-                    alert('Please select an item first.');
-                    return;
-                }
-
-                await openRelatedModal(model, fieldName, selectedValue);
-            });
-        });
-    }
-
-    function applySavedItemToField(fieldName, payload) {
-        const fieldEl = getFieldElement(fieldName);
-        if (!fieldEl || !payload || !payload.item) return;
-
-        ensureOption(fieldEl, payload.item.id, payload.item.text, true);
-
-        if (fieldName === 'area' && payload.branch) {
-            const branchField = getFieldElement('branch');
-            ensureOption(branchField, payload.branch.id, payload.branch.text, true);
-        }
-
-        if (fieldName === 'customer_group') {
-            if (payload.branch) {
-                const branchField = getFieldElement('branch');
-                ensureOption(branchField, payload.branch.id, payload.branch.text, true);
-            }
-            if (payload.area) {
-                const areaField = getFieldElement('area');
-                ensureOption(areaField, payload.area.id, payload.area.text, true);
-            }
-        }
-    }
-
-    function bindModalForm() {
-        const modalForm = modalBody.querySelector('form');
-        if (!modalForm) return;
-
-        initSelect2(modalBody);
-        attachRelatedButtonEvents(modalBody);
-
-        const cancelBtn = modalBody.querySelector('[data-modal-close]');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', function (e) {
-                e.preventDefault();
-                closeTopModal();
-            });
-        }
-
-        modalForm.addEventListener('submit', async function (e) {
-            e.preventDefault();
-
-            try {
-                const formData = new FormData(modalForm);
-                const currentModal = modalStack[modalStack.length - 1];
-                const url = buildModalUrl(currentModal.model, currentModal.pk);
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-
-                const data = await response.json();
-
-                if (response.ok && data.success) {
-                    applySavedItemToField(currentModal.fieldName, data);
-                    closeTopModal();
-                    return;
-                }
-
-                if (data.html) {
-                    modalBody.innerHTML = data.html;
-                    bindModalForm();
-                } else {
-                    alert(data.message || 'Save failed.');
-                }
-            } catch (error) {
-                console.error('Submit modal form error:', error);
-                alert('Save failed.');
-            }
-        });
-    }
-
-    if (modalContainer) {
-        modalContainer.addEventListener('click', function (e) {
-            if (e.target === modalContainer) {
-                closeTopModal();
-            }
-        });
-    }
-
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && modalStack.length) {
-            closeTopModal();
-        }
-    });
-
-    initSelect2(document);
-    attachRelatedButtonEvents(document);
-});
-</script>
-{% endblock %} {% endcomment %}

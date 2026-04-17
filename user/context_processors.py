@@ -84,42 +84,53 @@
 
 
 
-from .models import Menu
+# from .models import Menu
 
 
-def sidebar_menus(request):
-    user = getattr(request, "user", None)
+# def sidebar_menus(request):
+#     user = getattr(request, "user", None)
 
-    if not user or not user.is_authenticated:
-        return {"sidebar_menus": []}
+#     if not user or not user.is_authenticated:
+#         return {"sidebar_menus": []}
 
-    if getattr(user, "is_superuser", False) or getattr(user, "is_admin", False):
-        allowed_ids = list(
-            Menu.objects.filter(is_active=True).values_list("id", flat=True)
-        )
-    else:
-        allowed_ids = list(
-            Menu.objects.filter(
-                is_active=True,
-                role_menu_items__user_roles=user
-            ).distinct().values_list("id", flat=True)
-        )
+#     if getattr(user, "is_superuser", False) or getattr(user, "is_admin", False):
+#         allowed_ids = list(
+#             Menu.objects.filter(is_active=True).values_list("id", flat=True)
+#         )
+#     else:
+#         allowed_ids = list(
+#             Menu.objects.filter(
+#                 is_active=True,
+#                 role_menu_items__user_roles=user
+#             ).distinct().values_list("id", flat=True)
+#         )
 
-    menus = Menu.objects.filter(
-        id__in=allowed_ids,
-        is_active=True
-    ).prefetch_related("submenus").order_by("order", "name")
+#     menus = Menu.objects.filter(
+#         id__in=allowed_ids,
+#         is_active=True
+#     ).prefetch_related("submenus").order_by("order", "name")
 
-    roots = []
-    for menu in menus.filter(parent__isnull=True):
-        children = [child for child in menu.submenus.all() if child.id in allowed_ids]
-        roots.append({
-            "menu": menu,
-            "children": children
-        })
+#     roots = []
+#     for menu in menus.filter(parent__isnull=True):
+#         children = [child for child in menu.submenus.all() if child.id in allowed_ids]
+#         roots.append({
+#             "menu": menu,
+#             "children": children
+#         })
 
-    return {"sidebar_menus": roots}
+#     return {"sidebar_menus": roots}
 
 
-def user_menus_context(request):
-    return sidebar_menus(request)
+# def user_menus_context(request):
+#     return sidebar_menus(request)
+
+
+
+
+from user.utils import get_sidebar_menus_for_user
+
+
+def sidebar_menu_context(request):
+    return {
+        "sidebar_menus": get_sidebar_menus_for_user(request.user)
+    }

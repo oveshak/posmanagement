@@ -42,9 +42,10 @@ INSTALLED_APPS = [
 
     # Local apps
     'globalapp',
-    
+   
     'dashboard',
     'user',
+    'product',
 ]
 
 MIDDLEWARE = [
@@ -71,7 +72,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'user.context_processors.user_menus_context',
+                'user.context_processors.sidebar_menu_context',
             ],
         },
     },
@@ -146,6 +147,12 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Authentication
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'dashboard'
-LOGOUT_REDIRECT_URL = 'login'
+# LOGIN_URL = 'login'
+# LOGIN_REDIRECT_URL = 'dashboard'
+# LOGOUT_REDIRECT_URL = 'login'
+
+
+
+LOGIN_URL = "/user/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/user/login/"

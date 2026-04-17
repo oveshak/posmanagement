@@ -1,0 +1,70 @@
+<div id="main-content" class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Purchases</h1>
+            <p class="text-sm text-gray-500 dark:text-slate-400">Manage purchases and purchase items</p>
+        </div>
+        <a href="{% url 'purchase_create' %}"
+           class="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 font-semibold">
+            + Create Purchase
+        </a>
+    </div>
+
+    <form method="get"
+          data-filter-form="true"
+          hx-get="{% url 'purchase_list' %}"
+          hx-target="#main-content"
+          hx-select="#main-content"
+          hx-swap="outerHTML"
+          hx-push-url="true"
+          class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-200 dark:border-slate-800">
+        <input type="text" name="search" value="{{ selected_search }}" placeholder="Search supplier..."
+               class="rounded-xl border border-gray-300 dark:border-slate-700 px-4 py-3 bg-white dark:bg-slate-950 text-gray-900 dark:text-white">
+
+        <input type="text" name="purchase_status" value="{{ selected_status }}" placeholder="Status"
+               class="rounded-xl border border-gray-300 dark:border-slate-700 px-4 py-3 bg-white dark:bg-slate-950 text-gray-900 dark:text-white">
+
+        <div class="flex gap-3">
+            <button type="submit" class="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3">Filter</button>
+            <a href="{% url 'purchase_list' %}" class="flex-1 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 font-semibold px-5 py-3 text-center">Reset</a>
+        </div>
+    </form>
+
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[900px]">
+                <thead class="bg-gray-50 dark:bg-slate-800">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Supplier</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Date</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Items</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Total</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Status</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-slate-700">
+                    {% for item in purchases %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-slate-800">
+                            <td class="px-6 py-4">{{ item.supplier_name }}</td>
+                            <td class="px-6 py-4">{{ item.purchase_date }}</td>
+                            <td class="px-6 py-4">{{ item.purchaseitem.count }}</td>
+                            <td class="px-6 py-4">{{ item.total_amount }}</td>
+                            <td class="px-6 py-4">{{ item.purchase_status }}</td>
+                            <td class="px-6 py-4">
+                                <div class="flex gap-2">
+                                    <a href="{% url 'purchase_update' item.pk %}" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-semibold">Edit</a>
+                                    <a href="{% url 'purchase_delete' item.pk %}" class="delete-btn bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-semibold" data-url="{% url 'purchase_delete' item.pk %}">Delete</a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center text-gray-500 dark:text-slate-400">No purchases found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

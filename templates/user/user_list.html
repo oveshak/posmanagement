@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
 {% load static %}
-
+{% block app_prefix %}/user{% endblock %}
 {% block title %}Users - Management{% endblock %}
+{% block page_title %}Users{% endblock %}
+{% block page_subtitle %}Manage all system users{% endblock %}
 
 {% block content %}
-<div class="min-h-screen ">
-    <div class=" mx-auto space-y-6">
-
+<div class="min-h-screen">
+    <div class="mx-auto space-y-6">
         <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
             <div>
                 <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">Users</h1>
@@ -14,7 +15,7 @@
             </div>
 
             {% if request.user.is_superuser or request.user.is_admin or perms.user.add_users %}
-                <a href="{% url 'user_create' %}"
+                <a href="{% url 'user:user_create' %}"
                    class="inline-flex items-center justify-center rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-3 shadow-lg">
                     <i class="fas fa-plus mr-2"></i> Create User
                 </a>
@@ -22,16 +23,18 @@
         </div>
 
         <form method="get"
+              hx-get="{% url 'user:user_list' %}"
+              hx-target="#main-content"
+              hx-select="#main-content"
+              hx-swap="outerHTML"
+              hx-push-url="true"
               class="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-gray-200 dark:border-slate-800 p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
 
-            <input type="text"
-                   name="search"
-                   value="{{ request.GET.search }}"
+            <input type="text" name="search" value="{{ request.GET.search }}"
                    placeholder="Search by name, email, username"
                    class="xl:col-span-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
 
-            <select name="branch"
-                    class="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
+            <select name="branch" class="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white js-enhanced-select">
                 <option value="">All Branches</option>
                 {% for branch in branches %}
                     <option value="{{ branch.id }}" {% if request.GET.branch == branch.id|stringformat:'s' %}selected{% endif %}>
@@ -40,8 +43,7 @@
                 {% endfor %}
             </select>
 
-            <select name="area"
-                    class="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
+            <select name="area" class="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white js-enhanced-select">
                 <option value="">All Areas</option>
                 {% for area in areas %}
                     <option value="{{ area.id }}" {% if request.GET.area == area.id|stringformat:'s' %}selected{% endif %}>
@@ -50,18 +52,7 @@
                 {% endfor %}
             </select>
 
-            <select name="customer_group"
-                    class="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
-                <option value="">All Customer Groups</option>
-                {% for cg in customer_groups %}
-                    <option value="{{ cg.id }}" {% if request.GET.customer_group == cg.id|stringformat:'s' %}selected{% endif %}>
-                        {{ cg.name }}
-                    </option>
-                {% endfor %}
-            </select>
-
-            <select name="role"
-                    class="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
+            <select name="role" class="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white js-enhanced-select">
                 <option value="">All Roles</option>
                 {% for role in roles %}
                     <option value="{{ role.id }}" {% if request.GET.role == role.id|stringformat:'s' %}selected{% endif %}>
@@ -70,23 +61,13 @@
                 {% endfor %}
             </select>
 
-            <input type="date"
-                   name="created_from"
-                   value="{{ request.GET.created_from }}"
-                   class="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
-
-            <input type="date"
-                   name="created_to"
-                   value="{{ request.GET.created_to }}"
-                   class="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
-
-            <div class="xl:col-span-6 flex flex-wrap gap-3">
+            <div class="flex gap-3">
                 <button type="submit"
-                        class="rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold px-5 py-3">
+                        class="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3">
                     Filter
                 </button>
-                <a href="{% url 'user_list' %}"
-                   class="rounded-xl bg-slate-500 hover:bg-slate-600 text-white font-semibold px-5 py-3">
+                <a href="{% url 'user:user_list' %}"
+                   class="flex-1 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 font-semibold px-5 py-3 text-center">
                     Reset
                 </a>
             </div>
@@ -94,63 +75,56 @@
 
         <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-gray-200 dark:border-slate-800 overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full min-w-[950px]">
-                    <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                <table class="w-full min-w-[1100px]">
+                    <thead class="bg-gray-50 dark:bg-slate-800">
                         <tr>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">User</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Branch / Area</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Roles</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Customer Groups</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Status</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Actions</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">User</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">Phone</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">Branch</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">Area</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">Roles</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">Customer Groups</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">Status</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">Actions</th>
                         </tr>
                     </thead>
-
-                    <tbody class="divide-y divide-gray-200 dark:divide-slate-800">
+                    <tbody class="divide-y divide-gray-200 dark:divide-slate-700">
                         {% for user in users %}
-                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition">
+                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800">
                                 <td class="px-6 py-4">
-                                    <div class="flex items-center gap-4">
-                                        <div class="w-12 h-12 rounded-2xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-300 font-bold">
-                                            {{ user.name|default:user.email|slice:":1"|upper }}
-                                        </div>
-                                        <div>
-                                            <p class="font-semibold text-gray-900 dark:text-white">{{ user.name|default:"N/A" }}</p>
-                                            <p class="text-sm text-gray-600 dark:text-slate-400">{{ user.email }}</p>
-                                            <p class="text-xs text-gray-500 dark:text-slate-500">Created {{ user.created_at|date:"M d, Y" }}</p>
-                                        </div>
-                                    </div>
+                                    <div class="font-semibold text-gray-900 dark:text-white">{{ user.name|default:user.email }}</div>
+                                    <div class="text-sm text-gray-500 dark:text-slate-400">{{ user.email }}</div>
+                                    {% if user.username %}
+                                        <div class="text-xs text-gray-400 dark:text-slate-500">@{{ user.username }}</div>
+                                    {% endif %}
                                 </td>
-
-                                <td class="px-6 py-4 text-sm text-gray-700 dark:text-slate-300">
-                                    <p><span class="font-semibold">Branch:</span> {{ user.branch.name|default:"-" }}</p>
-                                    <p><span class="font-semibold">Area:</span> {{ user.area.name|default:"-" }}</p>
-                                </td>
-
+                                <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ user.phone_number|default:"—" }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ user.branch.name|default:"—" }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ user.area.name|default:"—" }}</td>
                                 <td class="px-6 py-4">
-                                    <div class="flex gap-2 flex-wrap">
-                                        {% for role in user.roles.all %}
-                                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                                                {{ role.name }}
-                                            </span>
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for role in user.roles.all|slice:":2" %}
+                                            <span class="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{{ role.name }}</span>
                                         {% empty %}
-                                            <span class="text-sm text-gray-500 dark:text-slate-500">No roles</span>
+                                            <span class="text-xs text-gray-500 dark:text-slate-400">No roles</span>
                                         {% endfor %}
+                                        {% if user.roles.count > 2 %}
+                                            <span class="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">+{{ user.roles.count|add:"-2" }}</span>
+                                        {% endif %}
                                     </div>
                                 </td>
-
                                 <td class="px-6 py-4">
-                                    <div class="flex gap-2 flex-wrap">
-                                        {% for cg in user.customer_group.all %}
-                                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                                {{ cg.name }}
-                                            </span>
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for cg in user.customer_group.all|slice:":2" %}
+                                            <span class="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">{{ cg.name }}</span>
                                         {% empty %}
-                                            <span class="text-sm text-gray-500 dark:text-slate-500">No groups</span>
+                                            <span class="text-xs text-gray-500 dark:text-slate-400">No groups</span>
                                         {% endfor %}
+                                        {% if user.customer_group.count > 2 %}
+                                            <span class="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">+{{ user.customer_group.count|add:"-2" }}</span>
+                                        {% endif %}
                                     </div>
                                 </td>
-
                                 <td class="px-6 py-4">
                                     {% if user.status %}
                                         <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</span>
@@ -158,45 +132,33 @@
                                         <span class="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">Inactive</span>
                                     {% endif %}
                                 </td>
-
-                        
-<td class="px-6 py-4">
-    <div class="flex gap-2 flex-wrap">
-
-        {% if request.user.id != user.id %}
-            
-            {% if request.user.is_superuser or request.user.is_admin or perms.user.change_users %}
-                <a href="{% url 'user_update' user.pk %}"
-                   class="inline-flex items-center rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-4 py-2">
-                    <i class="fas fa-pen mr-2"></i> Edit
-                </a>
-            {% endif %}
-
-            {% if request.user.is_superuser or request.user.is_admin or perms.user.delete_users %}
-                <a href="{% url 'user_delete' user.pk %}"
-                   class="inline-flex items-center rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-4 py-2">
-                    <i class="fas fa-trash mr-2"></i> Delete
-                </a>
-            {% endif %}
-
-            {% if not request.user.is_superuser and not request.user.is_admin and not perms.user.change_users and not perms.user.delete_users %}
-                <span class="text-sm text-gray-400 dark:text-slate-500">No Action</span>
-            {% endif %}
-
-        {% else %}
-            <span class="text-sm text-gray-400 dark:text-slate-500">No Action</span>
-        {% endif %}
-
-    </div>
-</td>
-
-
-
-
+                                <td class="px-6 py-4">
+                                    <div class="flex gap-2">
+                                        {% if request.user.is_superuser or request.user.is_admin or perms.user.change_users %}
+                                            <a href="{% url 'user:user_update' user.pk %}"
+                                            
+                                               class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-semibold">
+                                                ✏️ Edit
+                                            </a>
+                                        {% endif %}
+                                        {% if request.user.is_superuser or request.user.is_admin or perms.user.delete_users %}
+                                            {% comment %} <a href="{% url 'user_delete' user.pk %}"
+                                               class="modal-trigger bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-semibold"
+                                               data-modal-url="{% url 'user_delete' user.pk %}">
+                                                🗑️ Delete
+                                            </a> {% endcomment %}
+                                            <a href="{% url 'user:user_delete' user.pk %}"
+   class="delete-btn inline-flex items-center px-3 py-1 rounded bg-red-500 hover:bg-red-600 text-white text-xs"
+   data-url="{% url 'user:user_delete' user.pk %}">
+    🗑️ Delete
+</a>
+                                        {% endif %}
+                                    </div>
+                                </td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="6" class="px-6 py-10 text-center text-gray-600 dark:text-slate-400">
+                                <td colspan="8" class="px-6 py-14 text-center text-gray-500 dark:text-slate-400">
                                     No users found.
                                 </td>
                             </tr>
@@ -207,24 +169,4 @@
         </div>
     </div>
 </div>
-
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const branchSelect = document.querySelector('select[name="branch"]');
-    const areaSelect = document.querySelector('select[name="area"]');
-
-    if (branchSelect) {
-        branchSelect.addEventListener("change", function () {
-            this.form.submit();
-        });
-    }
-
-    if (areaSelect) {
-        areaSelect.addEventListener("change", function () {
-            this.form.submit();
-        });
-    }
-});
-</script>
 {% endblock %}

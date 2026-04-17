@@ -1,0 +1,97 @@
+
+
+<div id="main-content" class="flex-1 overflow-y-auto p-5 sm:p-6 page-content" style="background:var(--surface-alt);">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Products</h1>
+            <p class="text-sm text-gray-500 dark:text-slate-400">Manage products and variations</p>
+        </div>
+
+        <a href="{% url 'product:product_create' %}"
+           class="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 font-semibold shadow-lg">
+            + Create Product
+        </a>
+    </div>
+
+    <form method="get"
+          data-filter-form="true"
+          hx-get="{% url 'product:product_list' %}"
+          hx-target="#main-content"
+          hx-select="#main-content"
+          hx-swap="outerHTML"
+          hx-push-url="true"
+          class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-200 dark:border-slate-800">
+
+        <input type="text" name="search" value="{{ selected_search }}" placeholder="Search by name / sku"
+               class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+
+        <select name="category" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white js-enhanced-select">
+            <option value="">All Categories</option>
+            {% for item in categories %}
+                <option value="{{ item.id }}" {% if selected_category == item.id|stringformat:'s' %}selected{% endif %}>{{ item.name }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="brand" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white js-enhanced-select">
+            <option value="">All Brands</option>
+            {% for item in brands %}
+                <option value="{{ item.id }}" {% if selected_brand == item.id|stringformat:'s' %}selected{% endif %}>{{ item.name }}</option>
+            {% endfor %}
+        </select>
+
+        <div class="flex gap-3">
+            <button type="submit" class="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3">Filter</button>
+            <a href="{% url 'product:product_list' %}" class="flex-1 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 font-semibold px-5 py-3 text-center">Reset</a>
+        </div>
+    </form>
+
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[1100px]">
+                <thead class="bg-gray-50 dark:bg-slate-800">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Product</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase">SKU</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Category</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Brand</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Warranty</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Variations</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-slate-700">
+                    {% for item in products %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-slate-800">
+                            <td class="px-6 py-4 font-semibold text-gray-900 dark:text-white">{{ item.name }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ item.sku }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ item.category_name|default:"—" }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ item.brand_name|default:"—" }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ item.warranty_name|default:"—" }}</td>
+                            <td class="px-6 py-4">
+                                <div class="flex flex-wrap gap-1">
+                                    {% for v in item.variations.all|slice:":3" %}
+                                        <span class="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                            {{ v.name }}
+                                        </span>
+                                    {% empty %}
+                                        <span class="text-xs text-gray-500 dark:text-slate-400">No variation</span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex gap-2">
+                                    <a href="{% url 'product:product_update' item.pk %}" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-semibold">Edit</a>
+                                    <a href="{% url 'product:product_delete' item.pk %}" class="delete-btn bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-semibold" data-url="{% url 'product:product_delete' item.pk %}">Delete</a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-slate-400">No products found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

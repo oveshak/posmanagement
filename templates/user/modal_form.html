@@ -1,12 +1,27 @@
+
 {% comment %} <form method="post"
       enctype="multipart/form-data"
       action="{% if instance %}{% url 'related_object_edit' model_name instance.pk %}{% else %}{% url 'related_object_create' model_name %}{% endif %}"
+      hx-post="{% if instance %}{% url 'related_object_edit' model_name instance.pk %}{% else %}{% url 'related_object_create' model_name %}{% endif %}"
+      hx-target="#modal-body"
+      hx-swap="innerHTML"
+      hx-encoding="multipart/form-data"
       data-model-name="{{ model_name }}">
     {% csrf_token %}
+    <input type="hidden" name="_parent_field" value="{{ parent_field|default:'' }}">
 
-    <div class="space-y-4 max-h-[85vh] overflow-y-auto pr-1">
+    {% if form.non_field_errors %}
+        <div class="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="space-y-4 max-h-[85vh] overflow-y-auto p-4">
         <div class="flex items-center justify-between mb-4 sticky top-0 bg-white dark:bg-slate-900 z-10">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ title }}</h3>
+
             <button type="button"
                     class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     onclick="closeModal()">
@@ -17,7 +32,7 @@
             </button>
         </div>
 
-        {% include 'user/model_form.html' %}
+        {% include 'user/model_form.html' with form=form %}
 
         <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700 sticky bottom-0 bg-white dark:bg-slate-900">
             <button type="button"
@@ -25,6 +40,7 @@
                     class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition">
                 Cancel
             </button>
+
             <button type="submit"
                     class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 rounded-lg transition">
                 {% if instance %}Update{% else %}Create{% endif %}
@@ -32,292 +48,66 @@
         </div>
     </div>
 </form> {% endcomment %}
-{% comment %} <form method="post"
-      enctype="multipart/form-data"
-      action="{% if instance %}{% url 'related_object_edit' model_name instance.pk %}{% else %}{% url 'related_object_create' model_name %}{% endif %}"
-      data-model-name="{{ model_name }}"
-      onsubmit="handleModalFormSubmit(this, event)">
-    {% csrf_token %}
-
-    <div class="space-y-4 max-h-[85vh] overflow-y-auto pr-1">
-        <div class="flex items-center justify-between mb-4 sticky top-0 bg-white dark:bg-slate-900 z-10">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ title }}</h3>
-            <button type="button"
-                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                    onclick="closeModal()">
-                ✕
-            </button>
-        </div>
-
-        {% include 'user/model_form.html' %}
-
-        <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700 sticky bottom-0 bg-white dark:bg-slate-900">
-            <button type="button"
-                    onclick="closeModal()"
-                    class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition">
-                Cancel
-            </button>
-            <button type="submit"
-                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 rounded-lg transition">
-                {% if instance %}Update{% else %}Create{% endif %}
-            </button>
-        </div>
-    </div>
-</form> {% endcomment %}
-{% comment %} <script>
-(function () {
-    function initEnhancedSelect(scope) {
-        const root = scope || document;
-
-        root.querySelectorAll('.js-enhanced-select').forEach(function (select) {
-            if (typeof window.$ !== 'undefined' && window.$.fn.select2) {
-                if (window.$(select).data('select2')) {
-                    window.$(select).select2('destroy');
-                }
-                window.$(select).select2({
-                    theme: 'bootstrap-5',
-                    width: '100%',
-                    dropdownParent: window.$('#modal-content')
-                });
-            }
-        });
-
-        root.querySelectorAll('.js-enhanced-multiselect').forEach(function (select) {
-            if (typeof window.$ !== 'undefined' && window.$.fn.select2) {
-                if (window.$(select).data('select2')) {
-                    window.$(select).select2('destroy');
-                }
-                window.$(select).select2({
-                    theme: 'bootstrap-5',
-                    width: '100%',
-                    dropdownParent: window.$('#modal-content')
-                });
-            }
-        });
-    }
-
-    window.initEnhancedSelect = initEnhancedSelect;
-    initEnhancedSelect(document);
-})();
-</script>
-
-<script>
-// Helper functions for related modal handling
-function buildModalParams(fieldName, modelName) {
-    return {
-        'parent_field': fieldName,
-        'model': modelName
-    };
-}
-
-function openEditRelatedFromField(fieldName, modelName) {
-    const field = document.querySelector(`[name="${fieldName}"]`);
-    if (!field || !field.value) {
-        alert('Please select an item first');
-        return;
-    }
-    const pk = field.value;
-    openRelatedModal(modelName, 'edit', pk, {
-        'parent_field': fieldName
-    });
-}
-
-function closeModal() {
-    const modal = document.getElementById('modal-container');
-    if (modal) {
-        modal.classList.add('hidden');
-    }
-}
-</script>
-
-<script>
-// Additional helper functions for modal operations
-function closeModal() {
-    const modal = document.getElementById('modal-container');
-    if (modal) {
-        modal.classList.add('hidden');
-    }
-}
-
-function removeFromM2M(fieldName, value) {
-    const checkbox = document.querySelector(`input[name="${fieldName}"][value="${value}"]`);
-    if (checkbox) {
-        checkbox.checked = false;
-    }
-}
-
-// Initialize select2 for enhanced selects if available
-document.addEventListener('DOMContentLoaded', function() {
-    const selects = document.querySelectorAll('.js-enhanced-select');
-    selects.forEach(function(select) {
-        if (typeof $ !== 'undefined' && $.fn.select2) {
-            $(select).select2({
-                theme: 'bootstrap-5',
-                width: '100%'
-            });
-        }
-    });
-
-    const multiselects = document.querySelectorAll('.js-enhanced-multiselect');
-    multiselects.forEach(function(select) {
-        if (typeof $ !== 'undefined' && $.fn.select2) {
-            $(select).select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                multiple: true
-            });
-        }
-    });
-});
-
-function openRelatedModal(modelName, action, pk = null, params = {}) {
-    let url = `/user/ajax/related/${modelName}/${action}/`;
-    if (action === 'edit' && pk) {
-        url = `/user/ajax/related/${modelName}/${pk}/edit/`;
-    }
-
-    // Add query parameters for auto-selection
-    const queryParams = new URLSearchParams();
-    for (const [key, value] of Object.entries(params)) {
-        if (value) {
-            queryParams.append(key, value);
-        }
-    }
-    if (queryParams.toString()) {
-        url += '?' + queryParams.toString();
-    }
-
-    // Mark that we're opening a nested modal
-    window.nestedModalOpen = true;
-    window.parentFieldName = null; // Will be set based on context
-
-    fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            if (data.html) {
-                const currentBody = document.getElementById('modal-body');
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = data.html;
-                
-                // Store the original modal body
-                window.originalModalBody = currentBody.innerHTML;
-                
-                // Replace with nested modal
-                currentBody.innerHTML = data.html;
-                
-                // Re-initialize the form handlers for the nested modal
-                initializeNestedModalHandlers(modelName);
-            }
-        })
-        .catch(error => console.error('Error loading related modal:', error));
-}
-
-function initializeNestedModalHandlers(modelName) {
-    // Handle form submissions in nested modal
-    const form = document.querySelector('#modal-container form');
-    if (form) {
-        // Store model name for later use
-        form.dataset.modelName = modelName;
-    }
-}
-
-function autoSelectInParent(modelName, itemData) {
-    // Map model names to field names
-    const fieldMapping = {
-        'user': 'manager',
-        'branch': 'branch',
-        'area': 'total_area',
-        'menu': 'parent'
-    };
-
-    const fieldName = fieldMapping[modelName];
-    if (!fieldName) return;
-
-    const field = document.querySelector(`[name="${fieldName}"]`);
-    if (field) {
-        // Check if field is a select or multi-select
-        if (field.tagName === 'SELECT') {
-            // Check if it's a multiple select (M2M)
-            if (field.hasAttribute('multiple')) {
-                // Add to multi-select
-                const option = document.createElement('option');
-                option.value = itemData.id;
-                option.text = itemData.text;
-                option.selected = true;
-                field.appendChild(option);
-            } else {
-                // Set single select
-                field.value = itemData.id;
-            }
-            
-            // Trigger change event for any listeners
-            field.dispatchEvent(new Event('change', { bubbles: true }));
-        } else if (field.tagName === 'INPUT' && field.type === 'checkbox') {
-            // For checkbox lists (M2M with CheckboxSelectMultiple)
-            const checkbox = document.querySelector(`input[name="${fieldName}"][value="${itemData.id}"]`);
-            if (checkbox) {
-                checkbox.checked = true;
-            }
-        }
-    }
-}
-
-function getFieldValue(fieldName) {
-    const field = document.querySelector(`[name="${fieldName}"]`);
-    return field ? field.value : null;
-}
-</script> {% endcomment %}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 <form method="post"
       enctype="multipart/form-data"
-      action="{% if instance %}{% url 'related_object_edit' model_name instance.pk %}{% else %}{% url 'related_object_create' model_name %}{% endif %}"
+      action="{% if instance %}{% url 'user:related_object_edit' model_name instance.pk %}{% else %}{% url 'user:related_object_create' model_name %}{% endif %}"
+      hx-post="{% if instance %}{% url 'user:related_object_edit' model_name instance.pk %}{% else %}{% url 'user:related_object_create' model_name %}{% endif %}"
+      hx-target="#modal-body"
+      hx-swap="innerHTML"
+      hx-encoding="multipart/form-data"
       data-model-name="{{ model_name }}"
-      onsubmit="handleModalFormSubmit(this, event)">
+      class="flex flex-col max-h-[90vh]">
+
     {% csrf_token %}
+    <input type="hidden" name="_parent_field" value="{{ parent_field|default:'' }}">
 
-    <div class="space-y-4 max-h-[85vh] overflow-y-auto pr-1">
-        <div class="flex items-center justify-between mb-4 sticky top-0 bg-white dark:bg-slate-900 z-10">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ title }}</h3>
+    <!-- Header -->
+    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 sticky top-0 z-20">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+            {{ title }}
+        </h3>
 
-            <button type="button"
-                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                    onclick="closeModal()">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
+        <button type="button"
+                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                onclick="closeModal()">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Error block -->
+    {% if form.non_field_errors %}
+        <div class="px-4 pt-4">
+            <div class="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
         </div>
+    {% endif %}
 
-        {% include 'user/model_form.html' %}
+    <!-- Body -->
+    <div class="flex-1 overflow-y-auto p-4">
+        {% include 'user/model_form.html' with form=form %}
+    </div>
 
-        <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700 sticky bottom-0 bg-white dark:bg-slate-900">
-            <button type="button"
-                    onclick="closeModal()"
-                    class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition">
-                Cancel
-            </button>
+    <!-- Footer -->
+    <div class="flex justify-end gap-3 px-4 py-3 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 sticky bottom-0 z-20">
+        <button type="button"
+                onclick="closeModal()"
+                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition">
+            Cancel
+        </button>
 
-            <button type="submit"
-                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 rounded-lg transition">
-                {% if instance %}Update{% else %}Create{% endif %}
-            </button>
-        </div>
+        <button type="submit"
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 rounded-lg transition">
+            {% if instance %}Update{% else %}Create{% endif %}
+        </button>
     </div>
 </form>

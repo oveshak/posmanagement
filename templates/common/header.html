@@ -61,8 +61,8 @@
                                 <p class="text-xs" style="color:var(--text-muted);">{{ request.user.email }}</p>
                             </div>
                             <div class="py-1">
-                                <a href="{% url 'profile_page' %}"
-   hx-get="{% url 'profile_page' %}"
+                                <a href="{% url 'user:profile_page' %}"
+   hx-get="{% url 'user:profile_page' %}"
    hx-target="#main-content"
    hx-swap="innerHTML"
    hx-push-url="true"
@@ -75,7 +75,7 @@
                                     <i class="fas fa-cog w-3.5 text-center"></i> Settings
                                 </a>
                                 <div class="border-t my-1" style="border-color:var(--border);"></div>
-                                <a href="{% url 'logout' %}" class="dropdown-item danger flex items-center gap-2">
+                                <a href="{% url 'user:logout' %}" class="dropdown-item danger flex items-center gap-2">
                                     <i class="fas fa-arrow-right-from-bracket w-3.5 text-center"></i> Logout
                                 </a>
                             </div>

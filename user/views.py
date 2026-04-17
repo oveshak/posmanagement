@@ -1,438 +1,65 @@
-
-# from django.contrib import messages
-# from django.contrib.auth.mixins import LoginRequiredMixin
-# from django.http import JsonResponse
-# from django.shortcuts import redirect
-# from django.urls import reverse_lazy
-# from django.views.generic import ListView, CreateView, UpdateView, DeleteView
-
-# from .models import Branch, Area, CustomerGroup, Users
-# from .forms import BranchForm, AreaForm, CustomerGroupForm, UserForm
-# from django.contrib.auth.views import PasswordChangeView
-
-
-
-# from .mixins import AdminRequiredMixin
-# from .models import ActivityLog, Area, Branch, CustomerGroup, Menu, MultiBranch, Roles, Users
-# from .utils import log_activity
-
-# from datetime import datetime, timedelta
-# from django.contrib import messages
-# from django.contrib.auth import logout
-# from django.contrib.auth.decorators import login_required
-# from django.contrib.auth.mixins import LoginRequiredMixin
-# from django.contrib.auth.views import LoginView as DjangoLoginView
-# from django.db.models import Prefetch, Q
-# from django.http import JsonResponse
-# from django.shortcuts import get_object_or_404, redirect, render
-# from django.template.loader import render_to_string
-# from django.urls import reverse, reverse_lazy
-# from django.views.decorators.http import require_GET, require_http_methods
-# from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
-# from django.utils import timezone
-
-# from .forms import (
-  
-  
-#     CustomPasswordChangeForm,
-   
-#     CustomAuthenticationForm,
-    
-  
-   
-#     UserForm
-
-# )
-# from .mixins import AdminRequiredMixin
-# from .models import ActivityLog, Area, Branch, CustomerGroup, Menu, MultiBranch, Roles, Users
-# from .utils import log_activity
-
-
-# class CustomLoginView(DjangoLoginView):
-#     template_name = "auth/login.html"
-#     form_class = CustomAuthenticationForm
-#     redirect_authenticated_user = True
-
-#     def form_valid(self, form):
-#         response = super().form_valid(form)
-#         user = form.get_user()
-#         current_time = timezone.now()
-#         self.request.session["login_time"] = current_time.isoformat()
-#         log_activity(self.request, "login", f"{user} logged in at {current_time.strftime('%I:%M %p')}", user)
-#         messages.success(self.request, f"Welcome back, {user.name or user.email}!")
-#         return response
-
-#     def form_invalid(self, form):
-#         messages.error(self.request, "Invalid email or password. Please try again.")
-#         return super().form_invalid(form)
-
-#     def get_success_url(self):
-#         return reverse_lazy("dashboard")
-
-
-# class DashboardView(LoginRequiredMixin, TemplateView):
-#     template_name = "dashboard/dashboard.html"
-#     login_url = "login"
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context["total_users"] = Users.objects.filter(is_deleted=False).count()
-#         context["total_roles"] = Roles.objects.count()
-#         context["recent_logs"] = ActivityLog.objects.select_related("user", "target_user")[:10]
-#         context["current_user"] = self.request.user
-#         return context
-
-
-# class ManagementDashboardView(AdminRequiredMixin, TemplateView):
-#     template_name = "user/management_dashboard.html"
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context["total_users"] = Users.objects.filter(is_deleted=False).count()
-#         context["total_roles"] = Roles.objects.count()
-#         context["active_sessions"] = Users.objects.filter(status=True, is_deleted=False).count()
-#         context["total_logs"] = ActivityLog.objects.count()
-#         context["recent_logs"] = ActivityLog.objects.select_related("user", "target_user")[:5]
-#         context["recent_logs_time"] = ActivityLog.objects.latest("created_at").created_at.strftime("%I:%M %p") if ActivityLog.objects.exists() else "N/A"
-#         return context
-
-
-# class AdminDashboardView(AdminRequiredMixin, TemplateView):
-#     template_name = "dashboard/admin_dashboard.html"
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context["total_users"] = Users.objects.filter(is_deleted=False).count()
-#         context["total_roles"] = Roles.objects.count()
-#         context["recent_logs"] = ActivityLog.objects.select_related("user", "target_user")[:10]
-#         return context
-
-
-# class LogoutView(LoginRequiredMixin, TemplateView):
-#     login_url = "login"
-
-#     def get(self, request, *args, **kwargs):
-#         if request.user.is_authenticated:
-#             user_name = request.user.name or request.user.email
-#             login_time = request.session.get("login_time")
-#             session_duration = "Unknown"
-#             if login_time:
-#                 try:
-#                     login_dt = datetime.fromisoformat(login_time)
-#                     duration = timezone.now() - login_dt
-#                     minutes = int(duration.total_seconds() // 60)
-#                     seconds = int(duration.total_seconds() % 60)
-#                     session_duration = f"{minutes}m {seconds}s"
-#                 except Exception:
-#                     session_duration = "N/A"
-
-#             log_activity(request, "logout", f"{request.user} logged out. Session duration: {session_duration}", request.user)
-#             logout(request)
-#             messages.success(request, f"Goodbye {user_name}! Session duration: {session_duration}")
-#         else:
-#             logout(request)
-#         return redirect("login")
-
-
-
-
-
-
-
-# class HtmxTemplateView(LoginRequiredMixin, TemplateView):
-#     htmx_template_name = None
-#     normal_template_name = None
-#     login_url = "login"
-
-#     def get_template_names(self):
-#         if self.request.headers.get("HX-Request"):
-#             return [self.htmx_template_name]
-#         return [self.normal_template_name]
-
-
-# class ProfilePageView(HtmxTemplateView):
-#     htmx_template_name = "user/userprofile/user_profile_main.html"
-#     normal_template_name = "user/userprofile/user_profile.html"
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context["profile_user"] = (
-#             Users.objects
-#             .select_related("branch", "area")
-#             .prefetch_related("roles", "mult_branch", "customer_group")
-#             .get(pk=self.request.user.pk)
-#         )
-#         return context
-
-
-# class UserPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
-#     form_class = CustomPasswordChangeForm
-#     template_name = "user/userprofilepassword/change_password.html"
-#     success_url = reverse_lazy("profile_page")
-#     login_url = "login"
-
-#     def get_template_names(self):
-#         if self.request.headers.get("HX-Request"):
-#             return ["user/userprofilepassword/change_password_main.html"]
-#         return [self.template_name]
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context["profile_user"] = (
-#             Users.objects
-#             .select_related("branch", "area")
-#             .prefetch_related("roles", "mult_branch", "customer_group")
-#             .get(pk=self.request.user.pk)
-#         )
-#         return context
-
-#     def form_valid(self, form):
-#         response = super().form_valid(form)
-
-#         if self.request.headers.get("HX-Request"):
-#             messages.success(self.request, "Password changed successfully.")
-#             return render(
-#                 self.request,
-#                 "user/userprofilepassword/password_change_success.html",
-#                 {"message": "Password changed successfully."},
-#             )
-
-#         return response
-# # -------------------------
-# # AJAX FILTER
-# # -------------------------
-
-# def load_areas(request):
-#     branch_id = request.GET.get("branch_id")
-#     areas = Area.objects.filter(parent_branch_id=branch_id).values("id", "name")
-#     return JsonResponse(list(areas), safe=False)
-
-
-# def load_customer_groups(request):
-#     area_id = request.GET.get("area_id")
-#     customer_groups = CustomerGroup.objects.filter(area_id=area_id).values("id", "name")
-#     return JsonResponse(list(customer_groups), safe=False)
-
-
-# # -------------------------
-# # BRANCH CRUD
-# # -------------------------
-
-# class BranchListView(LoginRequiredMixin, ListView):
-#     model = Branch
-#     template_name = "branch/list.html"
-#     context_object_name = "branches"
-
-
-# class BranchCreateView(LoginRequiredMixin, CreateView):
-#     model = Branch
-#     form_class = BranchForm
-#     template_name = "branch/form.html"
-#     success_url = reverse_lazy("branch_list")
-
-#     def form_valid(self, form):
-#         messages.success(self.request, "Branch created successfully.")
-#         return super().form_valid(form)
-
-
-# class BranchUpdateView(LoginRequiredMixin, UpdateView):
-#     model = Branch
-#     form_class = BranchForm
-#     template_name = "branch/form.html"
-#     success_url = reverse_lazy("branch_list")
-
-#     def form_valid(self, form):
-#         messages.success(self.request, "Branch updated successfully.")
-#         return super().form_valid(form)
-
-
-# class BranchDeleteView(LoginRequiredMixin, DeleteView):
-#     model = Branch
-#     template_name = "common/confirm_delete.html"
-#     success_url = reverse_lazy("branch_list")
-
-
-# # -------------------------
-# # AREA CRUD
-# # -------------------------
-
-# class AreaListView(LoginRequiredMixin, ListView):
-#     model = Area
-#     template_name = "area/list.html"
-#     context_object_name = "areas"
-
-
-# class AreaCreateView(LoginRequiredMixin, CreateView):
-#     model = Area
-#     form_class = AreaForm
-#     template_name = "area/form.html"
-#     success_url = reverse_lazy("area_list")
-
-#     def get_form_kwargs(self):
-#         kwargs = super().get_form_kwargs()
-#         kwargs["branch_id"] = self.request.GET.get("branch")
-#         return kwargs
-
-#     def form_valid(self, form):
-#         messages.success(self.request, "Area created successfully.")
-#         return super().form_valid(form)
-
-
-# class AreaUpdateView(LoginRequiredMixin, UpdateView):
-#     model = Area
-#     form_class = AreaForm
-#     template_name = "area/form.html"
-#     success_url = reverse_lazy("area_list")
-
-#     def form_valid(self, form):
-#         messages.success(self.request, "Area updated successfully.")
-#         return super().form_valid(form)
-
-
-# class AreaDeleteView(LoginRequiredMixin, DeleteView):
-#     model = Area
-#     template_name = "common/confirm_delete.html"
-#     success_url = reverse_lazy("area_list")
-
-
-# # -------------------------
-# # CUSTOMER GROUP CRUD
-# # -------------------------
-
-# class CustomerGroupListView(LoginRequiredMixin, ListView):
-#     model = CustomerGroup
-#     template_name = "customer_group/list.html"
-#     context_object_name = "customer_groups"
-
-
-# class CustomerGroupCreateView(LoginRequiredMixin, CreateView):
-#     model = CustomerGroup
-#     form_class = CustomerGroupForm
-#     template_name = "customer_group/form.html"
-#     success_url = reverse_lazy("customer_group_list")
-
-#     def get_form_kwargs(self):
-#         kwargs = super().get_form_kwargs()
-#         kwargs["branch_id"] = self.request.GET.get("branch")
-#         kwargs["area_id"] = self.request.GET.get("area")
-#         return kwargs
-
-#     def form_valid(self, form):
-#         messages.success(self.request, "Customer group created successfully.")
-#         return super().form_valid(form)
-
-
-# class CustomerGroupUpdateView(LoginRequiredMixin, UpdateView):
-#     model = CustomerGroup
-#     form_class = CustomerGroupForm
-#     template_name = "customer_group/form.html"
-#     success_url = reverse_lazy("customer_group_list")
-
-#     def form_valid(self, form):
-#         messages.success(self.request, "Customer group updated successfully.")
-#         return super().form_valid(form)
-
-
-# class CustomerGroupDeleteView(LoginRequiredMixin, DeleteView):
-#     model = CustomerGroup
-#     template_name = "common/confirm_delete.html"
-#     success_url = reverse_lazy("customer_group_list")
-
-
-# # -------------------------
-# # USER CRUD
-# # -------------------------
-
-# class UserListView(LoginRequiredMixin, ListView):
-#     model = Users
-#     template_name = "users/list.html"
-#     context_object_name = "users"
-
-
-# class UserCreateView(LoginRequiredMixin, CreateView):
-#     model = Users
-#     form_class = UserForm
-#     template_name = "user/form.html"
-#     success_url = reverse_lazy("user_list")
-
-#     def form_valid(self, form):
-#         response = super().form_valid(form)
-#         self.object.sync_staff_relations()
-#         messages.success(self.request, "User created successfully.")
-#         return response
-
-
-# class UserUpdateView(LoginRequiredMixin, UpdateView):
-#     model = Users
-#     form_class = UserForm
-#     template_name = "users/form.html"
-#     success_url = reverse_lazy("user_list")
-
-#     def form_valid(self, form):
-#         response = super().form_valid(form)
-#         self.object.sync_staff_relations()
-#         messages.success(self.request, "User updated successfully.")
-#         return response
-
-
-# class UserDeleteView(LoginRequiredMixin, DeleteView):
-#     model = Users
-#     template_name = "common/confirm_delete.html"
-#     success_url = reverse_lazy("user_list")
-
-
-
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.views import PasswordChangeView
-
-
-
-
-
-
-
+import json
 from datetime import datetime, timedelta
+from multiprocessing import context
+from multiprocessing import context
+from urllib import request
+
 from django.contrib import messages
 from django.contrib.auth import logout
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView as DjangoLoginView
+from django.contrib.auth.views import PasswordChangeView
+from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import Prefetch, Q
-from django.http import JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import render_to_string
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse_lazy
+from django.utils import timezone
+from django.views import View
 from django.views.decorators.http import require_GET, require_http_methods
 from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
-from django.utils import timezone
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+
+from product.forms import BrandForm, CategoryForm, UnickForm, UnitForm, WarrantyForm
+from product.models import Brand, Category, Unit, Warranty, unick
+
+from .scope import (
+    get_multibranch_branch_ids,
+    get_user_scope,
+    
+    apply_selected_filters,
+    is_global_user,
+)
+
 
 from .forms import (
     AreaQuickForm,
     BranchQuickForm,
+    CustomAuthenticationForm,
     CustomPasswordChangeForm,
     CustomerGroupQuickForm,
-    CustomAuthenticationForm,
     MenuQuickForm,
     MultiBranchQuickForm,
     RoleForm,
     RoleQuickForm,
-    UserCreateForm,
     UserQuickForm,
-    UserUpdateForm,
-    UserCreateForm,
-    UserUpdateForm,
-    BranchQuickForm,
-    AreaQuickForm,
-    CustomerGroupQuickForm,
-    MenuQuickForm,
-    UserQuickForm,
-    RoleQuickForm,
-    UserForm
-
 )
 from .mixins import AdminRequiredMixin
 from .models import ActivityLog, Area, Branch, CustomerGroup, Menu, MultiBranch, Roles, Users
 from .utils import log_activity
+
+
+# -------------------------------------------------
+# AUTH / DASHBOARD
+# -------------------------------------------------
+class HtmxListViewMixin:
+    partial_template_name = None
+
+    def get_template_names(self):
+        if self.request.headers.get("HX-Request") == "true":
+            return [self.partial_template_name]
+        return [self.template_name]
 
 
 class CustomLoginView(DjangoLoginView):
@@ -445,7 +72,12 @@ class CustomLoginView(DjangoLoginView):
         user = form.get_user()
         current_time = timezone.now()
         self.request.session["login_time"] = current_time.isoformat()
-        log_activity(self.request, "login", f"{user} logged in at {current_time.strftime('%I:%M %p')}", user)
+        log_activity(
+            self.request,
+            "login",
+            f"{user} logged in at {current_time.strftime('%I:%M %p')}",
+            user,
+        )
         messages.success(self.request, f"Welcome back, {user.name or user.email}!")
         return response
 
@@ -459,7 +91,7 @@ class CustomLoginView(DjangoLoginView):
 
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = "dashboard/dashboard.html"
-    login_url = "login"
+    login_url = "user:login"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -470,39 +102,15 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class ManagementDashboardView(AdminRequiredMixin, TemplateView):
-    template_name = "user/management_dashboard.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["total_users"] = Users.objects.filter(is_deleted=False).count()
-        context["total_roles"] = Roles.objects.count()
-        context["active_sessions"] = Users.objects.filter(status=True, is_deleted=False).count()
-        context["total_logs"] = ActivityLog.objects.count()
-        context["recent_logs"] = ActivityLog.objects.select_related("user", "target_user")[:5]
-        context["recent_logs_time"] = ActivityLog.objects.latest("created_at").created_at.strftime("%I:%M %p") if ActivityLog.objects.exists() else "N/A"
-        return context
-
-
-class AdminDashboardView(AdminRequiredMixin, TemplateView):
-    template_name = "dashboard/admin_dashboard.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["total_users"] = Users.objects.filter(is_deleted=False).count()
-        context["total_roles"] = Roles.objects.count()
-        context["recent_logs"] = ActivityLog.objects.select_related("user", "target_user")[:10]
-        return context
-
-
 class LogoutView(LoginRequiredMixin, TemplateView):
-    login_url = "login"
+    login_url = "user:login"
 
     def get(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             user_name = request.user.name or request.user.email
             login_time = request.session.get("login_time")
             session_duration = "Unknown"
+
             if login_time:
                 try:
                     login_dt = datetime.fromisoformat(login_time)
@@ -513,29 +121,79 @@ class LogoutView(LoginRequiredMixin, TemplateView):
                 except Exception:
                     session_duration = "N/A"
 
-            log_activity(request, "logout", f"{request.user} logged out. Session duration: {session_duration}", request.user)
+            log_activity(
+                request,
+                "logout",
+                f"{request.user} logged out. Session duration: {session_duration}",
+                request.user,
+            )
             logout(request)
             messages.success(request, f"Goodbye {user_name}! Session duration: {session_duration}")
         else:
             logout(request)
-        return redirect("login")
+
+        return redirect("user:login")
 
 
-
-
-
-
+# -------------------------------------------------
+# HTMX PAGE HELPERS
+# -------------------------------------------------
 
 class HtmxTemplateView(LoginRequiredMixin, TemplateView):
     htmx_template_name = None
     normal_template_name = None
-    login_url = "login"
+    login_url = "user:login"
 
     def get_template_names(self):
         if self.request.headers.get("HX-Request"):
             return [self.htmx_template_name]
         return [self.normal_template_name]
 
+
+
+class BaseNoTemplateDeleteView(LoginRequiredMixin, View):
+    model = None
+    success_url = None
+    permission_required = ""
+    success_message = "Deleted successfully."
+
+    def has_delete_permission(self, request):
+        return (
+            request.user.is_authenticated and (
+                request.user.is_superuser or
+                getattr(request.user, "is_admin", False) or
+                request.user.has_perm(self.permission_required)
+            )
+        )
+
+    def cleanup_before_delete(self, obj):
+        pass
+
+    def post(self, request, pk, *args, **kwargs):
+        if not self.has_delete_permission(request):
+            if is_htmx(request):
+                return HttpResponseForbidden("Permission denied")
+            messages.error(request, "You don't have permission to delete this item.")
+            return redirect(self.success_url)
+
+        obj = get_object_or_404(self.model, pk=pk)
+        label = str(obj)
+
+        self.cleanup_before_delete(obj)
+        obj.delete()
+
+        log_activity(request, "delete", f"Deleted {label}")
+        messages.success(request, self.success_message)
+
+        if is_htmx(request):
+            return htmx_trigger_response({
+                "crud:deleted": {
+                    "message": self.success_message,
+                    "refreshList": True,
+                }
+            })
+
+        return redirect(self.success_url)
 
 class ProfilePageView(HtmxTemplateView):
     htmx_template_name = "user/userprofile/user_profile_main.html"
@@ -544,8 +202,7 @@ class ProfilePageView(HtmxTemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["profile_user"] = (
-            Users.objects
-            .select_related("branch", "area")
+            Users.objects.select_related("branch", "area")
             .prefetch_related("roles", "mult_branch", "customer_group")
             .get(pk=self.request.user.pk)
         )
@@ -556,7 +213,7 @@ class UserPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
     form_class = CustomPasswordChangeForm
     template_name = "user/userprofilepassword/change_password.html"
     success_url = reverse_lazy("profile_page")
-    login_url = "login"
+    login_url = "user:login"
 
     def get_template_names(self):
         if self.request.headers.get("HX-Request"):
@@ -566,8 +223,7 @@ class UserPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["profile_user"] = (
-            Users.objects
-            .select_related("branch", "area")
+            Users.objects.select_related("branch", "area")
             .prefetch_related("roles", "mult_branch", "customer_group")
             .get(pk=self.request.user.pk)
         )
@@ -575,7 +231,6 @@ class UserPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-
         if self.request.headers.get("HX-Request"):
             messages.success(self.request, "Password changed successfully.")
             return render(
@@ -583,188 +238,157 @@ class UserPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
                 "user/userprofilepassword/password_change_success.html",
                 {"message": "Password changed successfully."},
             )
-
         return response
 
 
+# -------------------------------------------------
+# GENERIC HELPERS
+# -------------------------------------------------
 
-
-# class ProfilePageView(LoginRequiredMixin, TemplateView):
-#     template_name = "user/user_profile.html"
-#     login_url = "login"
-
-
-
-# from .forms import CustomPasswordChangeForm 
-# from django.contrib.auth.views import PasswordChangeView
-
-# class HtmxTemplateView(LoginRequiredMixin, TemplateView):
-#     htmx_template_name = None
-#     normal_template_name = None
-#     login_url = "login"
-
-#     def get_template_names(self):
-#         if self.request.headers.get("HX-Request"):
-#             return [self.htmx_template_name]
-#         return [self.normal_template_name]
-
-
-# class ProfilePageView(HtmxTemplateView):
-#     htmx_template_name = "user/userprofile/user_profile_main.html"
-#     normal_template_name = "user/userprofile/user_profile.html"
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context["profile_user"] = (
-#             Users.objects
-#             .select_related("branch", "area")
-#             .prefetch_related("roles", "mult_branch", "customer_group")
-#             .get(pk=self.request.user.pk)
-#         )
-#         return context
-
-
-# class UserPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
-#     form_class = CustomPasswordChangeForm
-#     template_name = "user/userprofilepassword/change_password.html"
-#     success_url = reverse_lazy("profile_page")
-#     login_url = "login"
-
-#     def get_template_names(self):
-#         if self.request.headers.get("HX-Request"):
-#             return ["user/userprofilepassword/change_password_main.html"]
-#         return [self.template_name]
-
-#     def form_valid(self, form):
-#         response = super().form_valid(form)
-#         messages.success(self.request, "Password changed successfully.")
-
-#         if self.request.headers.get("HX-Request"):
-#             return render(
-#                 self.request,
-#                 "user/userprofilepassword/password_change_success.html",
-#                 {"message": "Password changed successfully."},
-#             )
-#         return response
+def normalize_model_name(model_name: str) -> str:
+    model_name = (model_name or "").lower().strip()
+    aliases = {
+        "customer_group": "customergroup",
+        "customergroups": "customergroup",
+        "customer-group": "customergroup",
+        "customergroup": "customergroup",
+        "customergroup": "customergroup",
+        "multi_branch": "multibranch",
+        "multi-branch": "multibranch",
+        "multibranches": "multibranch",
+        "roles": "role",
+        "users": "user",
+    }
+    return aliases.get(model_name, model_name)
 
 
 
+import json
+from django.http import HttpResponse
+from django.contrib import messages
+
+def is_htmx(request):
+    return request.headers.get("HX-Request") == "true"
 
 
+def htmx_trigger_response(events: dict, status=204):
+    response = HttpResponse("", status=status)
+    response["HX-Trigger"] = json.dumps(events)
+    return response
 
 
-from django.db.models import Q
-from django.views.generic import ListView
+def object_label(obj):
+    if hasattr(obj, "name") and obj.name:
+        return obj.name
+    if hasattr(obj, "title") and obj.title:
+        return obj.title
+    if hasattr(obj, "email") and obj.email:
+        return obj.email
+    return str(obj)
 
-class UserListView( ListView):
+
+def compact_option(obj):
+    return {
+        "id": obj.pk,
+        "text": object_label(obj),
+    }
+
+def user_has_permission(user, perm_name):
+    return user.is_superuser or getattr(user, "is_admin", False) or user.has_perm(perm_name)
+
+
+class PermissionRequiredViewMixin:
+    required_permission = None
+    denied_redirect = None
+    denied_message = "You do not have permission to perform this action."
+
+    def dispatch(self, request, *args, **kwargs):
+        if self.required_permission and not user_has_permission(request.user, self.required_permission):
+            messages.error(request, self.denied_message)
+            return redirect(self.denied_redirect or "dashboard")
+        return super().dispatch(request, *args, **kwargs)
+
+
+class ScopedListContextMixin:
+    def get_selected_filters(self):
+        return {
+            "branch": self.request.GET.get("branch", "").strip(),
+            "area": self.request.GET.get("area", "").strip(),
+            "customer_group": self.request.GET.get("customer_group", "").strip(),
+        }
+
+    def get_scope_context(self):
+        selected = self.get_selected_filters()
+        scope = get_user_scope(self.request.user)
+
+        filtered = apply_selected_filters(
+            scope["branches"],
+            scope["areas"],
+            scope["customer_groups"],
+            selected_branch=selected["branch"],
+            selected_area=selected["area"],
+            selected_customer_group_ids=[selected["customer_group"]] if selected["customer_group"] else [],
+        )
+
+        return {
+            "filter_branches": filtered["branches"].order_by("name"),
+            "filter_areas": filtered["areas"].order_by("name"),
+            "filter_customer_groups": filtered["customer_groups"].order_by("name"),
+            "selected_branch": selected["branch"],
+            "selected_area": selected["area"],
+            "selected_customer_group": selected["customer_group"],
+        }
+
+
+class UserListView(LoginRequiredMixin, ScopedListContextMixin, ListView):
     model = Users
     template_name = "user/user_list.html"
     context_object_name = "users"
     paginate_by = 10
 
-    def is_global_user(self):
-        # শুধু superuser সব দেখতে পারবে
-        return self.request.user.is_superuser
-
-    def get_allowed_branch_ids(self):
-        user = self.request.user
-
-        if self.is_global_user():
-            return None
-
-        if user.branch_id:
-            return [user.branch_id]
-
-        multi_branch_sets = user.mult_branch.all()
-        if multi_branch_sets.exists():
-            return list(
-                Branch.objects.filter(
-                    multibranch__in=multi_branch_sets
-                ).values_list("id", flat=True).distinct()
-            )
-
-        return []
-
-    def get_allowed_area_ids(self):
-        user = self.request.user
-
-        if self.is_global_user():
-            return None
-
-        if user.area_id:
-            return [user.area_id]
-
-        branch_ids = self.get_allowed_branch_ids()
-        if branch_ids:
-            return list(
-                Area.objects.filter(parent_branch_id__in=branch_ids)
-                .values_list("id", flat=True)
-                .distinct()
-            )
-
-        return []
-
-    def get_allowed_customer_group_ids(self):
-        user = self.request.user
-
-        if self.is_global_user():
-            return None
-
-        # user-er nijer assigned customer groups থাকলে শুধু ওইগুলো
-        user_group_ids = list(user.customer_group.values_list("id", flat=True))
-        if user_group_ids:
-            return user_group_ids
-
-        # না থাকলে area/branch অনুযায়ী possible groups
-        area_ids = self.get_allowed_area_ids()
-        branch_ids = self.get_allowed_branch_ids()
-
-        qs = CustomerGroup.objects.all()
-
-        if area_ids:
-            qs = qs.filter(area_id__in=area_ids)
-        elif branch_ids:
-            qs = qs.filter(branch_id__in=branch_ids)
-        else:
-            qs = qs.none()
-
-        return list(qs.values_list("id", flat=True).distinct())
-
     def get_queryset(self):
         queryset = (
             Users.objects.filter(is_deleted=False)
-            .prefetch_related("roles", "mult_branch", "customer_group")
             .select_related("branch", "area")
+            .prefetch_related("roles", "mult_branch", "customer_group")
         )
 
-        search = self.request.GET.get("search")
-        branch_id = self.request.GET.get("branch")
-        area_id = self.request.GET.get("area")
-        customer_group_id = self.request.GET.get("customer_group")
-        role_id = self.request.GET.get("role")
-        created_from = self.request.GET.get("created_from")
-        created_to = self.request.GET.get("created_to")
-
         user = self.request.user
+        scope = get_user_scope(user)
 
-        # SUPERUSER ছাড়া সবাই restricted
-        if not self.is_global_user():
-            # base restriction: exact hierarchy
-            if user.area_id:
-                queryset = queryset.filter(area_id=user.area_id)
-            elif user.branch_id:
-                queryset = queryset.filter(branch_id=user.branch_id)
+        allowed_branch_ids = set(scope["branches"].values_list("id", flat=True))
+        allowed_area_ids = set(scope["areas"].values_list("id", flat=True))
+        allowed_customer_group_ids = set(scope["customer_groups"].values_list("id", flat=True))
+
+        if not is_global_user(user):
+            if allowed_customer_group_ids:
+                queryset = queryset.filter(
+                    Q(customer_group__id__in=allowed_customer_group_ids) |
+                    Q(branch_id__in=allowed_branch_ids) |
+                    Q(area_id__in=allowed_area_ids) |
+                    Q(mult_branch__multi_branch__id__in=allowed_branch_ids)
+                )
+            elif allowed_area_ids:
+                queryset = queryset.filter(
+                    Q(area_id__in=allowed_area_ids) |
+                    Q(branch_id__in=allowed_branch_ids) |
+                    Q(mult_branch__multi_branch__id__in=allowed_branch_ids)
+                )
+            elif allowed_branch_ids:
+                queryset = queryset.filter(
+                    Q(branch_id__in=allowed_branch_ids) |
+                    Q(mult_branch__multi_branch__id__in=allowed_branch_ids)
+                )
             else:
-                branch_ids = self.get_allowed_branch_ids()
-                if branch_ids:
-                    queryset = queryset.filter(branch_id__in=branch_ids)
-                else:
-                    queryset = queryset.none()
+                queryset = queryset.none()
 
-            # customer group restriction: যদি login user-er customer group assign থাকে
-            user_group_ids = list(user.customer_group.values_list("id", flat=True))
-            if user_group_ids:
-                queryset = queryset.filter(customer_group__id__in=user_group_ids)
+        search = self.request.GET.get("search", "").strip()
+        branch_id = self.request.GET.get("branch", "").strip()
+        area_id = self.request.GET.get("area", "").strip()
+        customer_group_id = self.request.GET.get("customer_group", "").strip()
+        role_id = self.request.GET.get("role", "").strip()
+        created_from = self.request.GET.get("created_from", "").strip()
+        created_to = self.request.GET.get("created_to", "").strip()
 
         if search:
             queryset = queryset.filter(
@@ -774,7 +398,10 @@ class UserListView( ListView):
             )
 
         if branch_id:
-            queryset = queryset.filter(branch_id=branch_id)
+            queryset = queryset.filter(
+                Q(branch_id=branch_id) |
+                Q(mult_branch__multi_branch__id=branch_id)
+            )
 
         if area_id:
             queryset = queryset.filter(area_id=area_id)
@@ -796,142 +423,83 @@ class UserListView( ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        selected_branch = self.request.GET.get("branch")
-        selected_area = self.request.GET.get("area")
-        user = self.request.user
+        selected_branch = self.request.GET.get("branch", "").strip()
+        selected_area = self.request.GET.get("area", "").strip()
+        selected_customer_group = self.request.GET.get("customer_group", "").strip()
 
-        if self.is_global_user():
-            branches = Branch.objects.order_by("name")
-            areas = Area.objects.order_by("name")
-            customer_groups = CustomerGroup.objects.order_by("name")
-        else:
-            allowed_branch_ids = self.get_allowed_branch_ids()
-            allowed_area_ids = self.get_allowed_area_ids()
+        scope = get_user_scope(self.request.user)
+        filtered = apply_selected_filters(
+            scope["branches"],
+            scope["areas"],
+            scope["customer_groups"],
+            selected_branch=selected_branch,
+            selected_area=selected_area,
+            selected_customer_group_ids=[selected_customer_group] if selected_customer_group else [],
+        )
 
-            branches = Branch.objects.none()
-            areas = Area.objects.none()
-            customer_groups = CustomerGroup.objects.none()
-
-            if allowed_branch_ids:
-                branches = Branch.objects.filter(id__in=allowed_branch_ids).order_by("name")
-
-            if allowed_area_ids:
-                areas = Area.objects.filter(id__in=allowed_area_ids).order_by("name")
-
-            # customer group dropdown
-            user_group_ids = list(user.customer_group.values_list("id", flat=True))
-            if user_group_ids:
-                customer_groups = CustomerGroup.objects.filter(id__in=user_group_ids).order_by("name")
-            elif user.area_id:
-                customer_groups = CustomerGroup.objects.filter(area_id=user.area_id).order_by("name")
-            elif allowed_branch_ids:
-                customer_groups = CustomerGroup.objects.filter(branch_id__in=allowed_branch_ids).order_by("name")
-
-        if selected_branch:
-            areas = areas.filter(parent_branch_id=selected_branch)
-
-        if selected_area:
-            customer_groups = customer_groups.filter(area_id=selected_area)
-        elif selected_branch:
-            customer_groups = customer_groups.filter(branch_id=selected_branch)
-
-        context["branches"] = branches.distinct()
-        context["areas"] = areas.distinct()
-        context["customer_groups"] = customer_groups.distinct()
+        context["branches"] = filtered["branches"].order_by("name")
+        context["areas"] = filtered["areas"].order_by("name")
+        context["customer_groups"] = filtered["customer_groups"].order_by("name")
         context["roles"] = Roles.objects.order_by("name")
         return context
 
 
 
-# class UserFormContextMixin:
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context["branch_quick_form"] = BranchQuickForm()
-#         context["area_quick_form"] = AreaQuickForm()
-#         context["multibranch_quick_form"] = MultiBranchQuickForm()
-#         context["role_quick_form"] = RoleQuickForm()
-#         context["customergroup_quick_form"] = CustomerGroupQuickForm()
-#         return context
 
 
-
-# class UserFormContextMixin:
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context["branch_quick_form"] = BranchQuickForm()
-#         context["area_quick_form"] = AreaQuickForm()
-#         context["multibranch_quick_form"] = MultiBranchQuickForm()
-#         context["role_quick_form"] = RoleQuickForm()
-#         context["customergroup_quick_form"] = CustomerGroupQuickForm()
-#         context["user_quick_form"] = UserQuickForm()
-#         return context
-
-# class UserCreateView( UserFormContextMixin, CreateView):
-#     model = Users
-#     form_class = UserCreateForm
-#     template_name = "user/user_form.html"
-#     success_url = reverse_lazy("user_list")
-
-#     def get_form_kwargs(self):
-#         kwargs = super().get_form_kwargs()
-#         kwargs["request"] = self.request
-#         return kwargs
-
-#     def form_valid(self, form):
-#         response = super().form_valid(form)
-#         log_activity(self.request, "create", f"Created user {self.object.email}", self.object)
-#         messages.success(self.request, "User created successfully.")
-#         return response
-
-
-# class UserUpdateView( UserFormContextMixin, UpdateView):
-#     model = Users
-#     form_class = UserUpdateForm
-#     template_name = "user/user_form.html"
-#     success_url = reverse_lazy("user_list")
-
-#     def get_form_kwargs(self):
-#         kwargs = super().get_form_kwargs()
-#         kwargs["request"] = self.request
-#         return kwargs
-
-#     def form_valid(self, form):
-#         response = super().form_valid(form)
-#         log_activity(self.request, "update", f"Updated user {self.object.email}", self.object)
-#         messages.success(self.request, "User updated successfully.")
-#         return response
-
-from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse_lazy
-from django.views import View
-from django.db import transaction
-
-from .models import Users, Roles, Branch, Area, MultiBranch, CustomerGroup
-from .utils import log_activity
 
 
 class UserFormContextMixin:
     template_name = "user/user_form.html"
-    success_url = reverse_lazy("user_list")
+    success_url = reverse_lazy("user:user_list")
+
+    def _sync_user_staff_links(self, user):
+        if hasattr(user, "sync_staff_relations") and callable(user.sync_staff_relations):
+            user.sync_staff_relations()
+            return
+
+        for branch in Branch.objects.filter(branch_staff=user):
+            if user.branch_id != branch.id:
+                branch.branch_staff.remove(user)
+
+        for area in Area.objects.filter(area_staff=user):
+            if user.area_id != area.id:
+                area.area_staff.remove(user)
+
+        selected_group_ids = set(user.customer_group.values_list("id", flat=True))
+        for cg in CustomerGroup.objects.filter(customer_group_staff=user):
+            if cg.id not in selected_group_ids:
+                cg.customer_group_staff.remove(user)
+
+        if user.area and user.area.parent_branch and not user.branch:
+            user.branch = user.area.parent_branch
+            user.save(update_fields=["branch"])
+
+        for cg in user.customer_group.all():
+            if not user.branch and cg.branch:
+                user.branch = cg.branch
+            if not user.area and cg.area:
+                user.area = cg.area
+
+        if user.branch_id or user.area_id:
+            user.save(update_fields=["branch", "area"])
+
+        if user.branch:
+            user.branch.branch_staff.add(user)
+
+        if user.area:
+            user.area.area_staff.add(user)
+            if user.area.parent_branch:
+                user.area.parent_branch.total_area.add(user.area)
+
+        for cg in user.customer_group.all():
+            cg.customer_group_staff.add(user)
+            if user.area:
+                user.area.total_customers.add(cg)
 
     def get_common_context(self, request, obj=None, errors=None):
-        selected_branch = request.POST.get("branch") or (obj.branch_id if obj and obj.branch_id else "")
-        selected_area = request.POST.get("area") or (obj.area_id if obj and obj.area_id else "")
-
-        branches = Branch.objects.order_by("name")
-        areas = Area.objects.order_by("name")
-        customer_groups = CustomerGroup.objects.order_by("name")
-        roles = Roles.objects.order_by("name")
-        multibranches = MultiBranch.objects.order_by("title")
-
-        if selected_branch:
-            areas = areas.filter(parent_branch_id=selected_branch)
-            customer_groups = customer_groups.filter(branch_id=selected_branch)
-
-        if selected_area:
-            customer_groups = customer_groups.filter(area_id=selected_area)
+        selected_branch = request.POST.get("branch") or (str(obj.branch_id) if obj and obj.branch_id else "")
+        selected_area = request.POST.get("area") or (str(obj.area_id) if obj and obj.area_id else "")
 
         if request.method == "POST":
             selected_role_ids = request.POST.getlist("roles")
@@ -946,86 +514,53 @@ class UserFormContextMixin:
             selected_mult_branch_ids = []
             selected_customer_group_ids = []
 
+        scope = get_user_scope(request.user)
+
+        filtered_scope = apply_selected_filters(
+            scope["branches"],
+            scope["areas"],
+            scope["customer_groups"],
+            selected_branch=selected_branch,
+            selected_area=selected_area,
+            selected_customer_group_ids=selected_customer_group_ids,
+        )
+
+        branches = filtered_scope["branches"].order_by("name")
+        areas = filtered_scope["areas"].order_by("name")
+        customer_groups = filtered_scope["customer_groups"].order_by("name")
+
+        roles = Roles.objects.order_by("name")
+
+        allowed_branch_ids = list(scope["branches"].values_list("id", flat=True))
+        multibranches = MultiBranch.objects.prefetch_related("multi_branch").order_by("title")
+
+        if not is_global_user(request.user):
+            if allowed_branch_ids:
+                multibranches = multibranches.filter(multi_branch__id__in=allowed_branch_ids).distinct()
+            else:
+                multibranches = multibranches.none()
+
         return {
             "object": obj,
             "errors": errors or {},
-            "branches": branches.distinct(),
-            "areas": areas.distinct(),
-            "customer_groups": customer_groups.distinct(),
+            "branches": branches,
+            "areas": areas,
+            "customer_groups": customer_groups,
             "roles": roles,
             "multibranches": multibranches,
             "selected_role_ids": selected_role_ids,
             "selected_mult_branch_ids": selected_mult_branch_ids,
-            "selected_customer_group_ids": selected_customer_group_ids,
+            "selected_customer_group_ids": [str(i) for i in selected_customer_group_ids],
+            "selected_branch": selected_branch,
+            "selected_area": selected_area,
         }
 
-    def _sync_user_staff_links(self, user):
-        """
-        Keep reverse staff M2M relations in sync with user.branch, user.area,
-        and user.customer_group.
-        """
 
-        # clear old reverse links first
-        for branch in Branch.objects.filter(branchStaff=user):
-            branch.branchStaff.remove(user)
-
-        for area in Area.objects.filter(area_staf=user):
-            area.area_staf.remove(user)
-
-        for cg in CustomerGroup.objects.filter(customer_group_Staff=user):
-            cg.customer_group_Staff.remove(user)
-
-        # infer missing branch/area from selected area / customer groups
-        branch_updated = False
-        area_updated = False
-
-        if user.area and user.area.parent_branch and not user.branch:
-            user.branch = user.area.parent_branch
-            branch_updated = True
-
-        for cg in user.customer_group.all():
-            if not user.branch and cg.branch:
-                user.branch = cg.branch
-                branch_updated = True
-            if not user.area and cg.area:
-                user.area = cg.area
-                area_updated = True
-
-        if branch_updated or area_updated:
-            update_fields = []
-            if branch_updated:
-                update_fields.append("branch")
-            if area_updated:
-                update_fields.append("area")
-            user.save(update_fields=update_fields)
-
-        # add to branch staff
-        if user.branch:
-            user.branch.branchStaff.add(user)
-
-        # add to area staff
-        if user.area:
-            user.area.area_staf.add(user)
-
-        # add to customer group staff
-        for cg in user.customer_group.all():
-            cg.customer_group_Staff.add(user)
-
-        # optional consistency update:
-        # if user has area but no branch staff relation from area's parent branch
-        if user.area and user.area.parent_branch:
-            user.area.parent_branch.total_area.add(user.area)
-
-        # if selected customer groups have branch/area and user still missing one
-        # this should already be handled above, but safe to keep consistent
-        if user.area and user.area.parent_branch and not user.branch:
-            user.branch = user.area.parent_branch
-            user.save(update_fields=["branch"])
 
 
 class UserCreateView(LoginRequiredMixin, UserFormContextMixin, View):
     def get(self, request, *args, **kwargs):
-        context = self.get_common_context(request, obj=None)
+        context = self.get_common_context(request)
         return render(request, self.template_name, context)
 
     @transaction.atomic
@@ -1255,10 +790,14 @@ class UserUpdateView(LoginRequiredMixin, UserFormContextMixin, View):
         messages.success(request, "User updated successfully.")
         return redirect(self.success_url)
 
-class UserDeleteView( DeleteView):
+
+class UserDeleteView(LoginRequiredMixin, PermissionRequiredViewMixin, DeleteView):
     model = Users
     template_name = "user/user_confirm_delete.html"
     success_url = reverse_lazy("user_list")
+    required_permission = "user.delete_users"
+    denied_redirect = "user_list"
+    denied_message = "You do not have permission to delete users."
 
     def form_valid(self, form):
         user = self.get_object()
@@ -1269,7 +808,11 @@ class UserDeleteView( DeleteView):
         return redirect(self.success_url)
 
 
-class RoleListView(ListView):
+# -------------------------------------------------
+# ROLE CRUD
+# -------------------------------------------------
+
+class RoleListView(LoginRequiredMixin, ListView):
     model = Roles
     template_name = "user/role_list.html"
     context_object_name = "roles"
@@ -1278,11 +821,19 @@ class RoleListView(ListView):
         return Roles.objects.prefetch_related("permissions", "user_roles", "menu").all()
 
 
-class RoleCreateView(CreateView):
+class RoleCreateView(LoginRequiredMixin, PermissionRequiredViewMixin, CreateView):
     model = Roles
     form_class = RoleForm
     template_name = "user/role_form.html"
-    success_url = reverse_lazy("role_list")
+    success_url = reverse_lazy("user:role_list")
+    required_permission = "user.add_role"
+    denied_redirect = "user:role_list"
+    denied_message = "You do not have permission to create roles."
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["request"] = self.request
+        return kwargs
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -1291,11 +842,19 @@ class RoleCreateView(CreateView):
         return response
 
 
-class RoleUpdateView(UpdateView):
+class RoleUpdateView(LoginRequiredMixin, PermissionRequiredViewMixin, UpdateView):
     model = Roles
     form_class = RoleForm
     template_name = "user/role_form.html"
-    success_url = reverse_lazy("role_list")
+    success_url = reverse_lazy("user:role_list")
+    required_permission = "user.change_role"
+    denied_redirect = "user:role_list"
+    denied_message = "You do not have permission to update roles."
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["request"] = self.request
+        return kwargs
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -1304,169 +863,305 @@ class RoleUpdateView(UpdateView):
         return response
 
 
-class RoleDeleteView(DeleteView):
+class RoleDeleteView(BaseNoTemplateDeleteView):
     model = Roles
-    template_name = "user/role_confirm_delete.html"
-    success_url = reverse_lazy("role_list")
-
-    def form_valid(self, form):
-        role = self.get_object()
-        log_activity(self.request, "role_update", f"Deleted role {role.name}")
-        messages.success(self.request, "Role deleted successfully.")
-        return super().form_valid(form)
+    success_url = reverse_lazy("user:role_list")
+    permission_required = "user.delete_role"
+    success_message = "Role deleted successfully."
 
 
-class CustomerGroupDeleteView(DeleteView):
-    model = CustomerGroup
-    success_url = reverse_lazy("customer_group_list")
-
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect('login')
-        if not (request.user.is_superuser or request.user.is_admin or request.user.has_perm('user.delete_customergroup')):
-            messages.error(request, "You don't have permission to delete customer groups.")
-            return redirect('customer_group_list')
-        return super().dispatch(request, *args, **kwargs)
-
-    def form_valid(self, form):
-        cg = self.get_object()
-        # Clear customer group staff relationships
-        cg.customer_group_Staff.clear()
-        log_activity(self.request, "customer_group_delete", f"Deleted customer group {cg.name}")
-        messages.success(self.request, "Customer group deleted successfully.")
-        return super().form_valid(form)
-
-
-class MenuDeleteView(DeleteView):
-    model = Menu
-    success_url = reverse_lazy("menu_list")
-
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect('login')
-        if not (request.user.is_superuser or request.user.is_admin or request.user.has_perm('user.delete_menu')):
-            messages.error(request, "You don't have permission to delete menus.")
-            return redirect('menu_list')
-        return super().dispatch(request, *args, **kwargs)
-
-    def form_valid(self, form):
-        menu = self.get_object()
-        # Remove this menu from all roles
-        menu.role_menu_items.clear()
-        # Update any child menus to have no parent
-        Menu.objects.filter(parent=menu).update(parent=None)
-        log_activity(self.request, "menu_delete", f"Deleted menu {menu.name}")
-        messages.success(self.request, "Menu deleted successfully.")
-        return super().form_valid(form)
-
-
-class BranchDeleteView(DeleteView):
-    model = Branch
-    success_url = reverse_lazy("branch_list")
-
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect('login')
-        if not (request.user.is_superuser or request.user.is_admin or request.user.has_perm('user.delete_branch')):
-            messages.error(request, "You don't have permission to delete branches.")
-            return redirect('branch_list')
-        return super().dispatch(request, *args, **kwargs)
-
-    def form_valid(self, form):
-        branch = self.get_object()
-        # Clear branch staff relationships
-        branch.branchStaff.clear()
-        # Clear areas from this branch
-        branch.total_area.clear()
-        log_activity(self.request, "branch_delete", f"Deleted branch {branch.name}")
-        messages.success(self.request, "Branch deleted successfully.")
-        return super().form_valid(form)
-
-
-class AreaDeleteView(DeleteView):
-    model = Area
-    success_url = reverse_lazy("area_list")
-
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect('login')
-        if not (request.user.is_superuser or request.user.is_admin or request.user.has_perm('user.delete_area')):
-            messages.error(request, "You don't have permission to delete areas.")
-            return redirect('area_list')
-        return super().dispatch(request, *args, **kwargs)
-
-    def form_valid(self, form):
-        area = self.get_object()
-        # Clear area staff relationships
-        area.area_staf.clear()
-        # Remove this area from all branches that have it in total_area
-        area.branches.all().clear()
-        log_activity(self.request, "area_delete", f"Deleted area {area.name}")
-        messages.success(self.request, "Area deleted successfully.")
-        return super().form_valid(form)
-
-class BranchListView(LoginRequiredMixin, ListView):
+class BranchListView(LoginRequiredMixin, HtmxListViewMixin, ScopedListContextMixin, ListView):
     model = Branch
     template_name = "user/branch_list.html"
+    partial_template_name = "user/partials/branch_list_content.html"
     context_object_name = "branches"
 
     def get_queryset(self):
-        return Branch.objects.select_related("manager").prefetch_related("branchStaff", "total_area", "users").all()
+        qs = get_user_scope(self.request.user)["branches"].select_related("manager").prefetch_related(
+            "branch_staff", "total_area"
+        )
+
+        search = self.request.GET.get("search", "").strip()
+        branch_id = self.request.GET.get("branch", "").strip()
+
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search) |
+                Q(address__icontains=search) |
+                Q(phone__icontains=search)
+            )
+
+        if branch_id:
+            qs = qs.filter(id=branch_id)
+
+        return qs.distinct().order_by("name")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_scope_context())
+        return context
+
+class ScopedListContextMixin:
+    def get_selected_filters(self):
+        return {
+            "branch": self.request.GET.get("branch", "").strip(),
+            "area": self.request.GET.get("area", "").strip(),
+            "customer_group": self.request.GET.get("customer_group", "").strip(),
+        }
+
+    def get_scope_context(self):
+        selected = self.get_selected_filters()
+        scope = get_user_scope(self.request.user)
+
+        filtered = apply_selected_filters(
+            scope["branches"],
+            scope["areas"],
+            scope["customer_groups"],
+            selected_branch=selected["branch"],
+            selected_area=selected["area"],
+            selected_customer_group_ids=[selected["customer_group"]] if selected["customer_group"] else [],
+        )
+
+        return {
+            "filter_branches": filtered["branches"].order_by("name"),
+            "filter_areas": filtered["areas"].order_by("name"),
+            "filter_customer_groups": filtered["customer_groups"].order_by("name"),
+            "selected_branch": selected["branch"],
+            "selected_area": selected["area"],
+            "selected_customer_group": selected["customer_group"],
+        }
 
 
-class AreaListView(LoginRequiredMixin, ListView):
+
+
+class AreaListView(LoginRequiredMixin,HtmxListViewMixin, ScopedListContextMixin, ListView):
     model = Area
     template_name = "user/area_list.html"
+    partial_template_name = "user/partials/area_list_content.html"
     context_object_name = "areas"
 
     def get_queryset(self):
-        return Area.objects.select_related("parent_branch").prefetch_related("area_staf", "users_area").all()
+        qs = (
+            get_user_scope(self.request.user)["areas"]
+            .select_related("parent_branch")
+            .prefetch_related("area_staff", "total_customers")
+        )
+
+        search = self.request.GET.get("search", "").strip()
+        branch_id = self.request.GET.get("branch", "").strip()
+        area_id = self.request.GET.get("area", "").strip()
+
+        if branch_id:
+            qs = qs.filter(parent_branch_id=branch_id)
+
+        if area_id:
+            qs = qs.filter(id=area_id)
+
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search) |
+                Q(address__icontains=search) |
+                Q(parent_branch__name__icontains=search)
+            )
+
+        return qs.distinct().order_by("name")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_scope_context())
+        context["selected_search"] = self.request.GET.get("search", "").strip()
+        return context
+    
+
+class AreaListView(LoginRequiredMixin,HtmxListViewMixin, ScopedListContextMixin, ListView):
+    model = Area
+    template_name = "user/area_list.html"
+    partial_template_name = "user/partials/area_list_content.html"
+    context_object_name = "areas"
+
+    def get_queryset(self):
+        qs = (
+            get_user_scope(self.request.user)["areas"]
+            .select_related("parent_branch")
+            .prefetch_related("area_staff", "total_customers")
+        )
+
+        search = self.request.GET.get("search", "").strip()
+        branch_id = self.request.GET.get("branch", "").strip()
+        area_id = self.request.GET.get("area", "").strip()
+
+        if branch_id:
+            qs = qs.filter(parent_branch_id=branch_id)
+
+        if area_id:
+            qs = qs.filter(id=area_id)
+
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search) |
+                Q(address__icontains=search) |
+                Q(parent_branch__name__icontains=search)
+            )
+
+        return qs.distinct().order_by("name")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_scope_context())
+        context["selected_search"] = self.request.GET.get("search", "").strip()
+        return context
 
 
-class CustomerGroupListView(LoginRequiredMixin, ListView):
+class CustomerGroupListView(LoginRequiredMixin,HtmxListViewMixin, ScopedListContextMixin, ListView):
     model = CustomerGroup
     template_name = "user/customer_group_list.html"
+    partial_template_name = "user/partials/customer_group_list_content.html"
     context_object_name = "customer_groups"
 
     def get_queryset(self):
-        return CustomerGroup.objects.select_related("branch", "area").prefetch_related("customer_group_Staff").all()
+        qs = (
+            get_user_scope(self.request.user)["customer_groups"]
+            .select_related("branch", "area")
+            .prefetch_related("customer_group_staff")
+        )
 
+        search = self.request.GET.get("search", "").strip()
+        branch_id = self.request.GET.get("branch", "").strip()
+        area_id = self.request.GET.get("area", "").strip()
+        customer_group_id = self.request.GET.get("customer_group", "").strip()
 
-class MenuListView(LoginRequiredMixin, ListView):
+        if branch_id:
+            qs = qs.filter(branch_id=branch_id)
+
+        if area_id:
+            qs = qs.filter(area_id=area_id)
+
+        if customer_group_id:
+            qs = qs.filter(id=customer_group_id)
+
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search) |
+                Q(description__icontains=search) |
+                Q(branch__name__icontains=search) |
+                Q(area__name__icontains=search)
+            )
+
+        return qs.distinct().order_by("name")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_scope_context())
+        context["selected_search"] = self.request.GET.get("search", "").strip()
+        return context
+class MenuListView(LoginRequiredMixin, HtmxListViewMixin, ListView):
     model = Menu
     template_name = "user/menu_list.html"
+    partial_template_name = "user/partials/menu_list_content.html"
     context_object_name = "menus"
 
     def get_queryset(self):
-        return Menu.objects.select_related("parent").prefetch_related("permissions", "role_menu_items").all()
+        qs = (
+            Menu.objects.select_related("parent")
+            .prefetch_related("permissions", "role_menu_items")
+            .order_by("order", "name")
+        )
 
-# class ActivityLogListView( ListView):
-#     model = ActivityLog
-#     template_name = "user/activity_log.html"
-#     context_object_name = "logs"
-#     paginate_by = 20
+        search = self.request.GET.get("search", "").strip()
+        status = self.request.GET.get("status", "").strip()
+        parent_id = self.request.GET.get("parent", "").strip()
 
-#     def get_queryset(self):
-#         return ActivityLog.objects.select_related("user", "target_user").order_by("-created_at")
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search) |
+                Q(url__icontains=search) |
+                Q(icon__icontains=search) |
+                Q(description__icontains=search) |
+                Q(parent__name__icontains=search)
+            )
 
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         today = timezone.now().date()
-#         week_ago = timezone.now() - timedelta(days=7)
-#         month_ago = timezone.now() - timedelta(days=30)
-#         context["today_count"] = ActivityLog.objects.filter(created_at__date=today).count()
-#         context["week_count"] = ActivityLog.objects.filter(created_at__gte=week_ago).count()
-#         context["month_count"] = ActivityLog.objects.filter(created_at__gte=month_ago).count()
-#         return context
+        if status == "active":
+            qs = qs.filter(is_active=True)
+        elif status == "inactive":
+            qs = qs.filter(is_active=False)
+
+        if parent_id == "root":
+            qs = qs.filter(parent__isnull=True)
+        elif parent_id:
+            qs = qs.filter(parent_id=parent_id)
+
+        return qs.distinct()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["parents"] = Menu.objects.order_by("name")
+        context["selected_search"] = self.request.GET.get("search", "").strip()
+        context["selected_status"] = self.request.GET.get("status", "").strip()
+        context["selected_parent"] = self.request.GET.get("parent", "").strip()
+        return context
+
+
+class MultiBranchListView(LoginRequiredMixin, HtmxListViewMixin, ScopedListContextMixin, ListView):
+    model = MultiBranch
+    template_name = "user/multibranch_list.html"
+    partial_template_name = "user/partials/multibranch_list_content.html"
+    context_object_name = "multibranches"
+
+    def get_queryset(self):
+        qs = MultiBranch.objects.prefetch_related("multi_branch", "users_mult_branch")
+
+        user = self.request.user
+        scope = get_user_scope(user)
+        allowed_branch_ids = list(scope["branches"].values_list("id", flat=True))
+
+        if not is_global_user(user):
+            if allowed_branch_ids:
+                qs = qs.filter(multi_branch__id__in=allowed_branch_ids)
+            else:
+                qs = qs.none()
+
+        search = self.request.GET.get("search", "").strip()
+        branch_id = self.request.GET.get("branch", "").strip()
+
+        if branch_id:
+            qs = qs.filter(multi_branch__id=branch_id)
+
+        if search:
+            qs = qs.filter(
+                Q(title__icontains=search) |
+                Q(multi_branch__name__icontains=search)
+            )
+
+        return qs.distinct().order_by("title")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_scope_context())
+        context["selected_search"] = self.request.GET.get("search", "").strip()
+        return context
 
 
 
 
-class ActivityLogListView(ListView):
+
+class ActivityLogListView(LoginRequiredMixin, ListView):
     model = ActivityLog
     template_name = "user/activity_log.html"
     context_object_name = "logs"
     paginate_by = 20
+
+    def get_template_names(self):
+        if self.request.headers.get("HX-Request") == "true":
+            hx_target = self.request.headers.get("HX-Target", "")
+
+            # filter/pagination request
+            if hx_target == "activity-log-results":
+                return ["user/partials/activity_log_table.html"]
+
+            # sidebar/menu first click request
+            return ["user/partials/activity_log_page.html"]
+
+        return ["user/activity_log.html"]
 
     def get_queryset(self):
         queryset = (
@@ -1520,358 +1215,108 @@ class ActivityLogListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        selected_search = self.request.GET.get("search", "").strip()
+        selected_user = self.request.GET.get("user", "").strip()
         selected_branch = self.request.GET.get("branch", "").strip()
         selected_area = self.request.GET.get("area", "").strip()
+        selected_customer_group = self.request.GET.get("customer_group", "").strip()
+        selected_action = self.request.GET.get("action", "").strip()
+        selected_from_date = self.request.GET.get("from_date", "").strip()
+        selected_to_date = self.request.GET.get("to_date", "").strip()
 
         context["users"] = Users.objects.filter(is_deleted=False).order_by("name")
         context["branches"] = Branch.objects.order_by("name")
 
         if selected_branch:
             context["areas"] = Area.objects.filter(parent_branch_id=selected_branch).order_by("name")
+            context["customer_groups"] = CustomerGroup.objects.filter(branch_id=selected_branch).order_by("name")
         else:
             context["areas"] = Area.objects.order_by("name")
-
-        customer_groups = CustomerGroup.objects.all()
-
-        if selected_branch:
-            customer_groups = customer_groups.filter(branch_id=selected_branch)
+            context["customer_groups"] = CustomerGroup.objects.order_by("name")
 
         if selected_area:
-            customer_groups = customer_groups.filter(area_id=selected_area)
+            context["customer_groups"] = context["customer_groups"].filter(area_id=selected_area)
 
-        context["customer_groups"] = customer_groups.order_by("name").distinct()
+        today = timezone.localdate()
+        base_qs = ActivityLog.objects.all()
+        context["today_count"] = base_qs.filter(created_at__date=today).count()
+        context["week_count"] = base_qs.filter(created_at__date__gte=today - timedelta(days=7)).count()
+        context["month_count"] = base_qs.filter(created_at__date__gte=today - timedelta(days=30)).count()
 
-        context["selected_search"] = self.request.GET.get("search", "")
-        context["selected_user"] = self.request.GET.get("user", "")
+        context["action_choices"] = ActivityLog.ACTION_CHOICES
+        context["selected_search"] = selected_search
+        context["selected_user"] = selected_user
         context["selected_branch"] = selected_branch
         context["selected_area"] = selected_area
-        context["selected_customer_group"] = self.request.GET.get("customer_group", "")
-        context["selected_action"] = self.request.GET.get("action", "")
-        context["selected_from_date"] = self.request.GET.get("from_date", "")
-        context["selected_to_date"] = self.request.GET.get("to_date", "")
-
-        filtered_logs = self.get_queryset()
-        now = timezone.now()
-
-        context["today_count"] = filtered_logs.filter(created_at__date=now.date()).count()
-        context["week_count"] = filtered_logs.filter(created_at__gte=now - timedelta(days=7)).count()
-        context["month_count"] = filtered_logs.filter(created_at__gte=now - timedelta(days=30)).count()
+        context["selected_customer_group"] = selected_customer_group
+        context["selected_action"] = selected_action
+        context["selected_from_date"] = selected_from_date
+        context["selected_to_date"] = selected_to_date
 
         return context
 
 
 
+# -------------------------------------------------
+# MODEL DELETE VIEWS
+# -------------------------------------------------
 
+class BranchDeleteView(BaseNoTemplateDeleteView):
+    model = Branch
+    success_url = reverse_lazy("branch_list")
+    permission_required = "user.delete_branch"
+    success_message = "Branch deleted successfully."
 
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required, permission_required
-from django.views.decorators.http import require_POST, require_GET
-from django.shortcuts import get_object_or_404
-
-from .models import Menu
-
-
-@login_required
-@permission_required("user.add_menu", raise_exception=True)
-@require_POST
-def menu_ajax_create(request):
-    name = request.POST.get("name", "").strip()
-    url = request.POST.get("url", "").strip()
-    icon = request.POST.get("icon", "").strip() or "fas fa-circle"
-    order = request.POST.get("order", "0").strip()
-    description = request.POST.get("description", "").strip()
-    parent_id = request.POST.get("parent", "").strip()
-    is_active = request.POST.get("is_active") == "on"
-
-    if not name:
-        return JsonResponse({"success": False, "error": "Menu name is required."})
-
-    if not url:
-        return JsonResponse({"success": False, "error": "URL is required."})
-
-    try:
-        order = int(order or 0)
-    except ValueError:
-        return JsonResponse({"success": False, "error": "Order must be a number."})
-
-    parent = None
-    if parent_id:
-        parent = get_object_or_404(Menu, pk=parent_id)
-
-    menu = Menu.objects.create(
-        name=name,
-        url=url,
-        icon=icon,
-        order=order,
-        description=description,
-        parent=parent,
-        is_active=is_active,
-    )
-
-    return JsonResponse({
-        "success": True,
-        "id": menu.id,
-        "text": str(menu),
-    })
-
-
-@login_required
-@permission_required("user.change_menu", raise_exception=True)
-@require_GET
-def menu_json_detail(request, pk):
-    menu = get_object_or_404(Menu, pk=pk)
-
-    return JsonResponse({
-        "success": True,
-        "id": menu.id,
-        "name": menu.name,
-        "url": menu.url,
-        "icon": menu.icon,
-        "order": menu.order,
-        "description": menu.description or "",
-        "parent": menu.parent_id or "",
-        "is_active": menu.is_active,
-        "text": str(menu),
-    })
-
-
-@login_required
-@permission_required("user.change_menu", raise_exception=True)
-@require_POST
-def menu_ajax_update(request, pk):
-    menu = get_object_or_404(Menu, pk=pk)
-
-    name = request.POST.get("name", "").strip()
-    url = request.POST.get("url", "").strip()
-    icon = request.POST.get("icon", "").strip() or "fas fa-circle"
-    order = request.POST.get("order", "0").strip()
-    description = request.POST.get("description", "").strip()
-    parent_id = request.POST.get("parent", "").strip()
-    is_active = request.POST.get("is_active") == "on"
-
-    if not name:
-        return JsonResponse({"success": False, "error": "Menu name is required."})
-
-    if not url:
-        return JsonResponse({"success": False, "error": "URL is required."})
-
-    try:
-        order = int(order or 0)
-    except ValueError:
-        return JsonResponse({"success": False, "error": "Order must be a number."})
-
-    parent = None
-    if parent_id:
-        parent = get_object_or_404(Menu, pk=parent_id)
-        if parent.pk == menu.pk:
-            return JsonResponse({"success": False, "error": "A menu cannot be its own parent."})
+    def cleanup_before_delete(self, obj):
+        obj.branch_staff.clear()
+        obj.total_area.clear()
 
-    menu.name = name
-    menu.url = url
-    menu.icon = icon
-    menu.order = order
-    menu.description = description
-    menu.parent = parent
-    menu.is_active = is_active
-    menu.save()
 
-    return JsonResponse({
-        "success": True,
-        "id": menu.id,
-        "text": str(menu),
-    })
+class AreaDeleteView(BaseNoTemplateDeleteView):
+    model = Area
+    success_url = reverse_lazy("user.area_list")
+    permission_required = "user.delete_area"
+    success_message = "Area deleted successfully."
 
+    def cleanup_before_delete(self, obj):
+        obj.area_staff.clear()
+        obj.total_customers.clear()
 
 
-# ---------- AJAX helpers ----------
-def object_label(obj):
-    if hasattr(obj, "name") and obj.name:
-        return f"{obj.pk} - {obj.name}"
-    if hasattr(obj, "title") and obj.title:
-        return f"{obj.pk} - {obj.title}"
-    if hasattr(obj, "email") and obj.email:
-        return f"{obj.pk} - {obj.email}"
-    return f"{obj.pk} - {obj}"
+class CustomerGroupDeleteView(BaseNoTemplateDeleteView):
+    model = CustomerGroup
+    success_url = reverse_lazy("user:customer_group_list")
+    permission_required = "user.delete_customergroup"
+    success_message = "Customer group deleted successfully."
 
+    def cleanup_before_delete(self, obj):
+        obj.customer_group_staff.clear()
 
 
+class MenuDeleteView(BaseNoTemplateDeleteView):
+    model = Menu
+    success_url = reverse_lazy("menu_list")
+    permission_required = "user.delete_menu"
+    success_message = "Menu deleted successfully."
 
+    def cleanup_before_delete(self, obj):
+        obj.role_menu_items.clear()
+        Menu.objects.filter(parent=obj).update(parent=None)
 
 
+class MultiBranchDeleteView(BaseNoTemplateDeleteView):
+    model = MultiBranch
+    success_url = reverse_lazy("multibranch_list")
+    permission_required = "user.delete_multibranch"
+    success_message = "MultiBranch deleted successfully."
 
-def serialize_instance(instance, form_class):
-    form = form_class(instance=instance)
-    data = {}
+    def cleanup_before_delete(self, obj):
+        obj.multi_branch.clear()
 
-    for name in form.fields.keys():
-        value = getattr(instance, name, None)
 
-        if hasattr(value, "all"):
-            data[name] = list(value.all().values_list("pk", flat=True))
-        elif hasattr(instance, f"{name}_id"):
-            data[name] = getattr(instance, f"{name}_id")
-        else:
-            data[name] = value if value is not None else ""
-
-    return data
-
-
-def compact_option(obj):
-    if not obj:
-        return None
-    return {
-        "id": obj.pk,
-        "text": object_label(obj),
-    }
-
-
-def build_related_save_payload(model_name, obj):
-    payload = {
-        "success": True,
-        "model": model_name,
-        "item": compact_option(obj),
-        "message": f"{model_name.title()} saved successfully.",
-    }
-
-    if model_name == "branch":
-        payload["branch"] = compact_option(obj)
-
-    elif model_name == "area":
-        payload["branch"] = compact_option(obj.parent_branch) if obj.parent_branch_id else None
-        payload["area"] = compact_option(obj)
-
-    elif model_name == "customergroup":
-        payload["branch"] = compact_option(obj.branch) if obj.branch_id else None
-        payload["area"] = compact_option(obj.area) if obj.area_id else None
-        payload["customer_group"] = compact_option(obj)
-
-    elif model_name == "multibranch":
-        payload["mult_branch"] = compact_option(obj)
-
-    elif model_name == "role":
-        payload["role"] = compact_option(obj)
-
-    elif model_name == "user":
-        payload["user"] = compact_option(obj)
-        payload["branch"] = compact_option(obj.branch) if getattr(obj, "branch_id", None) else None
-        payload["area"] = compact_option(obj.area) if getattr(obj, "area_id", None) else None
-
-    return payload
-
-
-
-@login_required
-@require_GET
-def ajax_areas_by_branch(request):
-    branch_id = request.GET.get("branch_id")
-
-    qs = Area.objects.filter(parent_branch_id=branch_id).order_by("name") if branch_id else Area.objects.none()
-
-    return JsonResponse({
-        "results": [
-            {
-                "id": item.id,
-                "text": item.name,
-                "branch_id": item.parent_branch_id,
-            }
-            for item in qs
-        ]
-    })
-
-
-@login_required
-@require_GET
-def ajax_customer_groups(request):
-    branch_id = request.GET.get("branch_id")
-    area_id = request.GET.get("area_id")
-
-    qs = CustomerGroup.objects.all().order_by("name")
-
-    if branch_id:
-        qs = qs.filter(branch_id=branch_id)
-
-    if area_id:
-        qs = qs.filter(area_id=area_id)
-
-    return JsonResponse({
-        "results": [
-            {
-                "id": item.id,
-                "text": item.name,
-                "branch_id": item.branch_id,
-                "area_id": item.area_id,
-            }
-            for item in qs
-        ]
-    })
-
-
-@login_required
-@require_GET
-def ajax_branch_meta(request, pk):
-    branch = get_object_or_404(
-        Branch.objects.prefetch_related("branchStaff", "total_area"),
-        pk=pk,
-    )
-    return JsonResponse({
-        "id": branch.id,
-        "manager_id": branch.manager_id,
-        "staff_ids": list(branch.branchStaff.values_list("id", flat=True)),
-        "area_ids": list(branch.total_area.values_list("id", flat=True)),
-    })
-
-
-@login_required
-@require_GET
-def ajax_area_meta(request, pk):
-    area = get_object_or_404(
-        Area.objects.prefetch_related("area_staf", "customer_groups"),
-        pk=pk,
-    )
-    return JsonResponse({
-        "id": area.id,
-        "branch_id": area.parent_branch_id,
-        "staff_ids": list(area.area_staf.values_list("id", flat=True)),
-        "customer_group_ids": list(area.customer_groups.values_list("id", flat=True)),
-    })
-    branch_id = request.GET.get("branch_id")
-    area_id = request.GET.get("area_id")
-
-    qs = CustomerGroup.objects.all().order_by("name")
-
-    if branch_id:
-        qs = qs.filter(branch_id=branch_id)
-
-    if area_id:
-        qs = qs.filter(area_id=area_id)
-
-    return JsonResponse({
-        "results": [
-            {
-                "id": item.id,
-                "text": item.name,
-            }
-            for item in qs
-        ]
-    })
-
-from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
-from django.template.loader import render_to_string
-from django.views.decorators.http import require_http_methods
-
-from .models import Users, Roles, Branch, Area, MultiBranch, Menu, CustomerGroup
-from .forms import (
-    UserForm,
-    RoleQuickForm,
-    BranchQuickForm,
-    AreaQuickForm,
-    CustomerGroupQuickForm,
-    MenuQuickForm,
-)
-
+# -------------------------------------------------
+# HTMX RELATED MODAL + AJAX
+# -------------------------------------------------
 
 MODEL_FORM_MAP = {
     "branch": (Branch, BranchQuickForm),
@@ -1880,7 +1325,7 @@ MODEL_FORM_MAP = {
     "multibranch": (MultiBranch, MultiBranchQuickForm),
     "role": (Roles, RoleQuickForm),
     "menu": (Menu, MenuQuickForm),
-    "user": (Users, UserForm),
+    "user": (Users, UserQuickForm),
 }
 
 MODEL_PERMISSION_MAP = {
@@ -1895,147 +1340,407 @@ MODEL_PERMISSION_MAP = {
 
 
 
+
+
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_GET
+
+from .scope import get_user_scope
+
+
 def compact_option(obj):
+    if hasattr(obj, "name") and obj.name:
+        text = obj.name
+    elif hasattr(obj, "title") and obj.title:
+        text = obj.title
+    elif hasattr(obj, "email") and obj.email:
+        text = obj.email
+    else:
+        text = str(obj)
+
     return {
         "id": obj.pk,
-        "text": str(obj),
+        "text": text,
     }
 
-def build_related_save_payload(model_name, obj):
-    payload = {
-        "success": True,
-        "item": compact_option(obj),
-    }
+@login_required
+@require_GET
+def ajax_areas_by_branch(request):
+    branch_id = request.GET.get("branch_id", "").strip()
+    scope = get_user_scope(request.user)
 
-    if model_name == "branch":
-        payload["branch"] = compact_option(obj)
+    qs = scope["areas"]
+    if branch_id:
+        qs = qs.filter(parent_branch_id=branch_id)
 
-    elif model_name == "area":
-        payload["area"] = compact_option(obj)
-        if getattr(obj, "parent_branch_id", None):
-            payload["branch"] = compact_option(obj.parent_branch)
+    return JsonResponse({
+        "results": [compact_option(obj) for obj in qs.distinct().order_by("name")]
+    })
 
-    elif model_name == "customergroup":
-        payload["customergroup"] = compact_option(obj)
-        payload["customer_group"] = compact_option(obj)
-        if getattr(obj, "branch_id", None):
-            payload["branch"] = compact_option(obj.branch)
-        if getattr(obj, "area_id", None):
-            payload["area"] = compact_option(obj.area)
 
-    elif model_name == "multibranch":
-        payload["multibranch"] = compact_option(obj)
+@login_required
+@require_GET
+def ajax_customer_groups(request):
+    branch_id = request.GET.get("branch_id", "").strip()
+    area_id = request.GET.get("area_id", "").strip()
 
-    elif model_name == "role":
-        payload["role"] = compact_option(obj)
+    scope = get_user_scope(request.user)
+    qs = scope["customer_groups"]
 
-    elif model_name == "menu":
-        payload["menu"] = compact_option(obj)
+    if branch_id:
+        qs = qs.filter(branch_id=branch_id)
 
-    elif model_name == "user":
-        payload["user"] = compact_option(obj)
+    if area_id:
+        qs = qs.filter(area_id=area_id)
 
-    return payload
+    return JsonResponse({
+        "results": [compact_option(obj) for obj in qs.distinct().order_by("name")]
+    })
+
+
+@login_required
+@require_GET
+def ajax_branch_meta(request, pk):
+    branch = get_object_or_404(
+        Branch.objects.prefetch_related("branch_staff", "total_area"),
+        pk=pk,
+    )
+    return JsonResponse(
+        {
+            "id": branch.id,
+            "manager_id": branch.manager_id,
+            "staff_ids": list(branch.branch_staff.values_list("id", flat=True)),
+            "area_ids": list(branch.total_area.values_list("id", flat=True)),
+        }
+    )
+
+
+@login_required
+@require_GET
+def ajax_area_meta(request, pk):
+    area = get_object_or_404(
+        Area.objects.prefetch_related("area_staff", "total_customers"),
+        pk=pk,
+    )
+    return JsonResponse(
+        {
+            "id": area.id,
+            "branch_id": area.parent_branch_id,
+            "staff_ids": list(area.area_staff.values_list("id", flat=True)),
+            "customer_group_ids": list(area.total_customers.values_list("id", flat=True)),
+        }
+    )
+# @login_required
+# @require_http_methods(["GET", "POST"])
+# def related_object_modal(request, model_name, pk=None):
+#     model_name = normalize_model_name(model_name)
+
+#     MODEL_CONFIG = {
+#         "branch": {
+#             "model": Branch,
+#             "form": BranchQuickForm,
+#             "permission_add": "user.add_branch",
+#             "permission_change": "user.change_branch",
+#         },
+#         "area": {
+#             "model": Area,
+#             "form": AreaQuickForm,
+#             "permission_add": "user.add_area",
+#             "permission_change": "user.change_area",
+#         },
+#         "customergroup": {
+#             "model": CustomerGroup,
+#             "form": CustomerGroupQuickForm,
+#             "permission_add": "user.add_customergroup",
+#             "permission_change": "user.change_customergroup",
+#         },
+#         "multibranch": {
+#             "model": MultiBranch,
+#             "form": MultiBranchQuickForm,
+#             "permission_add": "user.add_multibranch",
+#             "permission_change": "user.change_multibranch",
+#         },
+#         "role": {
+#             "model": Roles,
+#             "form": RoleQuickForm,
+#             "permission_add": "user.add_role",
+#             "permission_change": "user.change_role",
+#         },
+#         "user": {
+#             "model": Users,
+#             "form": UserQuickForm,
+#             "permission_add": "user.add_users",
+#             "permission_change": "user.change_users",
+#         },
+#         "menu": {
+#             "model": Menu,
+#             "form": MenuQuickForm,
+#             "permission_add": "user.add_menu",
+#             "permission_change": "user.change_menu",
+#         },
+
+        
+#     }
+
+#     if model_name not in MODEL_CONFIG:
+#         return HttpResponse("Invalid model.", status=400)
+
+#     config = MODEL_CONFIG[model_name]
+#     model_class = config["model"]
+#     form_class = config["form"]
+
+#     instance = get_object_or_404(model_class, pk=pk) if pk else None
+
+#     permission_name = config["permission_change"] if instance else config["permission_add"]
+#     if not user_has_permission(request.user, permission_name):
+#         return HttpResponseForbidden("Permission denied")
+
+#     parent_field = request.GET.get("parent_field") or request.POST.get("_parent_field", "")
+#     branch_id = request.GET.get("branch_id") or request.POST.get("branch") or ""
+#     area_id = request.GET.get("area_id") or request.POST.get("area") or ""
+
+#     if request.method == "POST":
+#         form = form_class(request.POST, request.FILES, instance=instance, request=request)
+#         if form.is_valid():
+#             obj = form.save()
+
+#             return htmx_trigger_response({
+#                 "related:saved": {
+#                     "parentField": parent_field,
+#                     "option": {
+#                         "id": obj.pk,
+#                         "text": str(obj)
+#                     },
+#                     "message": f"{model_name.title()} saved successfully."
+#                 }
+#             })
+#     else:
+#         form = form_class(instance=instance, request=request)
+
+#     scope = get_user_scope(request.user)
+
+#     filtered_scope = apply_selected_filters(
+#         scope["branches"],
+#         scope["areas"],
+#         scope["customer_groups"],
+#         selected_branch=branch_id or (str(getattr(instance, "branch_id", "") or "")),
+#         selected_area=area_id or (str(getattr(instance, "area_id", "") or "")),
+#         selected_customer_group_ids=[],
+#     )
+
+#     # context = {
+#     #     "form": form,
+#     #     "model_name": model_name,
+#     #     "instance": instance,
+#     #     "parent_field": parent_field,
+#     #     "branches": filtered_scope["branches"].order_by("name"),
+#     #     "areas": filtered_scope["areas"].order_by("name"),
+#     #     "customer_groups": filtered_scope["customer_groups"].order_by("name"),
+#     #     "selected_branch": branch_id or (str(getattr(instance, "branch_id", "") or "")),
+#     #     "selected_area": area_id or (str(getattr(instance, "area_id", "") or "")),
+#     # }
+
+#     # return render(request, "common/related_modal_form.html", context)
+
+#     # context = {
+#     # "form": form,
+#     # "model_name": model_name,
+#     # "instance": instance,
+#     # "parent_field": parent_field,
+#     # "post_url": request.path,
+#     # "title": f"{'Update' if instance else 'Create'} {model_name.title()}",
+#     # "form_partial_template": "user/model_form.html",
+#     # "branches": filtered_scope["branches"].order_by("name"),
+#     # "areas": filtered_scope["areas"].order_by("name"),
+#     # "customer_groups": filtered_scope["customer_groups"].order_by("name"),
+#     # "selected_branch": branch_id or (str(getattr(instance, "branch_id", "") or "")),
+#     # "selected_area": area_id or (str(getattr(instance, "area_id", "") or "")),
+#     # }
+
+#     # return render(request, "common/related_modal_form.html", context)
+#     context = {
+#     "form": form,
+#     "model_name": model_name,
+#     "instance": instance,
+#     "parent_field": parent_field,
+#     "post_url": request.path,
+#     "title": f"{'Update' if instance else 'Create'} {model_name.title()}",
+#     "form_partial_template": "user/model_form.html",
+# }
+#     return render(request, "common/related_modal_form.html", context)
+
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def related_object_modal(request, model_name, pk=None):
-    model_name = model_name.lower().strip()
+    model_name = normalize_model_name(model_name)
 
-    if model_name not in MODEL_FORM_MAP:
-        return JsonResponse({"success": False, "message": "Invalid model name."}, status=400)
+    MODEL_CONFIG = {
+        "branch": {
+            "model": Branch,
+            "form": BranchQuickForm,
+            "permission_add": "user.add_branch",
+            "permission_change": "user.change_branch",
+        },
+        "area": {
+            "model": Area,
+            "form": AreaQuickForm,
+            "permission_add": "user.add_area",
+            "permission_change": "user.change_area",
+        },
+        "customergroup": {
+            "model": CustomerGroup,
+            "form": CustomerGroupQuickForm,
+            "permission_add": "user.add_customergroup",
+            "permission_change": "user.change_customergroup",
+        },
+        "multibranch": {
+            "model": MultiBranch,
+            "form": MultiBranchQuickForm,
+            "permission_add": "user.add_multibranch",
+            "permission_change": "user.change_multibranch",
+        },
+        "role": {
+            "model": Roles,
+            "form": RoleQuickForm,
+            "permission_add": "user.add_role",
+            "permission_change": "user.change_role",
+        },
+        "user": {
+            "model": Users,
+            "form": UserQuickForm,
+            "permission_add": "user.add_users",
+            "permission_change": "user.change_users",
+        },
+        "menu": {
+            "model": Menu,
+            "form": MenuQuickForm,
+            "permission_add": "user.add_menu",
+            "permission_change": "user.change_menu",
+        },
+    }
 
-    model_class, form_class = MODEL_FORM_MAP[model_name]
-    if form_class is None:
-        return JsonResponse({"success": False, "message": "Form is not configured for this model."}, status=400)
+    if model_name not in MODEL_CONFIG:
+        return HttpResponse("Invalid model.", status=400)
 
-    add_perm, change_perm = MODEL_PERMISSION_MAP[model_name]
-
-    if pk:
-        if not (request.user.is_superuser or request.user.is_admin or request.user.has_perm(change_perm)):
-            raise PermissionDenied
-    else:
-        if not (request.user.is_superuser or request.user.is_admin or request.user.has_perm(add_perm)):
-            raise PermissionDenied
+    config = MODEL_CONFIG[model_name]
+    model_class = config["model"]
+    form_class = config["form"]
 
     instance = get_object_or_404(model_class, pk=pk) if pk else None
-    initial = {}
 
-    if request.method == "GET":
-        if model_name == "area" and request.GET.get("branch_id"):
-            try:
-                initial["parent_branch"] = Branch.objects.get(pk=request.GET.get("branch_id"))
-            except Branch.DoesNotExist:
-                pass
+    permission_name = config["permission_change"] if instance else config["permission_add"]
+    if not user_has_permission(request.user, permission_name):
+        return HttpResponseForbidden("Permission denied")
 
-        elif model_name == "customergroup":
-            if request.GET.get("branch_id"):
-                try:
-                    initial["branch"] = Branch.objects.get(pk=request.GET.get("branch_id"))
-                except Branch.DoesNotExist:
-                    pass
+    parent_field = request.GET.get("parent_field") or request.POST.get("_parent_field", "")
+    branch_id = request.GET.get("branch_id") or request.POST.get("branch") or ""
+    area_id = request.GET.get("area_id") or request.POST.get("area") or ""
 
-            if request.GET.get("area_id"):
-                try:
-                    area = Area.objects.get(pk=request.GET.get("area_id"))
-                    initial["area"] = area
-                    if not initial.get("branch") and getattr(area, "parent_branch", None):
-                        initial["branch"] = area.parent_branch
-                except Area.DoesNotExist:
-                    pass
+    if request.method == "POST":
+        form = form_class(request.POST, request.FILES, instance=instance, request=request)
 
-        elif model_name == "menu" and request.GET.get("parent_id"):
-            try:
-                initial["parent"] = Menu.objects.get(pk=request.GET.get("parent_id"))
-            except Menu.DoesNotExist:
-                pass
+        if form.is_valid():
+            obj = form.save()
 
-        form = form_class(instance=instance, initial=initial, request=request)
+            action_text = "Updated" if instance else "Created"
+            print(parent_field, obj.pk, str(obj))
+            return htmx_trigger_response({
+                "related:saved": {
+                    "parentField": parent_field,
+                    "option": {
+                        "id": obj.pk,
+                        "text": str(obj),
+                    },
+                    "message": f"{action_text} successfully.",
+                }
+            })
 
-        html = render_to_string(
-            "user/modal_form.html",
-            {
-                "form": form,
-                "instance": instance,
-                "model_name": model_name,
-                "title": f"{'Edit' if instance else 'Create'} {model_class._meta.verbose_name.title()}",
-            },
-            request=request,
-        )
-        return JsonResponse({"success": True, "html": html})
+    else:
+        form = form_class(instance=instance, request=request)
 
-    form = form_class(request.POST, request.FILES, instance=instance, request=request)
+    context = {
+        "form": form,
+        "model_name": model_name,
+        "instance": instance,
+        "parent_field": parent_field,
+        "post_url": request.path,
+        "title": f"{'Update' if instance else 'Create'} {model_name.title()}",
+        "form_partial_template": "user/model_form.html",
+        "selected_branch": branch_id or (str(getattr(instance, "branch_id", "") or "")),
+        "selected_area": area_id or (str(getattr(instance, "area_id", "") or "")),
+    }
 
+    return render(request, "common/related_modal_form.html", context)
+
+
+
+# -------------------------------------------------
+# MENU AJAX COMPAT
+# -------------------------------------------------
+
+@login_required
+@require_http_methods(["POST"])
+def menu_ajax_create(request):
+    if not user_has_permission(request.user, "user.add_menu"):
+        return JsonResponse({"success": False, "message": "Permission denied."}, status=403)
+
+    form = MenuQuickForm(request.POST, request=request)
     if form.is_valid():
-        obj = form.save()
-        return JsonResponse(build_related_save_payload(model_name, obj))
+        menu = form.save()
+        return JsonResponse(
+            {
+                "success": True,
+                "id": menu.id,
+                "text": menu.name,
+                "message": "Menu created successfully.",
+            }
+        )
 
-    html = render_to_string(
-        "user/modal_form.html",
-        {
-            "form": form,
-            "instance": instance,
-            "model_name": model_name,
-            "title": f"{'Edit' if instance else 'Create'} {model_class._meta.verbose_name.title()}",
-        },
-        request=request,
-    )
-    return JsonResponse({"success": False, "html": html, "errors": form.errors}, status=400)
+    return JsonResponse({"success": False, "errors": form.errors}, status=422)
 
 
 @login_required
-def test_widgets(request):
-    """Debug view to test widget rendering"""
-    form = CustomerGroupQuickForm(request=request)
-    return render(request, "user/test_widget.html", {"form": form})
+@require_GET
+def menu_json_detail(request, pk):
+    menu = get_object_or_404(Menu.objects.prefetch_related("permissions"), pk=pk)
+    return JsonResponse(
+        {
+            "id": menu.id,
+            "name": menu.name,
+            "icon": menu.icon,
+            "url": menu.url,
+            "order": menu.order,
+            "is_active": menu.is_active,
+            "description": menu.description or "",
+            "parent_id": menu.parent_id,
+            "permission_ids": list(menu.permissions.values_list("id", flat=True)),
+        }
+    )
 
 
+@login_required
+@require_http_methods(["POST"])
+def menu_ajax_update(request, pk):
+    if not user_has_permission(request.user, "user.change_menu"):
+        return JsonResponse({"success": False, "message": "Permission denied."}, status=403)
 
+    menu = get_object_or_404(Menu, pk=pk)
+    form = MenuQuickForm(request.POST, instance=menu, request=request)
 
+    if form.is_valid():
+        menu = form.save()
+        return JsonResponse(
+            {
+                "success": True,
+                "id": menu.id,
+                "text": menu.name,
+                "message": "Menu updated successfully.",
+            }
+        )
 
-
-
-
+    return JsonResponse({"success": False, "errors": form.errors}, status=422)
 
 
 

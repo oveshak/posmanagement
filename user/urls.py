@@ -1,9 +1,10 @@
 
 
+
 from django.urls import path
 from .views import (
     ActivityLogListView,
-    AdminDashboardView,
+   
     AreaDeleteView,
     AreaListView,
     BranchDeleteView,
@@ -13,9 +14,11 @@ from .views import (
     CustomerGroupListView,
     DashboardView,
     LogoutView,
-    ManagementDashboardView,
+  
     MenuDeleteView,
     MenuListView,
+    MultiBranchDeleteView,
+    MultiBranchListView,
     ProfilePageView,
     RoleCreateView,
     RoleDeleteView,
@@ -30,27 +33,22 @@ from .views import (
     ajax_area_meta,
     ajax_branch_meta,
     ajax_customer_groups,
-    
     related_object_modal,
     menu_ajax_create,
     menu_json_detail,
     menu_ajax_update,
-    test_widgets,
+   
 )
-
-
+app_name = "user"
 urlpatterns = [
     path("login/", CustomLoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),
 
     path("", DashboardView.as_view(), name="dashboard"),
     path("dashboard/", DashboardView.as_view(), name="dashboard_page"),
-    path("admin-dashboard/", AdminDashboardView.as_view(), name="admin_dashboard"),
-    path("management/", ManagementDashboardView.as_view(), name="management_dashboard"),
-
+   
 
     path("profile/", ProfilePageView.as_view(), name="profile_page"),
-   
     path("change-password/", UserPasswordChangeView.as_view(), name="change_password"),
 
     path("users/", UserListView.as_view(), name="user_list"),
@@ -76,7 +74,11 @@ urlpatterns = [
     path("menus/<int:pk>/delete/", MenuDeleteView.as_view(), name="menu_delete"),
 
     path("activity-logs/", ActivityLogListView.as_view(), name="activity_logs"),
-    path("test-widgets/", test_widgets, name="test_widgets"),
+   
+
+
+    path("multi-branches/", MultiBranchListView.as_view(), name="multibranch_list"),
+    path("multi-branches/<int:pk>/delete/", MultiBranchDeleteView.as_view(), name="multibranch_delete"),
 
     # related modal routes
     path("ajax/related/<str:model_name>/create/", related_object_modal, name="related_object_create"),
@@ -95,66 +97,3 @@ urlpatterns = [
     path("menu/<int:pk>/json/", menu_json_detail, name="menu_json_detail"),
     path("menu/<int:pk>/ajax-update/", menu_ajax_update, name="menu_ajax_update"),
 ]
-
-
-# from django.urls import path
-# from .views import (
-#     AdminDashboardView,
-#     CustomLoginView,
-#     DashboardView,
-#     LogoutView,
-#     ManagementDashboardView,
-#     ProfilePageView,
-#     UserPasswordChangeView,
-#     load_areas,
-#     load_customer_groups,
-
-#     BranchListView, BranchCreateView, BranchUpdateView, BranchDeleteView,
-#     AreaListView, AreaCreateView, AreaUpdateView, AreaDeleteView,
-#     CustomerGroupListView, CustomerGroupCreateView, CustomerGroupUpdateView, CustomerGroupDeleteView,
-#     UserListView, UserCreateView, UserUpdateView, UserDeleteView,
-# )
-
-# urlpatterns = [
-
-
-#     path("login/", CustomLoginView.as_view(), name="login"),
-#     path("logout/", LogoutView.as_view(), name="logout"),
-
-#     path("", DashboardView.as_view(), name="dashboard"),
-#     path("dashboard/", DashboardView.as_view(), name="dashboard_page"),
-#     path("admin-dashboard/", AdminDashboardView.as_view(), name="admin_dashboard"),
-#     path("management/", ManagementDashboardView.as_view(), name="management_dashboard"),
-
-
-#     path("profile/", ProfilePageView.as_view(), name="profile_page"),
-   
-#     path("change-password/", UserPasswordChangeView.as_view(), name="change_password"),
-#     # AJAX
-#     path("ajax/load-areas/", load_areas, name="ajax_load_areas"),
-#     path("ajax/load-customer-groups/", load_customer_groups, name="ajax_load_customer_groups"),
-
-#     # Branch
-#     path("branches/", BranchListView.as_view(), name="branch_list"),
-#     path("branches/create/", BranchCreateView.as_view(), name="branch_create"),
-#     path("branches/<int:pk>/edit/", BranchUpdateView.as_view(), name="branch_edit"),
-#     path("branches/<int:pk>/delete/", BranchDeleteView.as_view(), name="branch_delete"),
-
-#     # Area
-#     path("areas/", AreaListView.as_view(), name="area_list"),
-#     path("areas/create/", AreaCreateView.as_view(), name="area_create"),
-#     path("areas/<int:pk>/edit/", AreaUpdateView.as_view(), name="area_edit"),
-#     path("areas/<int:pk>/delete/", AreaDeleteView.as_view(), name="area_delete"),
-
-#     # Customer Group
-#     path("customer-groups/", CustomerGroupListView.as_view(), name="customer_group_list"),
-#     path("customer-groups/create/", CustomerGroupCreateView.as_view(), name="customer_group_create"),
-#     path("customer-groups/<int:pk>/edit/", CustomerGroupUpdateView.as_view(), name="customer_group_edit"),
-#     path("customer-groups/<int:pk>/delete/", CustomerGroupDeleteView.as_view(), name="customer_group_delete"),
-
-#     # Users
-#     path("users/", UserListView.as_view(), name="user_list"),
-#     path("users/create/", UserCreateView.as_view(), name="user_create"),
-#     path("users/<int:pk>/edit/", UserUpdateView.as_view(), name="user_edit"),
-#     path("users/<int:pk>/delete/", UserDeleteView.as_view(), name="user_delete"),
-# ]

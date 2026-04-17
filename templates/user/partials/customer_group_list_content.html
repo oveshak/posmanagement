@@ -1,0 +1,207 @@
+<main id="main-content" class="flex-1 overflow-y-auto p-5 sm:p-6 page-content" style="background:var(--surface-alt);">
+    <div class="mx-auto">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">👥 Customer Groups</h1>
+                <p class="text-gray-600 dark:text-slate-400 mt-2">Manage customer groups, branches, areas and staff</p>
+            </div>
+
+            {% if request.user.is_superuser or request.user.is_admin or perms.user.add_customergroup %}
+                <a href="{% url 'user:related_object_create' 'customergroup' %}"
+                   class="inline-flex items-center justify-center bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition modal-trigger"
+                   data-modal-url="{% url 'user:related_object_create' 'customergroup' %}">
+                    ➕ Create Customer Group
+                </a>
+            {% endif %}
+        </div>
+
+        <form method="get"
+              hx-get="{% url 'user:customer_group_list' %}"
+              hx-target="#main-content"
+              hx-select="#main-content"
+              hx-swap="outerHTML"
+              hx-push-url="true"
+              class="bg-white dark:bg-slate-900 rounded-2xl shadow border border-gray-200 dark:border-slate-800 p-5 mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
+
+            <input type="text" name="search" value="{{ selected_search }}"
+                   placeholder="Search by name, description, branch, area"
+                   class="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white">
+
+            <select name="branch" class="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white js-enhanced-select">
+                <option value="">All Branches</option>
+                {% for branch in filter_branches %}
+                    <option value="{{ branch.id }}" {% if selected_branch == branch.id|stringformat:'s' %}selected{% endif %}>
+                        {{ branch.name }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <select name="area" class="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white js-enhanced-select">
+                <option value="">All Areas</option>
+                {% for area in filter_areas %}
+                    <option value="{{ area.id }}" {% if selected_area == area.id|stringformat:'s' %}selected{% endif %}>
+                        {{ area.name }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <select name="customer_group" class="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white js-enhanced-select">
+                <option value="">All Groups</option>
+                {% for group in filter_customer_groups %}
+                    <option value="{{ group.id }}" {% if selected_customer_group == group.id|stringformat:'s' %}selected{% endif %}>
+                        {{ group.name }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <div class="flex gap-3">
+                <button type="submit"
+                        class="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3">
+                    Filter
+                </button>
+                <a href="{% url 'user:customer_group_list' %}"
+                   class="flex-1 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 font-semibold px-5 py-3 text-center">
+                    Reset
+                </a>
+            </div>
+        </form>
+
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow overflow-hidden border border-gray-100 dark:border-slate-800">
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[1000px]">
+                    <thead class="bg-gray-50 dark:bg-slate-800">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Branch</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Area</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Staff</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Description</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
+                        {% for group in customer_groups %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800">
+                                <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{{ group.name }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ group.branch.name|default:"—" }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ group.area.name|default:"—" }}</td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for user in group.customer_group_staff.all|slice:":2" %}
+                                            <span class="inline-block px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded text-xs">
+                                                {{ user.name|default:user.email|truncatewords:2 }}
+                                            </span>
+                                        {% empty %}
+                                            <span class="text-xs text-gray-500 dark:text-slate-400">No staff</span>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">
+                                    {{ group.description|default:"No description"|truncatewords:10 }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <div class="flex gap-2">
+                                        {% if request.user.is_superuser or request.user.is_admin or perms.user.change_customergroup %}
+                                            <a href="{% url 'user:related_object_edit' 'customergroup' group.pk %}"
+                                               class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs modal-trigger"
+                                               data-modal-url="{% url 'user:related_object_edit' 'customergroup' group.pk %}">
+                                                ✏️ Edit
+                                            </a>
+                                        {% endif %}
+                                        {% if request.user.is_superuser or request.user.is_admin or perms.user.delete_customergroup %}
+                                            <a href="{% url 'user:customer_group_delete' group.pk %}"
+                                               class="delete-btn inline-flex items-center px-3 py-1 rounded bg-red-500 hover:bg-red-600 text-white text-xs"
+                                               data-url="{% url 'user:customer_group_delete' group.pk %}">
+                                                🗑️ Delete
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="px-6 py-12 text-center text-gray-600 dark:text-slate-400">
+                                    No customer groups found.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+{% comment %} <div class="bg-white dark:bg-slate-900 rounded-xl shadow overflow-hidden border border-gray-100 dark:border-slate-800">
+    <div class="overflow-x-auto">
+        <table class="w-full min-w-[1000px]">
+            <thead class="bg-gray-50 dark:bg-slate-800">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Branch</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Area</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Staff</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Description</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
+                {% for group in customer_groups %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-slate-800">
+                        <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{{ group.name }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ group.branch.name|default:"—" }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ group.area.name|default:"—" }}</td>
+
+                        <td class="px-6 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                {% for user in group.customer_group_staff.all|slice:":2" %}
+                                    <span class="inline-block px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded text-xs">
+                                        {{ user.name|default:user.email|truncatewords:2 }}
+                                    </span>
+                                {% empty %}
+                                    <span class="text-xs text-gray-500 dark:text-slate-400">No staff</span>
+                                {% endfor %}
+
+                                {% if group.customer_group_staff.count > 2 %}
+                                    <span class="inline-block px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded text-xs font-semibold">
+                                        +{{ group.customer_group_staff.count|add:"-2" }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">
+                            {{ group.description|default:"No description"|truncatewords:10 }}
+                        </td>
+
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div class="flex gap-2">
+                                {% if request.user.is_superuser or request.user.is_admin or perms.user.change_customergroup %}
+                                    <a href="{% url 'related_object_edit' 'customergroup' group.pk %}"
+                                       class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs modal-trigger"
+                                       data-modal-url="{% url 'related_object_edit' 'customergroup' group.pk %}">
+                                        ✏️ Edit
+                                    </a>
+                                {% endif %}
+
+                                {% if request.user.is_superuser or request.user.is_admin or perms.user.delete_customergroup %}
+                                    <a href="{% url 'customer_group_delete' group.pk %}"
+                                       class="delete-btn inline-flex items-center px-3 py-1 rounded bg-red-500 hover:bg-red-600 text-white text-xs"
+                                       data-url="{% url 'customer_group_delete' group.pk %}">
+                                        🗑️ Delete
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-600 dark:text-slate-400">
+                            No customer groups found.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div> {% endcomment %}

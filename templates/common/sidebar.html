@@ -1,4 +1,4 @@
-
+{% comment %} 
 
 
 {% load static %}
@@ -109,6 +109,266 @@
     </nav>
 
     <div class="sidebar-footer p-4 border-t">
+        <div class="sidebar-footer-text text-xs text-center">
+            © 2026 Management Panel
+        </div>
+    </div>
+</aside> {% endcomment %}
+
+
+
+
+
+
+
+
+
+
+{% comment %} 
+{% load static %}
+
+<aside id="sidebar"
+    class="fixed md:relative inset-y-0 left-0 z-50 flex h-screen flex-col transform -translate-x-full md:translate-x-0 shadow-2xl transition-all duration-300 sidebar-open">
+
+    <div class="top-logo-area p-4 relative z-10 border-b">
+        <div class="logo-wrap flex flex-col items-center gap-3">
+            <div class="brand-logo-box shrink-0">
+                <img src="https://dummyimage.com/120x40/f59e0b/ffffff&text=Logo"
+                     alt="Logo"
+                     class="h-10 w-auto rounded">
+            </div>
+            <div class="text-center">
+                <h1 class="brand-title text-lg font-bold">Management</h1>
+                <p class="brand-subtitle text-xs">Admin Panel</p>
+            </div>
+        </div>
+    </div>
+
+    <nav id="sidebarNav"
+         class="sidebar-nav flex-1 overflow-y-auto px-3 py-4 space-y-2"
+         hx-boost="true"
+         hx-target="#main-content"
+         hx-select="#main-content"
+         hx-swap="outerHTML"
+         hx-push-url="true">
+
+        <a href="{% url 'dashboard' %}"
+           data-href="{% url 'dashboard' %}"
+           class="sidebar-link menu-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 {% if request.path == '/' or request.path == '/dashboard/' %}active{% endif %}">
+            <i class="fas fa-home w-5 text-center shrink-0"></i>
+            <span class="sidebar-text">Dashboard</span>
+        </a>
+
+        {% for item in sidebar_menus %}
+            {% with menu=item.menu children=item.children %}
+                {% if children %}
+                    <div class="sidebar-group" data-dropdown>
+                        <button type="button"
+                                class="dropdown-trigger menu-item w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-left relative">
+                            <div class="flex items-center gap-3 min-w-0">
+                                {% if menu.icon %}
+                                    <i class="{{ menu.icon }} main-icon w-5 text-center shrink-0"></i>
+                                {% else %}
+                                    <i class="fas fa-circle main-icon w-5 text-center text-xs shrink-0"></i>
+                                {% endif %}
+                                <span class="sidebar-text truncate">{{ menu.name }}</span>
+                            </div>
+                            <i class="chevron sidebar-chevron fas fa-chevron-down text-xs transition-transform duration-300 shrink-0"></i>
+                        </button>
+
+                        <div class="dropdown-menu sidebar-submenu hidden mt-2 ml-3 space-y-1 pl-3">
+                            {% for child in children %}
+                                {% if child.url %}
+                                    {% if child.url|slice:':1' == '/' %}
+                                        {% with child_url=child.url %}
+                                            <a href="{{ child_url }}"
+                                               data-href="{{ child_url }}"
+                                               class="sidebar-child-link flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-200 {% if request.path == child_url %}active{% endif %}">
+                                                {% if child.icon %}
+                                                    <i class="{{ child.icon }} w-4 text-center shrink-0"></i>
+                                                {% else %}
+                                                    <i class="fas fa-angle-right w-4 text-center shrink-0"></i>
+                                                {% endif %}
+                                                <span class="sidebar-text">{{ child.name }}</span>
+                                            </a>
+                                        {% endwith %}
+                                    {% else %}
+                                        {% url child.url as child_resolved_url %}
+                                        {% if child_resolved_url %}
+                                            <a href="{{ child_resolved_url }}"
+                                               data-href="{{ child_resolved_url }}"
+                                               class="sidebar-child-link flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-200 {% if request.path == child_resolved_url %}active{% endif %}">
+                                                {% if child.icon %}
+                                                    <i class="{{ child.icon }} w-4 text-center shrink-0"></i>
+                                                {% else %}
+                                                    <i class="fas fa-angle-right w-4 text-center shrink-0"></i>
+                                                {% endif %}
+                                                <span class="sidebar-text">{{ child.name }}</span>
+                                            </a>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    {% if menu.url %}
+                        {% if menu.url|slice:':1' == '/' %}
+                            {% with menu_url=menu.url %}
+                                <a href="{{ menu_url }}"
+                                   data-href="{{ menu_url }}"
+                                   class="sidebar-link menu-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 {% if request.path == menu_url %}active{% endif %}">
+                                    {% if menu.icon %}
+                                        <i class="{{ menu.icon }} w-5 text-center shrink-0"></i>
+                                    {% else %}
+                                        <i class="fas fa-circle w-5 text-center text-xs shrink-0"></i>
+                                    {% endif %}
+                                    <span class="sidebar-text">{{ menu.name }}</span>
+                                </a>
+                            {% endwith %}
+                        {% else %}
+                            {% url menu.url as menu_resolved_url %}
+                            {% if menu_resolved_url %}
+                                <a href="{{ menu_resolved_url }}"
+                                   data-href="{{ menu_resolved_url }}"
+                                   class="sidebar-link menu-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 {% if request.path == menu_resolved_url %}active{% endif %}">
+                                    {% if menu.icon %}
+                                        <i class="{{ menu.icon }} w-5 text-center shrink-0"></i>
+                                    {% else %}
+                                        <i class="fas fa-circle w-5 text-center text-xs shrink-0"></i>
+                                    {% endif %}
+                                    <span class="sidebar-text">{{ menu.name }}</span>
+                                </a>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+            {% endwith %}
+        {% endfor %}
+    </nav>
+
+    <div class="sidebar-footer p-4 border-t space-y-3">
+        <a href="{% url 'user:logout' %}"
+           class="sidebar-link menu-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">
+            <i class="fas fa-sign-out-alt w-5 text-center shrink-0"></i>
+            <span class="sidebar-text">Logout</span>
+        </a>
+
+        <div class="sidebar-footer-text text-xs text-center">
+            © 2026 Management Panel
+        </div>
+    </div>
+</aside> {% endcomment %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+{% load static %}
+
+<aside id="sidebar"
+    class="fixed md:relative inset-y-0 left-0 z-50 flex h-screen flex-col transform -translate-x-full md:translate-x-0 shadow-2xl transition-all duration-300 sidebar-open">
+
+    <div class="top-logo-area p-4 relative z-10 border-b">
+        <div class="logo-wrap flex flex-col items-center gap-3">
+            <div class="brand-logo-box shrink-0">
+                <img src="https://dummyimage.com/120x40/f59e0b/ffffff&text=Logo"
+                     alt="Logo"
+                     class="h-10 w-auto rounded">
+            </div>
+            <div class="text-center">
+                <h1 class="brand-title text-lg font-bold">Management</h1>
+                <p class="brand-subtitle text-xs">Admin Panel</p>
+            </div>
+        </div>
+    </div>
+
+    <nav id="sidebarNav"
+         class="sidebar-nav flex-1 overflow-y-auto px-3 py-4 space-y-2"
+         hx-boost="true"
+         hx-target="#main-content"
+         hx-select="#main-content"
+         hx-swap="outerHTML"
+         hx-push-url="true">
+
+        {% url 'dashboard' as dashboard_url %}
+        <a href="{{ dashboard_url }}"
+           data-href="{{ dashboard_url }}"
+           class="sidebar-link menu-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 {% if request.path == dashboard_url %}active{% endif %}">
+            <i class="fas fa-home w-5 text-center shrink-0"></i>
+            <span class="sidebar-text">Dashboard</span>
+        </a>
+
+        {% for item in sidebar_menus %}
+            {% with menu=item.menu children=item.children menu_url=menu.get_resolved_url %}
+                {% if children %}
+                    <div class="sidebar-group" data-dropdown>
+                        <button type="button"
+                                class="dropdown-trigger menu-item w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-left relative">
+                            <div class="flex items-center gap-3 min-w-0">
+                                {% if menu.icon %}
+                                    <i class="{{ menu.icon }} main-icon w-5 text-center shrink-0"></i>
+                                {% else %}
+                                    <i class="fas fa-circle main-icon w-5 text-center text-xs shrink-0"></i>
+                                {% endif %}
+                                <span class="sidebar-text truncate">{{ menu.name }}</span>
+                            </div>
+                            <i class="chevron sidebar-chevron fas fa-chevron-down text-xs transition-transform duration-300 shrink-0"></i>
+                        </button>
+
+                        <div class="dropdown-menu sidebar-submenu hidden mt-2 ml-3 space-y-1 pl-3">
+                            {% for child in children %}
+                                {% with child_url=child.get_resolved_url %}
+                                    {% if child_url %}
+                                        <a href="{{ child_url }}"
+                                           data-href="{{ child_url }}"
+                                           class="sidebar-child-link flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-200 {% if request.path == child_url %}active{% endif %}">
+                                            {% if child.icon %}
+                                                <i class="{{ child.icon }} w-4 text-center shrink-0"></i>
+                                            {% else %}
+                                                <i class="fas fa-angle-right w-4 text-center shrink-0"></i>
+                                            {% endif %}
+                                            <span class="sidebar-text">{{ child.name }}</span>
+                                        </a>
+                                    {% endif %}
+                                {% endwith %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    {% if menu_url %}
+                        <a href="{{ menu_url }}"
+                           data-href="{{ menu_url }}"
+                           class="sidebar-link menu-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 {% if request.path == menu_url %}active{% endif %}">
+                            {% if menu.icon %}
+                                <i class="{{ menu.icon }} w-5 text-center shrink-0"></i>
+                            {% else %}
+                                <i class="fas fa-circle w-5 text-center text-xs shrink-0"></i>
+                            {% endif %}
+                            <span class="sidebar-text">{{ menu.name }}</span>
+                        </a>
+                    {% endif %}
+                {% endif %}
+            {% endwith %}
+        {% endfor %}
+    </nav>
+
+    <div class="sidebar-footer p-4 border-t space-y-3">
+        {% url 'user:logout' as logout_url %}
+        <a href="{{ logout_url }}"
+           class="sidebar-link menu-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">
+            <i class="fas fa-sign-out-alt w-5 text-center shrink-0"></i>
+            <span class="sidebar-text">Logout</span>
+        </a>
+
         <div class="sidebar-footer-text text-xs text-center">
             © 2026 Management Panel
         </div>
