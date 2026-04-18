@@ -49,12 +49,7 @@ def get_user_scope(user):
     user_customer_group_ids = set(user.customer_group.values_list("id", flat=True))
     multi_branch_ids = set(get_multibranch_branch_ids(user))
 
-    has_branch = bool(user.branch_id)
-    has_area = bool(user.area_id)
-    has_customer_group = bool(user_customer_group_ids)
-    has_multi_branch = bool(multi_branch_ids)
-
-    has_any_assignment = has_branch or has_area or has_customer_group or has_multi_branch
+    has_any_assignment = bool(user.branch_id or user.area_id or user_customer_group_ids or multi_branch_ids)
 
     # If nothing selected on user profile => show all, then UI selected chain will work
     if not has_any_assignment:
@@ -64,101 +59,78 @@ def get_user_scope(user):
             "customer_groups": customer_groups.distinct(),
         }
 
-    allowed_branch_ids = set()
-    allowed_area_ids = set()
-    allowed_customer_group_ids = set()
+    # Priority chain (strict): branch => area => customer group => multibranch
 
-    # 1) branch selected -> only that branch
     if user.branch_id:
-        allowed_branch_ids.add(user.branch_id)
+        branches = branches.filter(id=user.branch_id)
 
-    # 2) area selected -> area + its parent branch
+        if user.area_id:
+            areas = areas.filter(id=user.area_id, parent_branch_id=user.branch_id)
+        else:
+            areas = areas.filter(parent_branch_id=user.branch_id)
+
+        if user.area_id and user_customer_group_ids:
+            customer_groups = customer_groups.filter(
+                id__in=user_customer_group_ids,
+                branch_id=user.branch_id,
+                area_id=user.area_id,
+            )
+        elif user.area_id:
+            customer_groups = customer_groups.filter(
+                branch_id=user.branch_id,
+                area_id=user.area_id,
+            )
+        elif user_customer_group_ids:
+            customer_groups = customer_groups.filter(
+                id__in=user_customer_group_ids,
+                branch_id=user.branch_id,
+            )
+        else:
+            customer_groups = customer_groups.filter(branch_id=user.branch_id)
+
+        return {
+            "branches": branches.distinct().order_by("name"),
+            "areas": areas.distinct().order_by("name"),
+            "customer_groups": customer_groups.distinct().order_by("name"),
+        }
+
     if user.area_id:
-        allowed_area_ids.add(user.area_id)
-        if user.area and user.area.parent_branch_id:
-            allowed_branch_ids.add(user.area.parent_branch_id)
-
-    # 3) customer group selected -> cg + derive area + branch
-    if user_customer_group_ids:
-        allowed_customer_group_ids.update(user_customer_group_ids)
-
-        cg_qs = CustomerGroup.objects.filter(id__in=user_customer_group_ids)
-
-        allowed_branch_ids.update(
-            cg_qs.exclude(branch_id__isnull=True).values_list("branch_id", flat=True)
-        )
-        allowed_area_ids.update(
-            cg_qs.exclude(area_id__isnull=True).values_list("area_id", flat=True)
-        )
-
-    # 4) multi branch selected -> all those branches allowed
-    if multi_branch_ids:
-        allowed_branch_ids.update(multi_branch_ids)
-
-    # ---------------------------------------
-    # Build final base scope
-    # ---------------------------------------
-
-    # Branch rules:
-    # - if branch selected => only that branch
-    # - else if derived/allowed branch ids => those branches
-    if allowed_branch_ids:
-        branches = branches.filter(id__in=allowed_branch_ids)
-    else:
-        branches = Branch.objects.none()
-
-    # Area rules:
-    # - if branch + area selected => only that area
-    # - elif area selected => only that area
-    # - elif branch selected/multibranch => all areas under allowed branches
-    if user.branch_id and user.area_id:
-        areas = areas.filter(id=user.area_id, parent_branch_id=user.branch_id)
-
-    elif user.area_id:
         areas = areas.filter(id=user.area_id)
+        branch_ids = set(areas.values_list("parent_branch_id", flat=True))
+        branches = branches.filter(id__in=branch_ids)
 
-    elif allowed_branch_ids:
-        areas = areas.filter(parent_branch_id__in=allowed_branch_ids)
+        if user_customer_group_ids:
+            customer_groups = customer_groups.filter(
+                id__in=user_customer_group_ids,
+                area_id=user.area_id,
+            )
+        else:
+            customer_groups = customer_groups.filter(area_id=user.area_id)
 
-    else:
-        areas = Area.objects.none()
+        return {
+            "branches": branches.distinct().order_by("name"),
+            "areas": areas.distinct().order_by("name"),
+            "customer_groups": customer_groups.distinct().order_by("name"),
+        }
 
-    # Customer group rules:
-    # - if branch + area + customer group selected => only those customer groups
-    # - elif branch + area selected => all CG under that branch+area
-    # - elif branch selected => all CG under that branch
-    # - elif only customer group selected => only those
-    # - elif multibranch selected => all CG under allowed branches
-    if user.branch_id and user.area_id and user_customer_group_ids:
-        customer_groups = customer_groups.filter(
-            id__in=user_customer_group_ids,
-            branch_id=user.branch_id,
-            area_id=user.area_id,
-        )
-
-    elif user.branch_id and user.area_id:
-        customer_groups = customer_groups.filter(
-            branch_id=user.branch_id,
-            area_id=user.area_id,
-        )
-
-    elif user.branch_id and user_customer_group_ids:
-        customer_groups = customer_groups.filter(
-            id__in=user_customer_group_ids,
-            branch_id=user.branch_id,
-        )
-
-    elif user.branch_id:
-        customer_groups = customer_groups.filter(branch_id=user.branch_id)
-
-    elif user_customer_group_ids:
+    if user_customer_group_ids:
         customer_groups = customer_groups.filter(id__in=user_customer_group_ids)
+        branch_ids = set(customer_groups.exclude(branch_id__isnull=True).values_list("branch_id", flat=True))
+        area_ids = set(customer_groups.exclude(area_id__isnull=True).values_list("area_id", flat=True))
 
-    elif allowed_branch_ids:
-        customer_groups = customer_groups.filter(branch_id__in=allowed_branch_ids)
+        branches = branches.filter(id__in=branch_ids)
+        areas = areas.filter(id__in=area_ids)
 
-    else:
-        customer_groups = CustomerGroup.objects.none()
+        return {
+            "branches": branches.distinct().order_by("name"),
+            "areas": areas.distinct().order_by("name"),
+            "customer_groups": customer_groups.distinct().order_by("name"),
+        }
+
+    # Fallback only when branch/area/customer group are not selected: multibranch scope
+    branches = branches.filter(id__in=multi_branch_ids)
+    areas = areas.filter(parent_branch_id__in=multi_branch_ids)
+    customer_groups = customer_groups.filter(branch_id__in=multi_branch_ids)
 
     return {
         "branches": branches.distinct().order_by("name"),
@@ -193,10 +165,15 @@ def apply_selected_filters(
 
     if selected_area:
         areas = areas.filter(id=selected_area)
+        # Keep branch in sync with selected area when area chosen directly.
+        branches = branches.filter(id__in=areas.values_list("parent_branch_id", flat=True))
         customer_groups = customer_groups.filter(area_id=selected_area)
 
     if selected_customer_group_ids:
         customer_groups = customer_groups.filter(id__in=selected_customer_group_ids)
+        # Keep branch/area synced with selected customer group(s).
+        branches = branches.filter(id__in=customer_groups.values_list("branch_id", flat=True))
+        areas = areas.filter(id__in=customer_groups.values_list("area_id", flat=True))
 
     return {
         "branches": branches.distinct(),

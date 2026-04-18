@@ -1,51 +1,73 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block app_prefix %}/products{% endblock %}
+{% block app_prefix %}/product{% endblock %}
 
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="min-h-screen">
-    <div class="mx-auto max-w-5xl">
-        <div class="mb-6 flex items-center justify-between gap-4">
-            <div>
-                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ title }}</h2>
+<div id="main-content" data-page-title="{{ title }} - Management" data-page-subtitle="Manage {{ title|lower }}" class="flex-1 overflow-y-auto p-5 sm:p-6 page-content" style="background:var(--surface-alt);">
+    <div class="min-h-screen">
+        <div class="mx-auto max-w-5xl">
+            <div class="mb-6 flex items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ title }}</h2>
+                </div>
+
+                <a href="{{ cancel_url|default:'javascript:history.back()' }}"
+                   {% if cancel_url %}
+                   hx-get="{{ cancel_url }}"
+                   hx-target="#main-content"
+                   hx-select="#main-content"
+                   hx-swap="outerHTML"
+                   hx-push-url="true"
+                   {% endif %}
+                   class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200">
+                    <i class="fas fa-arrow-left mr-2"></i> Back
+                </a>
             </div>
 
-            <a href="javascript:history.back()"
-               class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200">
-                <i class="fas fa-arrow-left mr-2"></i> Back
-            </a>
-        </div>
+            <div class="bg-white dark:bg-slate-900 shadow-sm rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
+                <form method="post"
+                      action="{{ request.get_full_path }}"
+                      hx-post="{{ request.get_full_path }}"
+                      hx-target="#main-content"
+                      hx-select="#main-content"
+                      hx-swap="outerHTML"
+                      class="p-6 md:p-8 space-y-8">
+                    {% csrf_token %}
 
-        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
-            <form method="post" class="p-6 md:p-8 space-y-8">
-                {% csrf_token %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {% for field in form %}
+                            <div class="{% if field.name == 'notes' or field.name == 'reason' %}md:col-span-2{% endif %}">
+                                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">{{ field.label }}</label>
+                                {{ field }}
+                                {% for error in field.errors %}
+                                    <p class="text-sm text-red-600 mt-2">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {% for field in form %}
-                        <div class="{% if field.name == 'notes' or field.name == 'reason' %}md:col-span-2{% endif %}">
-                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">{{ field.label }}</label>
-                            {{ field }}
-                            {% for error in field.errors %}
-                                <p class="text-sm text-red-600 mt-2">{{ error }}</p>
-                            {% endfor %}
-                        </div>
-                    {% endfor %}
-                </div>
-
-                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
-                    <a href="javascript:history.back()"
-                       class="px-5 py-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200">
-                        Cancel
-                    </a>
-                    <button type="submit"
-                            class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold">
-                        {% if object %}Update{% else %}Create{% endif %}
-                    </button>
-                </div>
-            </form>
+                    <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
+                        <a href="{{ cancel_url|default:'javascript:history.back()' }}"
+                           {% if cancel_url %}
+                           hx-get="{{ cancel_url }}"
+                           hx-target="#main-content"
+                           hx-select="#main-content"
+                           hx-swap="outerHTML"
+                           hx-push-url="true"
+                           {% endif %}
+                           class="px-5 py-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200">
+                            Cancel
+                        </a>
+                        <button type="submit"
+                                class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                            {% if object %}Update{% else %}Create{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>

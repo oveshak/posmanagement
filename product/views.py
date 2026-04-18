@@ -981,7 +981,8 @@ from django.contrib.auth.decorators import login_required
 from user.forms import BranchQuickForm
 from user.forms import BranchQuickForm
 from user.models import Branch, Users
-from user.utils import log_activity
+from user.scope import get_user_scope, is_global_user
+from user.utils import build_form_changes, log_activity
 from user.views import is_htmx, htmx_trigger_response
 
 from .models import (
@@ -1027,7 +1028,7 @@ class BaseNoTemplateDeleteView(LoginRequiredMixin, View):
         label = str(obj)
         obj.delete()
 
-        log_activity(request, "delete", f"Deleted {label}")
+        log_activity(request, "delete", f"Deleted {label}", obj=obj)
         messages.success(request, self.success_message)
 
         if is_htmx(request):
@@ -1055,6 +1056,14 @@ class ProductListView(LoginRequiredMixin, HtmxListMixin, ListView):
             "unit_name", "category_name", "brand_name", "warranty_name"
         ).prefetch_related("variations").order_by("name")
 
+        scope = get_user_scope(self.request.user)
+        allowed_branch_ids = list(scope["branches"].values_list("id", flat=True))
+        if not is_global_user(self.request.user) and allowed_branch_ids:
+            qs = qs.filter(
+                Q(branch_product_stocks__stock_branch_id__in=allowed_branch_ids)
+                | Q(branch_product_stocks__isnull=True)
+            )
+
         search = self.request.GET.get("search", "").strip()
         category_id = self.request.GET.get("category", "").strip()
         brand_id = self.request.GET.get("brand", "").strip()
@@ -1077,8 +1086,9 @@ class ProductListView(LoginRequiredMixin, HtmxListMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["categories"] = Category.objects.order_by("name")
-        context["brands"] = Brand.objects.order_by("name")
+        base_qs = self.get_queryset()
+        context["categories"] = Category.objects.filter(products__in=base_qs).distinct().order_by("name")
+        context["brands"] = Brand.objects.filter(products__in=base_qs).distinct().order_by("name")
         context["selected_search"] = self.request.GET.get("search", "").strip()
         context["selected_category"] = self.request.GET.get("category", "").strip()
         context["selected_brand"] = self.request.GET.get("brand", "").strip()
@@ -1106,7 +1116,7 @@ class ProductCreateView(LoginRequiredMixin, View):
             formset.instance = product
             formset.save()
 
-            log_activity(request, "create", f"Created product {product.name}")
+            log_activity(request, "create", f"Created product {product.name}", obj=product)
             messages.success(request, "Product created successfully.")
             return redirect(self.success_url)
 
@@ -1142,10 +1152,17 @@ class ProductUpdateView(LoginRequiredMixin, View):
         formset = VariationFormSet(request.POST, instance=obj, prefix="variations")
 
         if form.is_valid() and formset.is_valid():
+            changes = build_form_changes(form)
             product = form.save()
             formset.save()
 
-            log_activity(request, "update", f"Updated product {product.name}")
+            log_activity(
+                request,
+                "update",
+                f"Updated product {product.name}",
+                obj=product,
+                changes=changes,
+            )
             messages.success(request, "Product updated successfully.")
             return redirect(self.success_url)
 
@@ -1178,6 +1195,14 @@ class BranchStockListView(LoginRequiredMixin, HtmxListMixin, ListView):
             "product_variation",
         ).prefetch_related("unickkey").order_by("-id")
 
+        scope = get_user_scope(self.request.user)
+        allowed_branch_ids = list(scope["branches"].values_list("id", flat=True))
+        if not is_global_user(self.request.user):
+            if allowed_branch_ids:
+                qs = qs.filter(stock_branch_id__in=allowed_branch_ids)
+            else:
+                qs = qs.none()
+
         search = self.request.GET.get("search", "").strip()
         branch_id = self.request.GET.get("branch", "").strip()
 
@@ -1195,7 +1220,7 @@ class BranchStockListView(LoginRequiredMixin, HtmxListMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["branches"] = Branch.objects.order_by("name")
+        context["branches"] = get_user_scope(self.request.user)["branches"].order_by("name")
         context["selected_search"] = self.request.GET.get("search", "").strip()
         context["selected_branch"] = self.request.GET.get("branch", "").strip()
         return context
@@ -1207,15 +1232,15 @@ class BranchStockCreateView(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template_name, {
-            "form": BranchProductStockForm(),
+            "form": BranchProductStockForm(request=request),
             "object": None,
         })
 
     def post(self, request, *args, **kwargs):
-        form = BranchProductStockForm(request.POST)
+        form = BranchProductStockForm(request.POST, request=request)
         if form.is_valid():
             obj = form.save()
-            log_activity(request, "create", f"Created branch stock {obj}")
+            log_activity(request, "create", f"Created branch stock {obj}", obj=obj)
             messages.success(request, "Branch stock created successfully.")
             return redirect(self.success_url)
 
@@ -1235,16 +1260,23 @@ class BranchStockUpdateView(LoginRequiredMixin, View):
     def get(self, request, pk, *args, **kwargs):
         obj = self.get_object(pk)
         return render(request, self.template_name, {
-            "form": BranchProductStockForm(instance=obj),
+            "form": BranchProductStockForm(instance=obj, request=request),
             "object": obj,
         })
 
     def post(self, request, pk, *args, **kwargs):
         obj = self.get_object(pk)
-        form = BranchProductStockForm(request.POST, instance=obj)
+        form = BranchProductStockForm(request.POST, instance=obj, request=request)
         if form.is_valid():
+            changes = build_form_changes(form)
             obj = form.save()
-            log_activity(request, "update", f"Updated branch stock {obj}")
+            log_activity(
+                request,
+                "update",
+                f"Updated branch stock {obj}",
+                obj=obj,
+                changes=changes,
+            )
             messages.success(request, "Branch stock updated successfully.")
             return redirect(self.success_url)
 
@@ -1258,6 +1290,249 @@ class BranchStockDeleteView(BaseNoTemplateDeleteView):
     model = BranchProductStock
     success_url = reverse_lazy("product:branch_stock_list")
     success_message = "Branch stock deleted successfully."
+
+
+# ---------------- MASTER CRUD (UNIT/CATEGORY/BRAND/WARRANTY) ----------------
+
+class MasterListBaseView(LoginRequiredMixin, HtmxListMixin, ListView):
+    template_name = "products/master_list.html"
+    partial_template_name = "products/partials/master_list_content.html"
+    context_object_name = "items"
+    paginate_by = 20
+
+    page_title = "Masters"
+    page_subtitle = "Manage master records"
+    list_url_name = ""
+    create_url_name = ""
+    edit_url_name = ""
+    delete_url_name = ""
+    create_label = "Item"
+    search_includes_duration = False
+
+    def get_queryset(self):
+        qs = self.model.objects.order_by("name")
+        search = self.request.GET.get("search", "").strip()
+
+        if search:
+            if self.search_includes_duration:
+                search_filter = (
+                    Q(name__icontains=search)
+                    | Q(duration_type__icontains=search)
+                )
+                if search.isdigit():
+                    search_filter |= Q(duration=int(search))
+                qs = qs.filter(search_filter)
+            else:
+                qs = qs.filter(name__icontains=search)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = self.page_title
+        context["page_subtitle"] = self.page_subtitle
+        context["list_url_name"] = self.list_url_name
+        context["create_url_name"] = self.create_url_name
+        context["edit_url_name"] = self.edit_url_name
+        context["delete_url_name"] = self.delete_url_name
+        context["create_label"] = self.create_label
+        context["selected_search"] = self.request.GET.get("search", "").strip()
+        context["show_warranty_columns"] = self.search_includes_duration
+        return context
+
+
+class MasterCreateBaseView(LoginRequiredMixin, View):
+    form_class = None
+    template_name = "products/simple_form.html"
+    success_url = None
+    object_label = "Item"
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template_name, {
+            "form": self.form_class(),
+            "object": None,
+            "title": f"Create {self.object_label}",
+            "cancel_url": self.success_url,
+        })
+
+    def post(self, request, *args, **kwargs):
+        form = self.form_class(request.POST)
+        if form.is_valid():
+            obj = form.save()
+            log_activity(request, "create", f"Created {self.object_label} {obj}", obj=obj)
+            messages.success(request, f"{self.object_label} created successfully.")
+            return redirect(self.success_url)
+
+        return render(request, self.template_name, {
+            "form": form,
+            "object": None,
+            "title": f"Create {self.object_label}",
+            "cancel_url": self.success_url,
+        })
+
+
+class MasterUpdateBaseView(LoginRequiredMixin, View):
+    model = None
+    form_class = None
+    template_name = "products/simple_form.html"
+    success_url = None
+    object_label = "Item"
+
+    def get_object(self, pk):
+        return get_object_or_404(self.model, pk=pk)
+
+    def get(self, request, pk, *args, **kwargs):
+        obj = self.get_object(pk)
+        return render(request, self.template_name, {
+            "form": self.form_class(instance=obj),
+            "object": obj,
+            "title": f"Update {self.object_label}",
+            "cancel_url": self.success_url,
+        })
+
+    def post(self, request, pk, *args, **kwargs):
+        obj = self.get_object(pk)
+        form = self.form_class(request.POST, instance=obj)
+        if form.is_valid():
+            changes = build_form_changes(form)
+            obj = form.save()
+            log_activity(
+                request,
+                "update",
+                f"Updated {self.object_label} {obj}",
+                obj=obj,
+                changes=changes,
+            )
+            messages.success(request, f"{self.object_label} updated successfully.")
+            return redirect(self.success_url)
+
+        return render(request, self.template_name, {
+            "form": form,
+            "object": obj,
+            "title": f"Update {self.object_label}",
+            "cancel_url": self.success_url,
+        })
+
+
+class UnitListView(MasterListBaseView):
+    model = Unit
+    page_title = "Units"
+    page_subtitle = "Manage product units"
+    list_url_name = "product:unit_list"
+    create_url_name = "product:unit_create"
+    edit_url_name = "product:unit_update"
+    delete_url_name = "product:unit_delete"
+    create_label = "Unit"
+
+
+class UnitCreateView(MasterCreateBaseView):
+    form_class = UnitForm
+    success_url = reverse_lazy("product:unit_list")
+    object_label = "Unit"
+
+
+class UnitUpdateView(MasterUpdateBaseView):
+    model = Unit
+    form_class = UnitForm
+    success_url = reverse_lazy("product:unit_list")
+    object_label = "Unit"
+
+
+class UnitDeleteView(BaseNoTemplateDeleteView):
+    model = Unit
+    success_url = reverse_lazy("product:unit_list")
+    success_message = "Unit deleted successfully."
+
+
+class CategoryListView(MasterListBaseView):
+    model = Category
+    page_title = "Categories"
+    page_subtitle = "Manage product categories"
+    list_url_name = "product:category_list"
+    create_url_name = "product:category_create"
+    edit_url_name = "product:category_update"
+    delete_url_name = "product:category_delete"
+    create_label = "Category"
+
+
+class CategoryCreateView(MasterCreateBaseView):
+    form_class = CategoryForm
+    success_url = reverse_lazy("product:category_list")
+    object_label = "Category"
+
+
+class CategoryUpdateView(MasterUpdateBaseView):
+    model = Category
+    form_class = CategoryForm
+    success_url = reverse_lazy("product:category_list")
+    object_label = "Category"
+
+
+class CategoryDeleteView(BaseNoTemplateDeleteView):
+    model = Category
+    success_url = reverse_lazy("product:category_list")
+    success_message = "Category deleted successfully."
+
+
+class BrandListView(MasterListBaseView):
+    model = Brand
+    page_title = "Brands"
+    page_subtitle = "Manage product brands"
+    list_url_name = "product:brand_list"
+    create_url_name = "product:brand_create"
+    edit_url_name = "product:brand_update"
+    delete_url_name = "product:brand_delete"
+    create_label = "Brand"
+
+
+class BrandCreateView(MasterCreateBaseView):
+    form_class = BrandForm
+    success_url = reverse_lazy("product:brand_list")
+    object_label = "Brand"
+
+
+class BrandUpdateView(MasterUpdateBaseView):
+    model = Brand
+    form_class = BrandForm
+    success_url = reverse_lazy("product:brand_list")
+    object_label = "Brand"
+
+
+class BrandDeleteView(BaseNoTemplateDeleteView):
+    model = Brand
+    success_url = reverse_lazy("product:brand_list")
+    success_message = "Brand deleted successfully."
+
+
+class WarrantyListView(MasterListBaseView):
+    model = Warranty
+    page_title = "Warranties"
+    page_subtitle = "Manage product warranties"
+    list_url_name = "product:warranty_list"
+    create_url_name = "product:warranty_create"
+    edit_url_name = "product:warranty_update"
+    delete_url_name = "product:warranty_delete"
+    create_label = "Warranty"
+    search_includes_duration = True
+
+
+class WarrantyCreateView(MasterCreateBaseView):
+    form_class = WarrantyForm
+    success_url = reverse_lazy("product:warranty_list")
+    object_label = "Warranty"
+
+
+class WarrantyUpdateView(MasterUpdateBaseView):
+    model = Warranty
+    form_class = WarrantyForm
+    success_url = reverse_lazy("product:warranty_list")
+    object_label = "Warranty"
+
+
+class WarrantyDeleteView(BaseNoTemplateDeleteView):
+    model = Warranty
+    success_url = reverse_lazy("product:warranty_list")
+    success_message = "Warranty deleted successfully."
 
 
 # ---------------- RELATED MODAL ----------------
@@ -1446,7 +1721,19 @@ def related_object_modal(request, model_name, pk=None):
                 form = form_class(request.POST, instance=instance)
 
         if form.is_valid():
+            changes = build_form_changes(form) if instance else {}
             obj = form.save()
+
+            action = "update" if instance else "create"
+            action_text = "Updated" if instance else "Created"
+            log_activity(
+                request,
+                action,
+                f"{action_text} {obj}",
+                obj=obj,
+                changes=changes,
+            )
+
             return htmx_trigger_response({
                 "related:saved": {
                     "parentField": parent_field,
@@ -1482,6 +1769,14 @@ def ajax_variations_by_product(request):
     product_id = request.GET.get("product_id", "").strip()
     qs = Variation.objects.all().order_by("name", "id")
 
+    scope = get_user_scope(request.user)
+    allowed_branch_ids = list(scope["branches"].values_list("id", flat=True))
+    if not is_global_user(request.user):
+        if allowed_branch_ids:
+            qs = qs.filter(branch_stocks__stock_branch_id__in=allowed_branch_ids)
+        else:
+            qs = qs.none()
+
     if product_id:
         qs = qs.filter(product_name_id=product_id)
 
@@ -1497,7 +1792,16 @@ def ajax_unick_by_variation(request):
     qs = unick.objects.none()
 
     if variation_id:
-        variation = Variation.objects.filter(pk=variation_id).prefetch_related("unickkey").first()
+        variation_qs = Variation.objects.filter(pk=variation_id)
+        scope = get_user_scope(request.user)
+        allowed_branch_ids = list(scope["branches"].values_list("id", flat=True))
+        if not is_global_user(request.user):
+            if allowed_branch_ids:
+                variation_qs = variation_qs.filter(branch_stocks__stock_branch_id__in=allowed_branch_ids)
+            else:
+                variation_qs = Variation.objects.none()
+
+        variation = variation_qs.prefetch_related("unickkey").first()
         if variation:
             qs = variation.unickkey.all().order_by("id")
 

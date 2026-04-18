@@ -4,6 +4,7 @@
 {% block title %}{% if object %}Update Stock Transfer{% else %}Create Stock Transfer{% endif %}{% endblock %}
 
 {% block content %}
+<div id="main-content" data-page-title="{% if object %}Update Stock Transfer{% else %}Create Stock Transfer{% endif %} - Management" data-page-subtitle="Manage stock transfer and transfer lines" class="flex-1 overflow-y-auto p-5 sm:p-6 page-content" style="background:var(--surface-alt);">
 <div class="min-h-screen">
     <div class="mx-auto max-w-7xl">
         <div class="mb-6 flex items-center justify-between gap-4">
@@ -94,5 +95,6 @@
             </form>
         </div>
     </div>
+</div>
 </div>
 {% endblock %}

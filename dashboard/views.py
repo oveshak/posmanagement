@@ -6,7 +6,7 @@ from django.contrib import messages
 
 class DashboardView(LoginRequiredMixin, View):
     template_name = 'dashboard.html'
-    login_url = 'login'
+    login_url = 'user:login'
 
     def get(self, request):
         age_groups = self._get_age_groups()

@@ -234,6 +234,7 @@ document.body.addEventListener("htmx:load", function (evt) {
 
         <form id="activity-filter-form"
               method="get"
+              data-no-main-ajax="1"
               hx-get="{% url 'user:activity_logs' %}"
               hx-target="#activity-log-results"
               hx-swap="innerHTML"

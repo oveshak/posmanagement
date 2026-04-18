@@ -593,6 +593,7 @@ from django import forms
 from django.forms import inlineformset_factory
 
 from user.models import Branch
+from user.scope import get_user_scope
 from .models import (
     Unit,
     Category,
@@ -865,7 +866,12 @@ class BranchProductStockForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop("request", None)
         super().__init__(*args, **kwargs)
+
+        user = getattr(self.request, "user", None)
+        scope = get_user_scope(user)
+        self.fields["stock_branch"].queryset = scope["branches"].order_by("name")
 
         # related modal enabled fields
         related_map = {

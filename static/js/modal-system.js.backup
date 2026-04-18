@@ -1,0 +1,1199 @@
+/**
+ * Modal System - সব apps-এ consistent modal handling
+ * Features:
+ * - Modal open/close properly
+ * - Nested modals support
+ * - Auto-select/create
+ * - Related model handling
+ */
+
+(function () {
+    const modalStack = [];
+    let lastHandledSaveSignature = null;
+    let lastHandledSaveAt = 0;
+
+    /**
+     * ============ UTILITY FUNCTIONS ============
+     */
+
+    function appPrefix() {
+        const fromBody = (document.body?.dataset?.appPrefix || "").trim();
+        if (fromBody) return fromBody.replace(/\/$/, "");
+        if (window.location.pathname.startsWith("/user/")) return "/user";
+        if (window.location.pathname.startsWith("/product/")) return "/product";
+        if (window.location.pathname.startsWith("/globalapp/")) return "/globalapp";
+        if (window.location.pathname.startsWith("/dashboard/")) return "/dashboard";
+        return "";
+    }
+
+    function getModalContainer() {
+        const modal = document.getElementById("modal-container");
+        if (!modal) {
+            console.error(`❌ Modal container NOT FOUND! ID: modal-container`);
+        }
+        return modal;
+    }
+
+    function getModalBody() {
+        const body = document.getElementById("modal-body");
+        if (!body) {
+            console.error(`❌ Modal body NOT FOUND! ID: modal-body`);
+        }
+        return body;
+    }
+
+    function showModal() {
+        const modal = getModalContainer();
+        if (modal) {
+            console.log(`📱 showModal() called - removing hidden class`);
+            modal.classList.remove("hidden");
+            document.body.style.overflow = "hidden";
+            console.log(`   ✅ Modal shown. Current classes:`, modal.className);
+        } else {
+            console.error(`❌ showModal() - no modal container found!`);
+        }
+    }
+
+    function hideModal() {
+        const modal = getModalContainer();
+        if (modal) {
+            console.log(`🔒 hideModal() called - adding hidden class`);
+            modal.classList.add("hidden");
+            document.body.style.overflow = "";
+            console.log(`   ✅ Modal hidden. Current classes:`, modal.className);
+            
+            // Verify the modal is actually hidden
+            setTimeout(() => {
+                const isHidden = modal.classList.contains("hidden");
+                console.log(`   ✔️ Verification: Modal is ${isHidden ? 'HIDDEN' : 'VISIBLE'}`);
+            }, 50);
+        } else {
+            console.error(`❌ hideModal() - no modal container found!`);
+        }
+    }
+
+    function currentModalForm() {
+        const body = getModalBody();
+        if (!body) return null;
+        return body.querySelector("form");
+    }
+
+    function getCsrfToken() {
+        const cookieValue = document.cookie
+            .split("; ")
+            .find(row => row.startsWith("csrftoken="))
+            ?.split("=")[1];
+
+        if (cookieValue) return decodeURIComponent(cookieValue);
+        return document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || "";
+    }
+
+    function findField(fieldName, root = null) {
+        const base = root || currentModalForm() || document;
+        return base.querySelector(`[name="${fieldName}"]`) || document.querySelector(`[name="${fieldName}"]`);
+    }
+
+    /**
+     * ============ FORM STATE MANAGEMENT ============
+     */
+
+    function captureFormState(root = null) {
+        const form = root?.querySelector?.("form") || currentModalForm();
+        if (!form) return {};
+
+        const state = {};
+        form.querySelectorAll("input, select, textarea").forEach((el) => {
+            if (!el.name) return;
+
+            if (el.type === "checkbox") {
+                if (el.name.endsWith("[]")) {
+                    if (!state[el.name]) state[el.name] = [];
+                    if (el.checked) state[el.name].push(el.value);
+                } else {
+                    state[el.name] = !!el.checked;
+                }
+                return;
+            }
+
+            if (el.type === "radio") {
+                if (el.checked) state[el.name] = el.value;
+                return;
+            }
+
+            if (el.tagName === "SELECT" && el.multiple) {
+                state[el.name] = Array.from(el.selectedOptions).map(opt => String(opt.value));
+                return;
+            }
+
+            if (el.type !== "file") {
+                state[el.name] = el.value;
+            }
+        });
+
+        return state;
+    }
+
+    function captureSelectOptions(root = null) {
+        const form = root?.querySelector?.("form") || currentModalForm() || root || document;
+        const snapshot = {};
+
+        if (!form?.querySelectorAll) return snapshot;
+
+        form.querySelectorAll("select[name]").forEach((select) => {
+            const name = select.name;
+            snapshot[name] = {
+                multiple: !!select.multiple,
+                options: Array.from(select.options).map((opt) => ({
+                    value: String(opt.value),
+                    text: opt.text,
+                    selected: !!opt.selected
+                }))
+            };
+        });
+
+        return snapshot;
+    }
+
+    function restoreSelectOptions(root = null, snapshot = {}) {
+        const form = root?.querySelector?.("form") || currentModalForm() || root || document;
+        if (!form) return;
+
+        Object.entries(snapshot).forEach(([name, config]) => {
+            const select = form.querySelector(`select[name="${name}"]`);
+            if (!select) return;
+
+            const currentPlaceholder = Array.from(select.options).find(
+                (opt) => opt.value === "" && !config.options.some(o => o.value === "")
+            );
+
+            select.innerHTML = "";
+
+            if (currentPlaceholder) {
+                select.add(new Option(currentPlaceholder.text, currentPlaceholder.value, false, false));
+            }
+
+            config.options.forEach((optData) => {
+                const opt = new Option(
+                    optData.text,
+                    optData.value,
+                    false,
+                    !!optData.selected
+                );
+                select.add(opt);
+            });
+
+            refreshTomSelect(select);
+        });
+    }
+
+    function restoreFormState(root = null, state = {}) {
+        const form = root?.querySelector?.("form") || currentModalForm();
+        if (!form) return;
+
+        Object.entries(state).forEach(([name, value]) => {
+            const elements = form.querySelectorAll(`[name="${name}"]`);
+            if (!elements.length) return;
+
+            elements.forEach((el) => {
+                if (el.type === "checkbox") {
+                    el.checked = Array.isArray(value) ? value.includes(el.value) : !!value;
+                    return;
+                }
+
+                if (el.type === "radio") {
+                    el.checked = String(el.value) === String(value);
+                    return;
+                }
+
+                if (el.tagName === "SELECT" && el.multiple) {
+                    const values = Array.isArray(value) ? value.map(String) : [];
+                    Array.from(el.options).forEach((opt) => {
+                        opt.selected = values.includes(String(opt.value));
+                    });
+
+                    if (el.tomselect) {
+                        el.tomselect.setValue(values, true);
+                        el.tomselect.refreshItems();
+                        el.tomselect.refreshOptions(false);
+                    }
+                    return;
+                }
+
+                if (el.tagName === "SELECT") {
+                    const strValue = value == null ? "" : String(value);
+                    el.value = strValue;
+
+                    if (el.tomselect) {
+                        if (strValue === "") {
+                            el.tomselect.clear(true);
+                        } else {
+                            el.tomselect.setValue(strValue, true);
+                        }
+                        el.tomselect.refreshItems();
+                        el.tomselect.refreshOptions(false);
+                    }
+                    return;
+                }
+
+                if (el.type !== "file") {
+                    el.value = value ?? "";
+                }
+            });
+        });
+    }
+
+    /**
+     * ============ TOM SELECT MANAGEMENT ============
+     */
+
+    function destroyTomSelectInstances(root = document) {
+        root.querySelectorAll("select.js-enhanced-select, select.js-enhanced-multiselect").forEach((el) => {
+            if (el.tomselect) {
+                el.tomselect.destroy();
+            }
+        });
+    }
+
+    function initTomSelect(root = document) {
+        root.querySelectorAll("select.js-enhanced-select").forEach((el) => {
+            if (el.tomselect) return;
+
+            new TomSelect(el, {
+                create: false,
+                allowEmptyOption: true,
+                placeholder: el.dataset.placeholder || "Search...",
+                maxOptions: 500,
+                plugins: ["dropdown_input", "clear_button"],
+            });
+        });
+
+        root.querySelectorAll("select.js-enhanced-multiselect").forEach((el) => {
+            if (el.tomselect) return;
+
+            new TomSelect(el, {
+                create: false,
+                plugins: ["remove_button", "clear_button"],
+                placeholder: el.dataset.placeholder || "Search...",
+                maxOptions: 500,
+            });
+        });
+    }
+
+    function refreshTomSelect(select) {
+        if (!select || !select.tomselect) return;
+
+        const selectedValues = Array.from(select.selectedOptions).map(opt => String(opt.value));
+        select.tomselect.clear(true);
+        select.tomselect.clearOptions();
+
+        Array.from(select.options).forEach((opt) => {
+            select.tomselect.addOption({
+                value: String(opt.value),
+                text: opt.text
+            });
+        });
+
+        if (select.multiple) {
+            select.tomselect.setValue(selectedValues, true);
+        } else {
+            select.tomselect.setValue(select.value ? String(select.value) : "", true);
+        }
+
+        select.tomselect.refreshItems();
+        select.tomselect.refreshOptions(false);
+    }
+
+    /**
+     * ============ SELECT VALUE MANAGEMENT ============
+     */
+
+    function setSingleSelectValue(select, value, text, silent = false) {
+        if (!select) return false;
+
+        value = String(value);
+
+        // Add or update option
+        let existing = Array.from(select.options).find(opt => String(opt.value) === value);
+        if (!existing) {
+            existing = new Option(text, value, true, true);
+            select.add(existing);
+        } else {
+            existing.text = text;
+            existing.selected = true;
+        }
+
+        select.value = value;
+        select.dataset.selectedValue = value;
+
+        // Update TomSelect if available
+        if (select.tomselect) {
+            select.tomselect.addOption({ value, text });
+            select.tomselect.setValue(value, silent);
+            select.tomselect.refreshItems();
+            select.tomselect.refreshOptions(false);
+        }
+
+        if (!silent) {
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+            select.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+
+        return String(select.value) === value;
+    }
+
+    function addMultiSelectValue(select, value, text, silent = false) {
+        if (!select) return false;
+
+        value = String(value);
+
+        // Add or update option
+        let existing = Array.from(select.options).find(opt => String(opt.value) === value);
+        if (!existing) {
+            existing = new Option(text, value, true, true);
+            select.add(existing);
+        } else {
+            existing.selected = true;
+        }
+
+        // Update TomSelect if available
+        if (select.tomselect) {
+            select.tomselect.addOption({ value, text });
+
+            const current = select.tomselect.getValue();
+            const arr = Array.isArray(current) ? current : (current ? [current] : []);
+            const next = [...new Set([...arr.map(String), value])];
+
+            select.tomselect.setValue(next, silent);
+            select.tomselect.refreshItems();
+            select.tomselect.refreshOptions(false);
+            select.dataset.selectedValue = next.join(",");
+        } else {
+            existing.selected = true;
+        }
+
+        if (!silent) {
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+            select.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+
+        return Array.from(select.selectedOptions).some(opt => String(opt.value) === value);
+    }
+
+    function upsertRelatedOption(fieldName, option, root = null, silent = false) {
+        const select = findField(fieldName, root);
+        if (!select || !option) return false;
+
+        const value = String(option.id);
+        const text = option.text || value;
+
+        if (select.multiple) {
+            return addMultiSelectValue(select, value, text, silent);
+        }
+        return setSingleSelectValue(select, value, text, silent);
+    }
+
+    function ensureRelatedOptionSelected(fieldName, option, root = null, tries = 20, delay = 150, silent = false) {
+        let attempt = 0;
+
+        function run() {
+            attempt += 1;
+            const ok = upsertRelatedOption(fieldName, option, root, silent);
+            if (ok) return;
+
+            if (attempt < tries) {
+                setTimeout(run, delay);
+            }
+        }
+
+        run();
+    }
+
+    function getSelectedValue(fieldName, root = null) {
+        const el = findField(fieldName, root);
+        if (!el) return "";
+        return el.value || "";
+    }
+
+    /**
+     * ============ MODAL OPERATIONS ============
+     */
+
+    function clearBindingMarkers(root) {
+        if (!root?.querySelectorAll) return;
+        root.querySelectorAll("[data-bound-click], [data-bound-dependent]").forEach((el) => {
+            el.removeAttribute("data-bound-click");
+            el.removeAttribute("data-bound-dependent");
+        });
+    }
+
+    function getCleanHtmlForStack(root) {
+        const wrapper = document.createElement("div");
+        wrapper.innerHTML = root.innerHTML;
+        clearBindingMarkers(wrapper);
+        return wrapper.innerHTML;
+    }
+
+    async function fetchJSON(url) {
+        const response = await fetch(url, {
+            credentials: "same-origin",
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        });
+        if (!response.ok) throw new Error("Request failed");
+        return await response.json();
+    }
+
+    function parseHXTriggerHeader(xhr) {
+        if (!xhr) {
+            console.log(`❌ No XHR object found`);
+            return null;
+        }
+        const triggerHeader = xhr.getResponseHeader("HX-Trigger");
+        console.log(`📋 HX-Trigger header:`, triggerHeader);
+        if (!triggerHeader) {
+            console.log(`   Header not found`);
+            return null;
+        }
+        try {
+            const parsed = JSON.parse(triggerHeader);
+            console.log(`   Parsed successfully:`, parsed);
+            return parsed;
+        } catch (error) {
+            console.warn("❌ Invalid HX-Trigger header:", triggerHeader, error);
+            return null;
+        }
+    }
+
+    function extractRelatedSavedDetail(triggers) {
+        if (!triggers) {
+            console.log(`   Triggers is null`);
+            return null;
+        }
+        console.log(`   Looking for 'related:saved' in:`, Object.keys(triggers));
+        const detail = triggers["related:saved"] || triggers["crud:saved"] || null;
+        console.log(`   Found:`, detail);
+        return detail;
+    }
+
+    function isDuplicateSaveEvent(detail) {
+        if (!detail) return false;
+
+        const signature = JSON.stringify({
+            parentField: detail.parentField || "",
+            optionId: detail.option?.id ?? "",
+            optionText: detail.option?.text ?? "",
+            message: detail.message || ""
+        });
+
+        const now = Date.now();
+        const isDup = signature === lastHandledSaveSignature && (now - lastHandledSaveAt) < 1200;
+
+        if (!isDup) {
+            lastHandledSaveSignature = signature;
+            lastHandledSaveAt = now;
+        }
+
+        return isDup;
+    }
+
+    /**
+     * ============ NESTED MODAL HANDLING ============
+     */
+
+    function buildRelatedUrl(modelName, action, pk = null, extraParams = {}) {
+        let url = `${appPrefix()}/ajax/related/${modelName}/create/`;
+        if (action === "edit" && pk) {
+            url = `${appPrefix()}/ajax/related/${modelName}/${pk}/edit/`;
+        }
+
+        const params = new URLSearchParams();
+        Object.entries(extraParams).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && value !== "") {
+                params.append(key, value);
+            }
+        });
+
+        const qs = params.toString();
+        return qs ? `${url}?${qs}` : url;
+    }
+
+    function openModalWithUrl(url, isNested = false) {
+        const body = getModalBody();
+        if (!body) return;
+
+        // Save current modal state if nested
+        if (isNested && body.innerHTML.trim()) {
+            // First, capture everything from current modal
+            const state = captureFormState(body);
+            const selectOptions = captureSelectOptions(body);
+
+            // Then destroy TomSelect instances
+            destroyTomSelectInstances(body);
+
+            // Then save to stack
+            modalStack.push({
+                html: getCleanHtmlForStack(body),
+                state,
+                selectOptions,
+            });
+
+            console.log(`📥 Saved parent modal to stack. Stack length: ${modalStack.length}`);
+        }
+
+        showModal();
+        
+        // Using HTMX if available, otherwise fetch
+        if (typeof htmx !== 'undefined') {
+            // Clear body before loading new modal
+            body.innerHTML = "";
+            htmx.ajax("GET", url, {
+                target: "#modal-body",
+                swap: "innerHTML"
+            });
+        } else {
+            fetch(url)
+                .then(response => response.text())
+                .then(html => {
+                    body.innerHTML = html;
+                    initializeDynamicUI(body);
+                })
+                .catch(error => {
+                    console.error("Failed to load modal:", error);
+                    Swal.fire("Error", "Failed to load modal", "error");
+                });
+        }
+    }
+
+    /**
+     * ============ RELATED BUTTONS HANDLING ============
+     */
+
+    function initializeRelatedButtons(root = document) {
+        // Create button
+        root.querySelectorAll(".related-create-btn").forEach((btn) => {
+            if (btn.dataset.boundClick) return;
+            btn.dataset.boundClick = "1";
+
+            btn.addEventListener("click", function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const modelName = this.dataset.model;
+                const fieldName = this.dataset.fieldName;
+                const params = { parent_field: fieldName };
+
+                // Handle dependent fields
+                if (modelName === "area") {
+                    const branchId = getSelectedValue("branch", root) || getSelectedValue("parent_branch", root);
+                    if (branchId) params.branch_id = branchId;
+                }
+
+                if (modelName === "customergroup") {
+                    const branchId = getSelectedValue("branch", root) || getSelectedValue("parent_branch", root);
+                    const areaId = getSelectedValue("area", root);
+                    if (branchId) params.branch_id = branchId;
+                    if (areaId) params.area_id = areaId;
+                }
+
+                const modal = getModalContainer();
+                // Check if modal is visible (not hidden)
+                const isNested = modal && !modal.classList.contains("hidden");
+                openModalWithUrl(buildRelatedUrl(modelName, "create", null, params), isNested);
+            });
+        });
+
+        // Edit button
+        root.querySelectorAll(".related-edit-btn").forEach((btn) => {
+            if (btn.dataset.boundClick) return;
+            btn.dataset.boundClick = "1";
+
+            btn.addEventListener("click", function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const modelName = this.dataset.model;
+                const fieldName = this.dataset.fieldName;
+                const field = findField(fieldName, root);
+                if (!field) return;
+
+                let pk = "";
+                if (field.multiple) {
+                    const selected = Array.from(field.selectedOptions);
+                    if (!selected.length) {
+                        Swal.fire("Select one item first", "", "warning");
+                        return;
+                    }
+                    pk = selected[0].value;
+                } else {
+                    pk = field.value;
+                    if (!pk) {
+                        Swal.fire("Select one item first", "", "warning");
+                        return;
+                    }
+                }
+
+                const params = { parent_field: fieldName };
+                const modal = getModalContainer();
+                // Check if modal is visible (not hidden)
+                const isNested = modal && !modal.classList.contains("hidden");
+                openModalWithUrl(buildRelatedUrl(modelName, "edit", pk, params), isNested);
+            });
+        });
+    }
+
+    /**
+     * ============ FORM INITIALIZATION ============
+     */
+
+    function initializeFormSubmitGuard(root = document) {
+        root.querySelectorAll("form").forEach((form) => {
+            if (form.dataset.submitGuardBound === "1") return;
+            form.dataset.submitGuardBound = "1";
+
+            form.addEventListener("submit", function (event) {
+                // Check if already submitting
+                if (form.dataset.submitting === "1") {
+                    console.log(`⛔ Form already submitting, blocking re-submission`);
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return false;
+                }
+
+                form.dataset.submitting = "1";
+                console.log(`✅ Form submit allowed - marking as submitting`);
+
+                const submitButtons = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+                submitButtons.forEach((btn) => {
+                    btn.disabled = true;
+                    if (btn.tagName === "BUTTON") {
+                        if (!btn.dataset.originalText) btn.dataset.originalText = btn.innerHTML;
+                        btn.innerHTML = "Saving...";
+                    } else {
+                        if (!btn.dataset.originalText) btn.dataset.originalText = btn.value;
+                        btn.value = "Saving...";
+                    }
+                });
+            });
+
+            // Re-enable buttons if form response is an error (200 with HTML, not 204)
+            form.addEventListener("htmx:responseError", function (event) {
+                console.log(`❌ Form response error`);
+                delete form.dataset.submitting;
+
+                const submitButtons = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+                submitButtons.forEach((btn) => {
+                    btn.disabled = false;
+                    if (btn.tagName === "BUTTON" && btn.dataset.originalText) {
+                        btn.innerHTML = btn.dataset.originalText;
+                    } else if (btn.tagName === "INPUT" && btn.dataset.originalText) {
+                        btn.value = btn.dataset.originalText;
+                    }
+                });
+            });
+        });
+    }
+
+    function initializeDynamicUI(root = document) {
+        clearBindingMarkers(root);
+        initTomSelect(root);
+        initializeRelatedButtons(root);
+        initializeFormSubmitGuard(root);
+    }
+
+    /**
+     * ============ MODAL SAVE HANDLING ============
+     */
+
+    async function restorePreviousModalAndApply(detail) {
+        const previous = modalStack.pop();
+        const body = getModalBody();
+        if (!body || !previous) return;
+
+        // Step 1: Clear everything
+        destroyTomSelectInstances(body);
+        body.innerHTML = "";
+        
+        // Step 2: Restore HTML
+        body.innerHTML = previous.html;
+
+        // Step 3: Clear binding markers
+        clearBindingMarkers(body);
+        
+        // Step 3.5: Clear the hidden _parent_field so this becomes top-level modal again
+        const parentFieldInput = body.querySelector('[name="_parent_field"]');
+        if (parentFieldInput) {
+            parentFieldInput.value = "";
+        }
+        
+        // Step 4: Make sure modal is visible
+        showModal();
+
+        // Step 5: Wait for DOM to settle
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        // Step 6: Re-initialize everything
+        initializeDynamicUI(body);
+        
+        // Step 7: Restore form state
+        restoreSelectOptions(body, previous.selectOptions || {});
+        restoreFormState(body, previous.state);
+
+        // Step 8: Wait again for UI updates
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Step 9: Restore again to ensure it sticks
+        restoreSelectOptions(body, previous.selectOptions || {});
+        restoreFormState(body, previous.state);
+
+        // Step 10: Auto-select the newly created item
+        if (detail.parentField && detail.option) {
+            ensureRelatedOptionSelected(detail.parentField, detail.option, body, 20, 100, true);
+        }
+
+        // Step 11: Show success message
+        Swal.fire({
+            toast: true,
+            position: "top-end",
+            icon: "success",
+            title: detail.message || "Saved successfully!",
+            showConfirmButton: false,
+            timer: 1000,
+            timerProgressBar: true,
+        });
+    }
+
+    async function handleRelatedSaved(detail) {
+        console.log(`\n${'='.repeat(50)}`);
+        console.log(`🎯 handleRelatedSaved called`);
+        console.log(`   Detail:`, detail);
+        
+        const body = getModalBody();
+        if (!body) {
+            console.error(`❌ Modal body not found!`);
+            console.log(`${'='.repeat(50)}\n`);
+            return;
+        }
+        
+        if (!detail) {
+            console.error(`❌ Detail not provided!`);
+            console.log(`${'='.repeat(50)}\n`);
+            return;
+        }
+        
+        if (isDuplicateSaveEvent(detail)) {
+            console.log(`⏭️  Duplicate event - skipping`);
+            console.log(`${'='.repeat(50)}\n`);
+            return;
+        }
+
+        const form = currentModalForm();
+        const parentFieldValue = form?.querySelector('[name="_parent_field"]')?.value || "";
+        // isNested is true only if there's a parent field value AND there are items in the stack
+        const isNested = parentFieldValue.trim() !== "" && modalStack.length > 0;
+        
+        console.log(`🔍 Modal Analysis:`);
+        console.log(`   parentFieldValue="${parentFieldValue}"`);
+        console.log(`   modalStack.length=${modalStack.length}`);
+        console.log(`   isNested=${isNested}`);
+
+        console.log(`   Form exists: ${!!form}`);
+
+        // Show success toast for ALL saves (both nested and top-level)
+        console.log(`🎉 Showing success toast...`);
+        Swal.fire({
+            toast: true,
+            position: "top-end",
+            icon: "success",
+            title: detail.message || "Saved successfully!",
+            showConfirmButton: false,
+            timer: 1500,
+            timerProgressBar: true,
+        });
+
+        // Nested modal: restore previous modal
+        if (isNested) {
+            console.log(`📤 This is NESTED - will restore parent`);
+            await restorePreviousModalAndApply(detail);
+            console.log(`${'='.repeat(50)}\n`);
+            return;
+        }
+
+        // Top-level modal: auto-select on parent page and close
+        console.log(`🔒 This is TOP-LEVEL - will close modal`);
+        
+        if (detail.parentField && detail.option) {
+            console.log(`   Auto-selecting: ${detail.parentField} = ${detail.option.text}`);
+            ensureRelatedOptionSelected(detail.parentField, detail.option, document, 15, 150, true);
+        }
+
+        // Close modal after showing the message
+        await new Promise(resolve => setTimeout(resolve, 800));
+        console.log(`   Clearing modal body...`);
+        body.innerHTML = "";
+        console.log(`   Calling hideModal()...`);
+        hideModal();
+        
+        // Verify modal is actually hidden
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const isHidden = getModalContainer()?.classList.contains("hidden");
+        console.log(`✅ Modal closed! (Hidden: ${isHidden})`);
+        console.log(`${'='.repeat(50)}\n`);
+    }
+
+    /**
+     * ============ GLOBAL API ============
+     */
+
+    window.closeModal = function () {
+        console.log(`\n${'='.repeat(50)}`);
+        console.log(`📞 closeModal() called`);
+        console.log(`   Current stack length: ${modalStack.length}`);
+        
+        // If there's a nested modal in stack, restore previous
+        if (modalStack.length > 0) {
+            const previous = modalStack.pop();
+            const body = getModalBody();
+            
+            console.log(`📤 Restoring parent modal from stack. Remaining: ${modalStack.length}`);
+            
+            if (body && previous) {
+                // Clean up current modal - destroy TomSelect instances
+                destroyTomSelectInstances(body);
+                body.innerHTML = "";
+                
+                // Restore previous
+                body.innerHTML = previous.html;
+                clearBindingMarkers(body);
+                showModal();
+                
+                // Re-initialize
+                initializeDynamicUI(body);
+                restoreSelectOptions(body, previous.selectOptions || {});
+                restoreFormState(body, previous.state);
+                
+                console.log(`✅ Parent modal restored`);
+            } else {
+                console.warn(`⚠️ Previous modal data missing`, {previous, body});
+            }
+            console.log(`${'='.repeat(50)}\n`);
+            return;
+        }
+
+        // Otherwise, close modal completely
+        console.log("🔒 Closing modal completely (no parent to restore)");
+        const body = getModalBody();
+        if (body) {
+            // Cleanup TomSelect instances first
+            destroyTomSelectInstances(body);
+            
+            // Clear modal body (this will trigger HTMX cleanup naturally)
+            body.innerHTML = "";
+            console.log(`   Modal body cleared`);
+        }
+        
+        hideModal();
+        console.log(`✅ Modal closed completely`);
+        console.log(`${'='.repeat(50)}\n`);
+    };
+
+    window.showErrorAlert = function (message) {
+        Swal.fire("Error", message, "error");
+    };
+
+    window.showSuccessAlert = function (message) {
+        Swal.fire({
+            toast: true,
+            position: "top-end",
+            icon: "success",
+            title: message,
+            showConfirmButton: false,
+            timer: 1200,
+            timerProgressBar: true,
+        });
+    };
+
+    /**
+     * ============ STARTUP VERIFICATION ============
+     */
+
+    function verifyModalSystem() {
+        console.log(`\n${'='.repeat(50)}`);
+        console.log(`✅ MODAL SYSTEM INITIALIZING...`);
+        
+        const container = document.getElementById("modal-container");
+        const body = document.getElementById("modal-body");
+        const backdrop = document.getElementById("modal-backdrop");
+        
+        console.log(`   Modal container: ${container ? '✅ FOUND' : '❌ NOT FOUND'}`);
+        console.log(`   Modal body: ${body ? '✅ FOUND' : '❌ NOT FOUND'}`);
+        console.log(`   Modal backdrop: ${backdrop ? '✅ FOUND' : '❌ NOT FOUND'}`);
+        
+        if (!container || !body || !backdrop) {
+            console.error(`❌ MODAL STRUCTURE INCOMPLETE!`);
+            console.error(`   Check base.html has modal-container, modal-body, modal-backdrop`);
+        } else {
+            console.log(`✅ Modal structure is complete`);
+        }
+        
+        console.log(`✅ Modal system ready!`);
+        console.log(`${'='.repeat(50)}\n`);
+    }
+
+    /**
+     * ============ EVENT LISTENERS ============
+     */
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // Verify modal system is initialized
+        verifyModalSystem();
+        
+        // Initialize UI
+        initializeDynamicUI(document);
+
+        // Modal backdrop click handler
+        const backdrop = document.getElementById("modal-backdrop");
+        if (backdrop) {
+            backdrop.addEventListener("click", function (event) {
+                if (event.target === this) {
+                    closeModal();
+                }
+            });
+        }
+
+        // Update page title when HTMX loads new content
+        setTimeout(() => {
+            const titleMatch = document.documentElement.innerHTML.match(/<title[^>]*>([^<]*)<\/title>/i);
+            if (titleMatch && titleMatch[1]) {
+                document.title = titleMatch[1];
+            }
+        }, 100);
+
+        // Modal trigger handler
+        document.body.addEventListener("click", function (event) {
+            const trigger = event.target.closest(".modal-trigger");
+            if (!trigger) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const url = trigger.getAttribute("data-modal-url") || trigger.getAttribute("href");
+            if (!url) return;
+
+            openModalWithUrl(url, false);
+        });
+
+        // Delete button handler
+        document.body.addEventListener("click", function (event) {
+            const btn = event.target.closest(".delete-btn");
+            if (!btn) return;
+
+            event.preventDefault();
+
+            const url = btn.dataset.url;
+            if (!url) return;
+
+            Swal.fire({
+                title: "আপনি কি নিশ্চিত?",
+                text: "এই পদক্ষেপ পরিবর্তন করা যাবে না।",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "হ্যাঁ, মুছে দিন",
+                cancelButtonText: "বাতিল"
+            }).then((result) => {
+                if (!result.isConfirmed) return;
+
+                fetch(url, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        "X-CSRFToken": getCsrfToken(),
+                        "X-Requested-With": "XMLHttpRequest",
+                        "HX-Request": "true"
+                    }
+                })
+                .then(async response => {
+                    if (!response.ok) throw new Error("Delete failed");
+
+                    Swal.fire({
+                        toast: true,
+                        position: "top-end",
+                        icon: "success",
+                        title: "সফলভাবে মুছে দেওয়া হয়েছে!",
+                        showConfirmButton: false,
+                        timer: 1200,
+                    });
+
+                    // Reload page or refresh list
+                    setTimeout(() => {
+                        location.reload();
+                    }, 800);
+                })
+                .catch(() => {
+                    Swal.fire("Error", "Delete failed", "error");
+                });
+            });
+        });
+    });
+
+    // HTMX event handlers
+    document.body.addEventListener("htmx:beforeRequest", function (event) {
+        const elt = event.detail?.elt;
+        if (elt?.tagName === "FORM") {
+            console.log(`⏳ Form beforeRequest:`, elt.getAttribute("action"), elt.getAttribute("hx-post"));
+        }
+    });
+
+    document.body.addEventListener("htmx:beforeSwap", function (event) {
+        const target = event.detail?.target;
+        if (!target || target.id !== "modal-body") return;
+
+        const xhr = event.detail?.xhr;
+        console.log(`🔄 beforeSwap - Status: ${xhr?.status}`);
+        
+        const triggers = parseHXTriggerHeader(xhr);
+        const detail = extractRelatedSavedDetail(triggers);
+
+        console.log(`🔄 beforeSwap - Modal body update, triggers:`, triggers);
+
+        if (detail) {
+            console.log(`   ✅ Found related:saved trigger, preventing swap and handling save`);
+            event.detail.shouldSwap = false;
+            event.preventDefault();
+            
+            // Call handleRelatedSaved directly here (fallback)
+            setTimeout(async () => {
+                console.log(`   🔧 Calling handleRelatedSaved from beforeSwap...`);
+                await handleRelatedSaved(detail);
+            }, 50);
+        } else if (xhr?.status === 200) {
+            console.log(`   ⚠️ Got 200 with HTML - form validation error or re-render`);
+            // Allow the swap to show form validation errors
+        }
+    });
+
+    document.body.addEventListener("htmx:afterSwap", function (event) {
+        if (event.detail.target && event.detail.target.id === "modal-body") {
+            console.log(`📝 Modal body loaded. Stack: ${modalStack.length}`);
+            showModal();
+            initializeDynamicUI(event.detail.target);
+            
+            // If we just swapped in form HTML (200 response), clear submitting flag to allow retry
+            const form = event.detail.target.querySelector("form");
+            if (form && form.dataset.submitting === "1") {
+                console.log(`   Form loaded after error - clearing submitting flag for retry`);
+                delete form.dataset.submitting;
+            }
+        }
+
+        if (event.detail.target && event.detail.target.id === "main-content") {
+            console.log(`🏠 Main content updated`);
+            initializeDynamicUI(event.detail.target);
+            
+            // Update page title when main content is loaded
+            setTimeout(() => {
+                const titleElement = document.querySelector("title");
+                if (titleElement && titleElement.textContent) {
+                    const newTitle = titleElement.textContent.trim();
+                    if (newTitle && document.title !== newTitle) {
+                        console.log(`📄 Updating page title to: ${newTitle}`);
+                        document.title = newTitle;
+                    }
+                }
+            }, 50);
+        }
+    });
+
+    document.body.addEventListener("htmx:afterRequest", async function (event) {
+        const elt = event.detail?.elt;
+        const xhr = event.detail?.xhr;
+        
+        console.log(`\n${'='.repeat(50)}`);
+        console.log(`📡 htmx:afterRequest fired`);
+        console.log(`   Element tag:`, elt?.tagName);
+        console.log(`   XHR Status:`, xhr?.status);
+        
+        // Always clear submitting flag for forms
+        if (elt && elt.tagName === "FORM") {
+            console.log(`   ✅ Is a form - clearing submitting flag`);
+            delete elt.dataset.submitting;
+
+            const submitButtons = elt.querySelectorAll('button[type="submit"], input[type="submit"]');
+            submitButtons.forEach((btn) => {
+                btn.disabled = false;
+                if (btn.tagName === "BUTTON" && btn.dataset.originalText) {
+                    btn.innerHTML = btn.dataset.originalText;
+                } else if (btn.tagName === "INPUT" && btn.dataset.originalText) {
+                    btn.value = btn.dataset.originalText;
+                }
+            });
+        }
+
+        // Process related:saved events for 204 responses OR if HX-Trigger header is present
+        const triggers = parseHXTriggerHeader(xhr);
+        const detail = extractRelatedSavedDetail(triggers);
+        
+        if (xhr?.status === 204) {
+            console.log(`   ✅ Got 204 No Content response`);
+            console.log(`   Extracted detail:`, detail);
+
+            if (!detail) {
+                console.log(`   ❌ No related:saved detail found`);
+                console.log(`${'='.repeat(50)}\n`);
+                return;
+            }
+            
+            console.log(`   ✅ Processing related:saved event`);
+            
+            // Small delay to ensure everything is ready
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            await handleRelatedSaved(detail);
+        } else if (detail && (xhr?.status === 200 || xhr?.status === 201)) {
+            console.log(`   ✅ Got ${xhr?.status} response with HX-Trigger header`);
+            console.log(`   Processing related:saved from trigger header:`, detail);
+            
+            // Small delay to ensure everything is ready
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            await handleRelatedSaved(detail);
+        } else if (xhr?.status === 200) {
+            console.log(`   ⚠️  Got 200 response - form is being re-rendered`);
+            console.log(`${'='.repeat(50)}\n`);
+        } else {
+            console.log(`   ⚠️  Got status ${xhr?.status} - not processing as modal save`);
+            console.log(`${'='.repeat(50)}\n`);
+        }
+    });
+
+    // Also listen for HTMX-triggered events from response headers
+    // HTMX fires custom events when HX-Trigger header is present
+    document.addEventListener("related:saved", async function (event) {
+        console.log(`🎯 Caught related:saved event (from HTMX)`);
+        console.log(`   Event detail:`, event.detail);
+        console.log(`   Event detail type:`, typeof event.detail);
+        
+        // The detail might be an object with the trigger data
+        let detail = event.detail;
+        
+        // If it's a string, try parsing it
+        if (typeof detail === "string") {
+            try {
+                detail = JSON.parse(detail);
+            } catch (e) {
+                console.warn("Could not parse event detail:", detail, e);
+                return;
+            }
+        }
+        
+        // If it's still not an object with expected properties, log and return
+        if (!detail || typeof detail !== "object") {
+            console.warn("Event detail is not an object:", detail);
+            return;
+        }
+        
+        console.log(`✅ Processing related:saved with:`, detail);
+        await handleRelatedSaved(detail);
+    });
+
+    console.log(`\n✅ Modal System Script Loaded Successfully!\n`);
+
+})();

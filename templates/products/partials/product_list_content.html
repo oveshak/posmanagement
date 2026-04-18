@@ -1,6 +1,6 @@
 
 
-<div id="main-content" class="flex-1 overflow-y-auto p-5 sm:p-6 page-content" style="background:var(--surface-alt);">
+<div id="main-content" data-page-title="Products - Management" data-page-subtitle="Manage products and variations" class="flex-1 overflow-y-auto p-5 sm:p-6 page-content" style="background:var(--surface-alt);">
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Products</h1>
@@ -8,6 +8,11 @@
         </div>
 
         <a href="{% url 'product:product_create' %}"
+              hx-get="{% url 'product:product_create' %}"
+              hx-target="#main-content"
+              hx-select="#main-content"
+              hx-swap="outerHTML"
+              hx-push-url="true"
            class="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 font-semibold shadow-lg">
             + Create Product
         </a>
@@ -41,7 +46,13 @@
 
         <div class="flex gap-3">
             <button type="submit" class="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3">Filter</button>
-            <a href="{% url 'product:product_list' %}" class="flex-1 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 font-semibold px-5 py-3 text-center">Reset</a>
+                <a href="{% url 'product:product_list' %}"
+                    hx-get="{% url 'product:product_list' %}"
+                    hx-target="#main-content"
+                    hx-select="#main-content"
+                    hx-swap="outerHTML"
+                    hx-push-url="true"
+                    class="flex-1 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 font-semibold px-5 py-3 text-center">Reset</a>
         </div>
     </form>
 
@@ -80,7 +91,13 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex gap-2">
-                                    <a href="{% url 'product:product_update' item.pk %}" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-semibold">Edit</a>
+                                                <a href="{% url 'product:product_update' item.pk %}"
+                                                    hx-get="{% url 'product:product_update' item.pk %}"
+                                                    hx-target="#main-content"
+                                                    hx-select="#main-content"
+                                                    hx-swap="outerHTML"
+                                                    hx-push-url="true"
+                                                    class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-semibold">Edit</a>
                                     <a href="{% url 'product:product_delete' item.pk %}" class="delete-btn bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-semibold" data-url="{% url 'product:product_delete' item.pk %}">Delete</a>
                                 </div>
                             </td>

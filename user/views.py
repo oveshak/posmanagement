@@ -47,7 +47,7 @@ from .forms import (
 )
 from .mixins import AdminRequiredMixin
 from .models import ActivityLog, Area, Branch, CustomerGroup, Menu, MultiBranch, Roles, Users
-from .utils import log_activity
+from .utils import build_form_changes, build_snapshot_changes, log_activity
 
 
 # -------------------------------------------------
@@ -76,7 +76,8 @@ class CustomLoginView(DjangoLoginView):
             self.request,
             "login",
             f"{user} logged in at {current_time.strftime('%I:%M %p')}",
-            user,
+            target_user=user,
+            obj=user,
         )
         messages.success(self.request, f"Welcome back, {user.name or user.email}!")
         return response
@@ -125,7 +126,8 @@ class LogoutView(LoginRequiredMixin, TemplateView):
                 request,
                 "logout",
                 f"{request.user} logged out. Session duration: {session_duration}",
-                request.user,
+                target_user=request.user,
+                obj=request.user,
             )
             logout(request)
             messages.success(request, f"Goodbye {user_name}! Session duration: {session_duration}")
@@ -182,7 +184,7 @@ class BaseNoTemplateDeleteView(LoginRequiredMixin, View):
         self.cleanup_before_delete(obj)
         obj.delete()
 
-        log_activity(request, "delete", f"Deleted {label}")
+        log_activity(request, "delete", f"Deleted {label}", obj=obj)
         messages.success(request, self.success_message)
 
         if is_htmx(request):
@@ -340,9 +342,10 @@ class ScopedListContextMixin:
         }
 
 
-class UserListView(LoginRequiredMixin, ScopedListContextMixin, ListView):
+class UserListView(LoginRequiredMixin, HtmxListViewMixin, ScopedListContextMixin, ListView):
     model = Users
     template_name = "user/user_list.html"
+    partial_template_name = "user/partials/user_list_content.html"
     context_object_name = "users"
     paginate_by = 10
 
@@ -668,7 +671,7 @@ class UserCreateView(LoginRequiredMixin, UserFormContextMixin, View):
 
         self._sync_user_staff_links(user)
 
-        log_activity(request, "create", f"Created user {user.email}", user)
+        log_activity(request, "create", f"Created user {user.email}", target_user=user, obj=user)
         messages.success(request, "User created successfully.")
         return redirect(self.success_url)
 
@@ -753,6 +756,29 @@ class UserUpdateView(LoginRequiredMixin, UserFormContextMixin, View):
             context = self.get_common_context(request, obj=obj, errors=errors)
             return render(request, self.template_name, context)
 
+        before_snapshot = {
+            "name": obj.name,
+            "email": obj.email,
+            "username": obj.username,
+            "phone_number": obj.phone_number,
+            "address": obj.address,
+            "descriptions": obj.descriptions,
+            "nid_number": obj.nid_number,
+            "branch": obj.branch,
+            "area": obj.area,
+            "status": obj.status,
+            "is_verified": obj.is_verified,
+            "is_staff": obj.is_staff,
+            "is_admin": obj.is_admin,
+            "is_deleted": obj.is_deleted,
+            "roles": list(obj.roles.all()),
+            "mult_branch": list(obj.mult_branch.all()),
+            "customer_group": list(obj.customer_group.all()),
+            "profile_picture": obj.profile_picture.name if obj.profile_picture else None,
+            "nid_front": obj.nid_front.name if obj.nid_front else None,
+            "nid_back": obj.nid_back.name if obj.nid_back else None,
+        }
+
         obj.name = name or None
         obj.email = email
         obj.username = username or None
@@ -786,7 +812,64 @@ class UserUpdateView(LoginRequiredMixin, UserFormContextMixin, View):
 
         self._sync_user_staff_links(obj)
 
-        log_activity(request, "update", f"Updated user {obj.email}", obj)
+        after_snapshot = {
+            "name": obj.name,
+            "email": obj.email,
+            "username": obj.username,
+            "phone_number": obj.phone_number,
+            "address": obj.address,
+            "descriptions": obj.descriptions,
+            "nid_number": obj.nid_number,
+            "branch": obj.branch,
+            "area": obj.area,
+            "status": obj.status,
+            "is_verified": obj.is_verified,
+            "is_staff": obj.is_staff,
+            "is_admin": obj.is_admin,
+            "is_deleted": obj.is_deleted,
+            "roles": list(obj.roles.all()),
+            "mult_branch": list(obj.mult_branch.all()),
+            "customer_group": list(obj.customer_group.all()),
+            "profile_picture": obj.profile_picture.name if obj.profile_picture else None,
+            "nid_front": obj.nid_front.name if obj.nid_front else None,
+            "nid_back": obj.nid_back.name if obj.nid_back else None,
+        }
+
+        changes = build_snapshot_changes(
+            before_snapshot,
+            after_snapshot,
+            labels={
+                "name": "Name",
+                "email": "Email",
+                "username": "Username",
+                "phone_number": "Phone Number",
+                "address": "Address",
+                "descriptions": "Description",
+                "nid_number": "NID Number",
+                "branch": "Branch",
+                "area": "Area",
+                "status": "Status",
+                "is_verified": "Verified",
+                "is_staff": "Staff",
+                "is_admin": "Admin",
+                "is_deleted": "Deleted",
+                "roles": "Roles",
+                "mult_branch": "Multi Branch",
+                "customer_group": "Customer Group",
+                "profile_picture": "Profile Picture",
+                "nid_front": "NID Front",
+                "nid_back": "NID Back",
+            },
+        )
+
+        log_activity(
+            request,
+            "update",
+            f"Updated user {obj.email}",
+            target_user=obj,
+            obj=obj,
+            changes=changes,
+        )
         messages.success(request, "User updated successfully.")
         return redirect(self.success_url)
 
@@ -794,17 +877,24 @@ class UserUpdateView(LoginRequiredMixin, UserFormContextMixin, View):
 class UserDeleteView(LoginRequiredMixin, PermissionRequiredViewMixin, DeleteView):
     model = Users
     template_name = "user/user_confirm_delete.html"
-    success_url = reverse_lazy("user_list")
+    success_url = reverse_lazy("user:user_list")
     required_permission = "user.delete_users"
-    denied_redirect = "user_list"
+    denied_redirect = "user:user_list"
     denied_message = "You do not have permission to delete users."
 
     def form_valid(self, form):
         user = self.get_object()
         user.is_deleted = True
         user.save(update_fields=["is_deleted"])
-        log_activity(self.request, "delete", f"Soft deleted user {user.email}", user)
+        log_activity(self.request, "delete", f"Soft deleted user {user.email}", target_user=user, obj=user)
         messages.success(self.request, "User deleted successfully.")
+        if is_htmx(self.request):
+            return htmx_trigger_response({
+                "crud:deleted": {
+                    "message": "User deleted successfully.",
+                    "refreshList": True,
+                }
+            })
         return redirect(self.success_url)
 
 
@@ -812,9 +902,10 @@ class UserDeleteView(LoginRequiredMixin, PermissionRequiredViewMixin, DeleteView
 # ROLE CRUD
 # -------------------------------------------------
 
-class RoleListView(LoginRequiredMixin, ListView):
+class RoleListView(LoginRequiredMixin, HtmxListViewMixin, ListView):
     model = Roles
     template_name = "user/role_list.html"
+    partial_template_name = "user/partials/role_list_content.html"
     context_object_name = "roles"
 
     def get_queryset(self):
@@ -837,7 +928,7 @@ class RoleCreateView(LoginRequiredMixin, PermissionRequiredViewMixin, CreateView
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        log_activity(self.request, "role_update", f"Created role {self.object.name}")
+        log_activity(self.request, "role_update", f"Created role {self.object.name}", obj=self.object)
         messages.success(self.request, "Role created successfully.")
         return response
 
@@ -857,8 +948,15 @@ class RoleUpdateView(LoginRequiredMixin, PermissionRequiredViewMixin, UpdateView
         return kwargs
 
     def form_valid(self, form):
+        changes = build_form_changes(form)
         response = super().form_valid(form)
-        log_activity(self.request, "role_update", f"Updated role {self.object.name}")
+        log_activity(
+            self.request,
+            "role_update",
+            f"Updated role {self.object.name}",
+            obj=self.object,
+            changes=changes,
+        )
         messages.success(self.request, "Role updated successfully.")
         return response
 
@@ -1152,7 +1250,7 @@ class ActivityLogListView(LoginRequiredMixin, ListView):
 
     def get_template_names(self):
         if self.request.headers.get("HX-Request") == "true":
-            hx_target = self.request.headers.get("HX-Target", "")
+            hx_target = (self.request.headers.get("HX-Target", "") or "").lstrip("#")
 
             # filter/pagination request
             if hx_target == "activity-log-results":
@@ -1171,6 +1269,28 @@ class ActivityLogListView(LoginRequiredMixin, ListView):
             .order_by("-created_at")
         )
 
+        scope = get_user_scope(self.request.user)
+        allowed_branch_ids = set(scope["branches"].values_list("id", flat=True))
+        allowed_area_ids = set(scope["areas"].values_list("id", flat=True))
+        allowed_customer_group_ids = set(scope["customer_groups"].values_list("id", flat=True))
+
+        if not is_global_user(self.request.user):
+            if allowed_customer_group_ids:
+                queryset = queryset.filter(
+                    Q(user__customer_group__id__in=allowed_customer_group_ids) |
+                    Q(user__branch_id__in=allowed_branch_ids) |
+                    Q(user__area_id__in=allowed_area_ids)
+                )
+            elif allowed_area_ids:
+                queryset = queryset.filter(
+                    Q(user__area_id__in=allowed_area_ids) |
+                    Q(user__branch_id__in=allowed_branch_ids)
+                )
+            elif allowed_branch_ids:
+                queryset = queryset.filter(user__branch_id__in=allowed_branch_ids)
+            else:
+                queryset = queryset.none()
+
         search = self.request.GET.get("search", "").strip()
         user_id = self.request.GET.get("user", "").strip()
         branch_id = self.request.GET.get("branch", "").strip()
@@ -1181,13 +1301,20 @@ class ActivityLogListView(LoginRequiredMixin, ListView):
         to_date = self.request.GET.get("to_date", "").strip()
 
         if search:
-            queryset = queryset.filter(
+            search_filter = (
                 Q(description__icontains=search) |
                 Q(user__name__icontains=search) |
                 Q(user__email__icontains=search) |
+                Q(model_name__icontains=search) |
+                Q(object_repr__icontains=search) |
                 Q(target_user__name__icontains=search) |
                 Q(target_user__email__icontains=search)
             )
+
+            if search.isdigit():
+                search_filter |= Q(object_id=int(search))
+
+            queryset = queryset.filter(search_filter)
 
         if user_id:
             queryset = queryset.filter(user_id=user_id)
@@ -1224,18 +1351,48 @@ class ActivityLogListView(LoginRequiredMixin, ListView):
         selected_from_date = self.request.GET.get("from_date", "").strip()
         selected_to_date = self.request.GET.get("to_date", "").strip()
 
-        context["users"] = Users.objects.filter(is_deleted=False).order_by("name")
-        context["branches"] = Branch.objects.order_by("name")
+        scope = get_user_scope(self.request.user)
+        filtered_scope = apply_selected_filters(
+            scope["branches"],
+            scope["areas"],
+            scope["customer_groups"],
+            selected_branch=selected_branch,
+            selected_area=selected_area,
+            selected_customer_group_ids=[selected_customer_group] if selected_customer_group else [],
+        )
 
-        if selected_branch:
-            context["areas"] = Area.objects.filter(parent_branch_id=selected_branch).order_by("name")
-            context["customer_groups"] = CustomerGroup.objects.filter(branch_id=selected_branch).order_by("name")
-        else:
-            context["areas"] = Area.objects.order_by("name")
-            context["customer_groups"] = CustomerGroup.objects.order_by("name")
+        context["branches"] = filtered_scope["branches"].order_by("name")
+        context["areas"] = filtered_scope["areas"].order_by("name")
+        context["customer_groups"] = filtered_scope["customer_groups"].order_by("name")
 
-        if selected_area:
-            context["customer_groups"] = context["customer_groups"].filter(area_id=selected_area)
+        allowed_branch_ids = set(scope["branches"].values_list("id", flat=True))
+        allowed_area_ids = set(scope["areas"].values_list("id", flat=True))
+        allowed_customer_group_ids = set(scope["customer_groups"].values_list("id", flat=True))
+        users_qs = Users.objects.filter(is_deleted=False)
+
+        if not is_global_user(self.request.user):
+            if allowed_customer_group_ids:
+                users_qs = users_qs.filter(
+                    Q(customer_group__id__in=allowed_customer_group_ids) |
+                    Q(branch_id__in=allowed_branch_ids) |
+                    Q(area_id__in=allowed_area_ids) |
+                    Q(mult_branch__multi_branch__id__in=allowed_branch_ids)
+                )
+            elif allowed_area_ids:
+                users_qs = users_qs.filter(
+                    Q(area_id__in=allowed_area_ids) |
+                    Q(branch_id__in=allowed_branch_ids) |
+                    Q(mult_branch__multi_branch__id__in=allowed_branch_ids)
+                )
+            elif allowed_branch_ids:
+                users_qs = users_qs.filter(
+                    Q(branch_id__in=allowed_branch_ids) |
+                    Q(mult_branch__multi_branch__id__in=allowed_branch_ids)
+                )
+            else:
+                users_qs = users_qs.none()
+
+        context["users"] = users_qs.distinct().order_by("name")
 
         today = timezone.localdate()
         base_qs = ActivityLog.objects.all()
@@ -1263,7 +1420,7 @@ class ActivityLogListView(LoginRequiredMixin, ListView):
 
 class BranchDeleteView(BaseNoTemplateDeleteView):
     model = Branch
-    success_url = reverse_lazy("branch_list")
+    success_url = reverse_lazy("user:branch_list")
     permission_required = "user.delete_branch"
     success_message = "Branch deleted successfully."
 
@@ -1274,7 +1431,7 @@ class BranchDeleteView(BaseNoTemplateDeleteView):
 
 class AreaDeleteView(BaseNoTemplateDeleteView):
     model = Area
-    success_url = reverse_lazy("user.area_list")
+    success_url = reverse_lazy("user:area_list")
     permission_required = "user.delete_area"
     success_message = "Area deleted successfully."
 
@@ -1295,7 +1452,7 @@ class CustomerGroupDeleteView(BaseNoTemplateDeleteView):
 
 class MenuDeleteView(BaseNoTemplateDeleteView):
     model = Menu
-    success_url = reverse_lazy("menu_list")
+    success_url = reverse_lazy("user:menu_list")
     permission_required = "user.delete_menu"
     success_message = "Menu deleted successfully."
 
@@ -1306,7 +1463,7 @@ class MenuDeleteView(BaseNoTemplateDeleteView):
 
 class MultiBranchDeleteView(BaseNoTemplateDeleteView):
     model = MultiBranch
-    success_url = reverse_lazy("multibranch_list")
+    success_url = reverse_lazy("user:multibranch_list")
     permission_required = "user.delete_multibranch"
     success_message = "MultiBranch deleted successfully."
 
@@ -1642,10 +1799,22 @@ def related_object_modal(request, model_name, pk=None):
         form = form_class(request.POST, request.FILES, instance=instance, request=request)
 
         if form.is_valid():
+            changes = build_form_changes(form) if instance else {}
             obj = form.save()
 
             action_text = "Updated" if instance else "Created"
-            print(parent_field, obj.pk, str(obj))
+            action = "update" if instance else "create"
+            target_user = obj if isinstance(obj, Users) else None
+
+            log_activity(
+                request,
+                action,
+                f"{action_text} {obj}",
+                target_user=target_user,
+                obj=obj,
+                changes=changes,
+            )
+
             return htmx_trigger_response({
                 "related:saved": {
                     "parentField": parent_field,
@@ -1665,14 +1834,14 @@ def related_object_modal(request, model_name, pk=None):
         "model_name": model_name,
         "instance": instance,
         "parent_field": parent_field,
-        "post_url": request.path,
+        "post_url": request.path or "",  # Ensure it's a string, not None
         "title": f"{'Update' if instance else 'Create'} {model_name.title()}",
         "form_partial_template": "user/model_form.html",
         "selected_branch": branch_id or (str(getattr(instance, "branch_id", "") or "")),
         "selected_area": area_id or (str(getattr(instance, "area_id", "") or "")),
     }
 
-    return render(request, "common/related_modal_form.html", context)
+    return render(request, "common/universal_modal_form.html", context)
 
 
 
@@ -1689,6 +1858,7 @@ def menu_ajax_create(request):
     form = MenuQuickForm(request.POST, request=request)
     if form.is_valid():
         menu = form.save()
+        log_activity(request, "create", f"Created menu {menu.name}", obj=menu)
         return JsonResponse(
             {
                 "success": True,
@@ -1730,7 +1900,15 @@ def menu_ajax_update(request, pk):
     form = MenuQuickForm(request.POST, instance=menu, request=request)
 
     if form.is_valid():
+        changes = build_form_changes(form)
         menu = form.save()
+        log_activity(
+            request,
+            "update",
+            f"Updated menu {menu.name}",
+            obj=menu,
+            changes=changes,
+        )
         return JsonResponse(
             {
                 "success": True,

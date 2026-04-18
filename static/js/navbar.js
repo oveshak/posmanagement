@@ -23,6 +23,19 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function navigateMainContent(url, source = null) {
+        if (typeof htmx !== 'undefined') {
+            htmx.ajax('GET', url, {
+                source: source || undefined,
+                target: '#main-content',
+                select: '#main-content',
+                swap: 'outerHTML'
+            });
+        } else {
+            window.location.href = url;
+        }
+    }
+
     function setTheme(theme) {
         html.classList.toggle('dark', theme === 'dark');
         localStorage.setItem('theme', theme);
@@ -222,34 +235,71 @@ document.addEventListener('DOMContentLoaded', function () {
         const link = e.target.closest('a.sidebar-link, a.sidebar-child-link');
         if (!link) return;
 
-        const href = normalizePath(link.getAttribute('href'));
+        const rawHref = link.getAttribute('href');
+        if (!rawHref || rawHref.startsWith('#') || rawHref.startsWith('javascript:')) return;
+
+        const nextUrl = new URL(rawHref, window.location.origin);
+        const nextFullPath = `${normalizePath(nextUrl.pathname)}${nextUrl.search}`;
+        const currentUrl = new URL(window.location.href);
+        const currentFullPath = `${normalizePath(currentUrl.pathname)}${currentUrl.search}`;
+
+        const href = normalizePath(rawHref);
         const currentPath = normalizePath(window.location.pathname);
 
-        if (href === currentPath) {
-            e.preventDefault();
-            if (!isDesktop()) {
-                closeMobile();
-            }
+        // Sidebar navigation is fully HTMX-driven to avoid mixed handlers requiring double click.
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Keep browser URL in sync so active state resolver uses the correct route.
+        if (nextFullPath !== currentFullPath) {
+            window.history.pushState({ htmx: true }, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+        }
+
+        navigateMainContent(rawHref, link);
+
+        if (href !== currentPath) {
+            document.querySelectorAll('.sidebar-link, .sidebar-child-link').forEach(item => {
+                item.classList.remove('active');
+            });
+            link.classList.add('active');
+        }
+
+        if (!isDesktop()) {
+            closeMobile();
         }
     });
 
     document.body.addEventListener('htmx:afterSwap', function (e) {
-        if (e.target && e.target.id === 'main-content') {
-            setActiveSidebarLinks();
+        const target = e?.detail?.target || e.target;
+        const hasMainContent = !!(target && (target.id === 'main-content' || target.querySelector?.('#main-content')));
+        if (!hasMainContent) return;
 
-            const newMain = document.getElementById('main-content');
-            if (newMain) {
-                newMain.scrollTop = 0;
-            }
+        setActiveSidebarLinks();
 
-            if (!isDesktop()) {
-                closeMobile();
-            }
+        if (typeof window.syncPageChromeFromMainContent === 'function') {
+            window.syncPageChromeFromMainContent();
+        }
+
+        const newMain = document.getElementById('main-content');
+        if (newMain) {
+            newMain.scrollTop = 0;
+        }
+
+        if (!isDesktop()) {
+            closeMobile();
         }
     });
 
     document.body.addEventListener('htmx:historyRestore', function () {
         setActiveSidebarLinks();
+    });
+
+    window.addEventListener('popstate', function () {
+        navigateMainContent(window.location.href, sidebarNav || document.body);
+        setActiveSidebarLinks();
+        if (typeof window.syncPageChromeFromMainContent === 'function') {
+            window.syncPageChromeFromMainContent();
+        }
     });
 
     syncSidebar();

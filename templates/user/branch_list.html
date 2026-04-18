@@ -111,9 +111,9 @@
                                         {% endif %}
                                         {% if request.user.is_superuser or request.user.is_admin or perms.user.delete_branch %}
 
-                                         <a href="{% url 'branch_delete' branch.pk %}"
+                                         <a href="{% url 'user:branch_delete' branch.pk %}"
    class="delete-btn inline-flex items-center px-3 py-1 rounded bg-red-500 hover:bg-red-600 text-white text-xs"
-   data-url="{% url 'branch_delete' branch.pk %}">
+   data-url="{% url 'user:branch_delete' branch.pk %}">
     🗑️ Delete
 </a>
                                            
@@ -244,7 +244,7 @@
                                         {% endif %}
                                         {% if request.user.is_superuser or request.user.is_admin or perms.user.delete_branch %}
                                             <button class="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white px-3 py-1 rounded text-xs delete-btn"
-                                                    data-url="{% url 'branch_delete' branch.pk %}">
+                                                    data-url="{% url 'user:branch_delete' branch.pk %}">
                                                 🗑️ Delete
                                             </button>
                                         {% endif %}

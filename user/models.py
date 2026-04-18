@@ -512,6 +512,7 @@ class ActivityLog(models.Model):
     object_repr = models.CharField(max_length=255, null=True, blank=True)
 
     description = models.TextField()
+    changes = models.JSONField(default=dict, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
 
     content_type = models.ForeignKey(

@@ -1,0 +1,136 @@
+{% comment %}
+Universal Modal Form Template
+সব apps-এ এই template ব্যবহার করুন
+Features:
+- Auto form submission with HTMX
+- Proper modal close
+- Auto-select newly created items
+- Nested modal support
+{% endcomment %}
+
+<form method="post"
+      enctype="multipart/form-data"
+      action="{{ post_url }}"
+      hx-post="{{ post_url|default:'' }}"
+      hx-target="#modal-body"
+      hx-swap="innerHTML"
+      data-model-name="{{ model_name }}"
+      class="flex flex-col max-h-[90vh]">
+
+    {% csrf_token %}
+    <input type="hidden" name="_parent_field" value="{{ parent_field|default:'' }}">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 sticky top-0 z-20">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+            {{ title }}
+        </h3>
+
+        <button type="button"
+                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+                onclick="closeModal()">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Errors -->
+    {% if form.non_field_errors %}
+        <div class="px-4 pt-4">
+            <div class="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Form Content -->
+    <div class="flex-1 overflow-y-auto p-4">
+        {% if form_partial_template %}
+            {% include form_partial_template with form=form %}
+        {% else %}
+            <!-- Default form rendering -->
+            <div class="space-y-4">
+                {% for field in form %}
+                    {% if field.name != 'csrfmiddlewaretoken' %}
+                        <div class="form-group">
+                            {% if field.label %}
+                                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {{ field.label }}
+                                    {% if field.field.required %}
+                                        <span class="text-red-500">*</span>
+                                    {% endif %}
+                                </label>
+                            {% endif %}
+
+                            {% if field.errors %}
+                                {{ field }}
+                                <ul class="mt-1 text-sm text-red-600 dark:text-red-400">
+                                    {% for error in field.errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                {{ field }}
+                            {% endif %}
+
+                            {% if field.help_text %}
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Footer/Buttons -->
+    <div class="flex justify-end gap-3 px-4 py-3 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 sticky bottom-0 z-20">
+        <button type="button"
+                onclick="closeModal()"
+                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition">
+            Cancel
+        </button>
+
+        <button type="submit"
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition">
+            Save
+        </button>
+    </div>
+</form>
+
+<style>
+    /* Form Field Styling */
+    #modal-body input[type="text"],
+    #modal-body input[type="email"],
+    #modal-body input[type="number"],
+    #modal-body input[type="date"],
+    #modal-body input[type="time"],
+    #modal-body textarea,
+    #modal-body select {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        transition: border-color 0.2s;
+    }
+
+    #modal-body input:focus,
+    #modal-body textarea:focus,
+    #modal-body select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .dark #modal-body input,
+    .dark #modal-body textarea,
+    .dark #modal-body select {
+        background-color: #1e293b;
+        border-color: #334155;
+        color: #f1f5f9;
+    }
+</style>
