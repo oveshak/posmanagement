@@ -1,234 +1,11 @@
 {% extends "base.html" %}
-
-{% comment %} {% extends "base.html" %}
 {% load static %}
 
 {% block app_prefix %}/product{% endblock %}
 {% block title %}{% if object %}Update Product{% else %}Create Product{% endif %}{% endblock %}
 
 {% block extra_css %}
-<style>
-.related-icon-btn {
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: 0.2s ease;
-}
-.related-icon-btn-create {
-    background: #10b981;
-    color: white;
-}
-.related-icon-btn-create:hover {
-    background: #059669;
-}
-.related-icon-btn-edit {
-    background: #3b82f6;
-    color: white;
-}
-.related-icon-btn-edit:hover {
-    background: #2563eb;
-}
-.variation-card {
-    border: 1px solid #e5e7eb;
-}
-.dark .variation-card {
-    border-color: #334155;
-}
-</style>
-{% endblock %}
-
-{% block content %}
-<div id="main-content" data-page-title="{% if object %}Update Product{% else %}Create Product{% endif %} - Management" data-page-subtitle="Manage product and variations" class="flex-1 overflow-y-auto p-5 sm:p-6 page-content" style="background:var(--surface-alt);">
-    <div class="min-h-screen">
-        <div class="mx-auto max-w-7xl">
-        <div class="mb-6 flex items-center justify-between gap-4">
-            <div>
-                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-                    {% if object %}Update Product{% else %}Create Product{% endif %}
-                </h2>
-                <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
-                    Create product and manage all variations from one page.
-                </p>
-            </div>
-
-            <a href="{% url 'product_list' %}"
-               class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200">
-                <i class="fas fa-arrow-left mr-2"></i> Back
-            </a>
-        </div>
-
-        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
-            <form method="post" class="p-6 md:p-8 space-y-8">
-                {% csrf_token %}
-
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Product Information</h3>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Product Name</label>
-                            {{ form.name }}
-                            {% for error in form.name.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">SKU</label>
-                            {{ form.sku }}
-                            {% for error in form.sku.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Unit</label>
-                            {{ form.unit_name }}
-                            <div class="mt-3 flex justify-end gap-2">
-                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="unit" data-field-name="unit_name"><i class="fas fa-plus"></i></button>
-                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="unit" data-field-name="unit_name"><i class="fas fa-pen"></i></button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Category</label>
-                            {{ form.category_name }}
-                            <div class="mt-3 flex justify-end gap-2">
-                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="category" data-field-name="category_name"><i class="fas fa-plus"></i></button>
-                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="category" data-field-name="category_name"><i class="fas fa-pen"></i></button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Brand</label>
-                            {{ form.brand_name }}
-                            <div class="mt-3 flex justify-end gap-2">
-                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="brand" data-field-name="brand_name"><i class="fas fa-plus"></i></button>
-                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="brand" data-field-name="brand_name"><i class="fas fa-pen"></i></button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Warranty</label>
-                            {{ form.warranty_name }}
-                            <div class="mt-3 flex justify-end gap-2">
-                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="warranty" data-field-name="warranty_name"><i class="fas fa-plus"></i></button>
-                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="warranty" data-field-name="warranty_name"><i class="fas fa-pen"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="pt-4 border-t border-gray-200 dark:border-slate-700">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Variations</h3>
-                        <p class="text-sm text-gray-500 dark:text-slate-400">You can create multiple variation rows here.</p>
-                    </div>
-
-                    {{ formset.management_form }}
-
-                    <div class="space-y-4">
-                        {% for vform in formset %}
-                            <div class="variation-card rounded-2xl p-5 bg-gray-50 dark:bg-slate-950/40">
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                    <div>
-                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Variation Name</label>
-                                        {{ vform.name }}
-                                        {% for error in vform.name.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">SKU Suffix</label>
-                                        {{ vform.sku_suffix }}
-                                        {% for error in vform.sku_suffix.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Price</label>
-                                        {{ vform.price }}
-                                        {% for error in vform.price.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Quantity</label>
-                                        {{ vform.quantity }}
-                                        {% for error in vform.quantity.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Dealer Price</label>
-                                        {{ vform.dealer_price }}
-                                        {% for error in vform.dealer_price.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
-                                    </div>
-
-                                    <div class="flex items-center gap-3 pt-8">
-                                        {{ vform.isunck }}
-                                        <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Has Unique Key</label>
-                                    </div>
-
-                                    <div class="md:col-span-3">
-                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Unique Keys</label>
-                                        {{ vform.unickkey }}
-                                        <div class="mt-3 flex justify-end gap-2">
-                                            <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="unick" data-field-name="{{ vform.unickkey.html_name }}"><i class="fas fa-plus"></i></button>
-                                            <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="unick" data-field-name="{{ vform.unickkey.html_name }}"><i class="fas fa-pen"></i></button>
-                                        </div>
-                                        {% for error in vform.unickkey.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
-                                    </div>
-
-                                    {% if vform.instance.pk %}
-                                        <div class="md:col-span-3">
-                                            <label class="inline-flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-                                                {{ vform.DELETE }} Delete this variation
-                                            </label>
-                                        </div>
-                                    {% endif %}
-                                </div>
-
-                                {% for hidden in vform.hidden_fields %}
-                                    {{ hidden }}
-                                {% endfor %}
-                            </div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
-                    <a href="{% url 'product_list' %}"
-                       class="px-5 py-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200">
-                        Cancel
-                    </a>
-                    <button type="submit"
-                            class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold">
-                        {% if object %}Update Product{% else %}Create Product{% endif %}
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endblock %} {% endcomment %}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-{% load static %}
-
-{% block app_prefix %}/product{% endblock %}
-{% block title %}{% if object %}Update Product{% else %}Create Product{% endif %}{% endblock %}
-
-{% block extra_css %}
+{{ form.media.css }}
 <style>
 .related-icon-btn {
     width: 38px;
@@ -250,264 +27,1713 @@
 .dark .variation-card {
     border-color: #334155;
 }
+
+.scanner-input {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: #111827;
+    background: white;
+}
+.dark .scanner-input {
+    border-color: #475569;
+    background: #0f172a;
+    color: white;
+}
+
+.hidden-section {
+    display: none;
+}
+
+#attribute-slot-container .ts-wrapper,
+#variation-formset .ts-wrapper {
+    width: 100%;
+}
+
+#attribute-slot-container .ts-control,
+#variation-formset .ts-control {
+    min-height: 48px;
+    border-radius: 0.75rem;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    padding: 0.35rem 0.5rem;
+    box-shadow: none;
+}
+
+.dark #attribute-slot-container .ts-control,
+.dark #variation-formset .ts-control {
+    border-color: #334155;
+    background: #0f172a;
+}
+
+#attribute-slot-container .ts-control .item,
+#variation-formset .ts-control .item {
+    border-radius: 9999px;
+    background: #e2e8f0;
+    color: #1f2937;
+    padding: 0.18rem 0.55rem;
+    font-size: 0.78rem;
+    line-height: 1.15rem;
+}
+
+.dark #attribute-slot-container .ts-control .item,
+.dark #variation-formset .ts-control .item {
+    background: #334155;
+    color: #f1f5f9;
+}
+
+#attribute-slot-container .ts-dropdown,
+#variation-formset .ts-dropdown {
+    border-radius: 0.75rem;
+    border: 1px solid #d1d5db;
+    overflow: hidden;
+}
+
+.dark #attribute-slot-container .ts-dropdown,
+.dark #variation-formset .ts-dropdown {
+    border-color: #334155;
+    background: #0f172a;
+}
+
+#attribute-slot-container .ts-dropdown .option,
+#variation-formset .ts-dropdown .option {
+    padding: 0.55rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+#attribute-slot-container .attribute-slot {
+    border: 1px dashed #d1d5db;
+    border-radius: 0.9rem;
+    padding: 0.9rem;
+    background: #f8fafc;
+}
+
+.dark #attribute-slot-container .attribute-slot {
+    border-color: #334155;
+    background: #0b1220;
+}
+
+#attribute-slot-container .attribute-slot-summary {
+    margin-top: 0.15rem;
+    font-size: 0.78rem;
+    color: #475569;
+}
+
+.dark #attribute-slot-container .attribute-slot-summary {
+    color: #94a3b8;
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div id="main-content" data-page-title="{% if object %}Update Product{% else %}Create Product{% endif %} - Management" data-page-subtitle="Manage product and variations" class="flex-1 overflow-y-auto p-5 sm:p-6 page-content" style="background:var(--surface-alt);">
-    <div class="min-h-screen">
-        <div class="mx-auto max-w-7xl">
-        <div class="mb-6 flex items-center justify-between gap-4">
-            <div>
-                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-                    {% if object %}Update Product{% else %}Create Product{% endif %}
-                </h2>
-                <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
-                    One page থেকে product, multiple variation, and unique keys manage করুন।
-                </p>
-            </div>
-
-            <a href="{% url 'product:product_list' %}"
-               hx-get="{% url 'product:product_list' %}"
-               hx-target="#main-content"
-               hx-select="#main-content"
-               hx-swap="outerHTML"
-               hx-push-url="true"
-               class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200">
-                <i class="fas fa-arrow-left mr-2"></i> Back
-            </a>
-        </div>
-
-        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
-            <form method="post"
-                  action="{{ request.get_full_path }}"
-                  hx-post="{{ request.get_full_path }}"
-                  hx-target="#main-content"
-                  hx-select="#main-content"
-                  hx-swap="outerHTML"
-                  class="p-6 md:p-8 space-y-8">
-                {% csrf_token %}
-
+<div id="main-content" data-page-title="{% if object %}Update Product{% else %}Create Product{% endif %} - Management" data-page-subtitle="Manage product, variation, stock and IMEI" class="p-5 sm:p-6 page-content" style="background:var(--surface-alt);">
+    {{ form.media }}
+    <div>
+        <div class="mx-auto ">
+            <div class="mb-6 flex items-center justify-between gap-4">
                 <div>
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Product Information</h3>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Product Name</label>
-                            {{ form.name }}
-                            {% for error in form.name.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">SKU</label>
-                            {{ form.sku }}
-                            {% for error in form.sku.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Unit</label>
-                            {{ form.unit_name }}
-                            <div class="mt-3 flex justify-end gap-2">
-                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="unit" data-field-name="unit_name"><i class="fas fa-plus"></i></button>
-                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="unit" data-field-name="unit_name"><i class="fas fa-pen"></i></button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Category</label>
-                            {{ form.category_name }}
-                            <div class="mt-3 flex justify-end gap-2">
-                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="category" data-field-name="category_name"><i class="fas fa-plus"></i></button>
-                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="category" data-field-name="category_name"><i class="fas fa-pen"></i></button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Brand</label>
-                            {{ form.brand_name }}
-                            <div class="mt-3 flex justify-end gap-2">
-                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="brand" data-field-name="brand_name"><i class="fas fa-plus"></i></button>
-                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="brand" data-field-name="brand_name"><i class="fas fa-pen"></i></button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Warranty</label>
-                            {{ form.warranty_name }}
-                            <div class="mt-3 flex justify-end gap-2">
-                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="warranty" data-field-name="warranty_name"><i class="fas fa-plus"></i></button>
-                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="warranty" data-field-name="warranty_name"><i class="fas fa-pen"></i></button>
-                            </div>
-                        </div>
-                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{% if object %}Update Product{% else %}Create Product{% endif %}</h2>
+                    <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">Variation-wise stock, VAT (exclusive/inclusive), and IMEI scanner workflow.</p>
                 </div>
 
-                <div class="pt-4 border-t border-gray-200 dark:border-slate-700">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Variations</h3>
+                <a href="{% url 'product:product_list' %}"
+                   hx-get="{% url 'product:product_list' %}"
+                   hx-target="#main-content"
+                   hx-select="#main-content"
+                   hx-swap="outerHTML"
+                   hx-push-url="true"
+                   class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200">
+                    <i class="fas fa-arrow-left mr-2"></i> Back
+                </a>
+            </div>
 
-                        <button type="button"
-                                id="add-variation-row"
-                                class="inline-flex items-center rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 text-sm font-semibold">
-                            <i class="fas fa-plus mr-2"></i>
-                            Add Variation
-                        </button>
+            <div class="bg-white dark:bg-slate-900 shadow-sm rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
+                <form method="post"
+                      action="{{ request.get_full_path }}"
+                      hx-post="{{ request.get_full_path }}"
+                      hx-target="#main-content"
+                      hx-select="#main-content"
+                      hx-swap="outerHTML"
+                      hx-encoding="multipart/form-data"
+                      enctype="multipart/form-data"
+                      class="p-6 md:p-8 space-y-8">
+                    {% csrf_token %}
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Product Information</h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Product Name</label>
+                                {{ form.name }}
+                                {% for error in form.name.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">SKU</label>
+                                {{ form.sku }}
+                                {% for error in form.sku.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Barcode Type</label>
+                                {{ form.barcode_type }}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Unit</label>
+                                {{ form.unit_name }}
+                                <div class="mt-3 flex justify-end gap-2">
+                                    <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="unit" data-field-name="unit_name"><i class="fas fa-plus"></i></button>
+                                    <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="unit" data-field-name="unit_name"><i class="fas fa-pen"></i></button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Category</label>
+                                {{ form.category_name }}
+                                <div class="mt-3 flex justify-end gap-2">
+                                    <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="category" data-field-name="category_name"><i class="fas fa-plus"></i></button>
+                                    <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="category" data-field-name="category_name"><i class="fas fa-pen"></i></button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Subcategory</label>
+                                {{ form.subcategory_name }}
+                                <div class="mt-3 flex justify-end gap-2">
+                                    <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="subcategory" data-field-name="subcategory_name"><i class="fas fa-plus"></i></button>
+                                    <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="subcategory" data-field-name="subcategory_name"><i class="fas fa-pen"></i></button>
+                                </div>
+                                {% for error in form.subcategory_name.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Brand</label>
+                                {{ form.brand_name }}
+                                <div class="mt-3 flex justify-end gap-2">
+                                    <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="brand" data-field-name="brand_name"><i class="fas fa-plus"></i></button>
+                                    <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="brand" data-field-name="brand_name"><i class="fas fa-pen"></i></button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Warranty</label>
+                                {{ form.warranty_name }}
+                                <div class="mt-3 flex justify-end gap-2">
+                                    <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="warranty" data-field-name="warranty_name"><i class="fas fa-plus"></i></button>
+                                    <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="warranty" data-field-name="warranty_name"><i class="fas fa-pen"></i></button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Business Location</label>
+                                {{ form.business_location }}
+                                <div class="mt-3 flex justify-end gap-2">
+                                    <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="branch" data-field-name="business_location"><i class="fas fa-plus"></i></button>
+                                    <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="branch" data-field-name="business_location"><i class="fas fa-pen"></i></button>
+                                </div>
+                                {% for error in form.business_location.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                            </div>
+
+                            <div class="md:col-span-3">
+                                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Product Description</label>
+                                {{ form.product_description }}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Product Type</label>
+                                {{ form.product_type }}
+                            </div>
+
+                            <div id="single-quantity-wrapper">
+                                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Single Product Quantity</label>
+                                {{ form.single_stock_quantity }}
+                                {% for error in form.single_stock_quantity.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                            </div>
+
+                            <div id="enable-imei-wrapper" class="flex items-start">
+                                <label class="mt-8 inline-flex items-center gap-3 text-sm font-medium text-gray-700 dark:text-slate-300">
+                                    {{ form.enable_imei_or_serial }}
+                                    Enable IMEI/Serial Number
+                                </label>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Product Image</label>
+                                {{ form.product_image }}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Product Brochure</label>
+                                {{ form.product_brochure }}
+                            </div>
+
+                            <div class="flex items-start">
+                                <label class="mt-8 inline-flex items-center gap-3 text-sm font-medium text-gray-700 dark:text-slate-300">
+                                    {{ form.manage_stock }}
+                                    Manage Stock?
+                                </label>
+                            </div>
+                        </div>
                     </div>
 
-                    {{ formset.management_form }}
+                    <div class="pt-4 border-t border-gray-200 dark:border-slate-700">
+                        <div id="pricing-tax-stock-settings">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Pricing, Tax and Stock Settings</h3>
 
-                    <div id="variation-formset" class="space-y-4">
-                        {% for vform in formset %}
+                            <div id="pricing-tax-stock-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">VAT Model</label>
+                                    {{ form.vat_rate }}
+                                    <div class="mt-3 flex justify-end gap-2">
+                                        <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="vat_rate" data-field-name="vat_rate"><i class="fas fa-plus"></i></button>
+                                        <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="vat_rate" data-field-name="vat_rate"><i class="fas fa-pen"></i></button>
+                                    </div>
+                                    {% for error in form.vat_rate.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Applicable Tax (%)</label>
+                                    {{ form.applicable_tax_percent }}
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Selling Price Tax Type</label>
+                                    {{ form.selling_price_tax_type }}
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Default Purchase Price (Exc. Tax)</label>
+                                    {{ form.default_purchase_price_exc_tax }}
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Default Purchase Price (Inc. Tax)</label>
+                                    {{ form.default_purchase_price_inc_tax }}
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Margin (%)</label>
+                                    {{ form.margin_percent }}
+                                </div>
+
+                                <div>
+                                    <label id="default-selling-price-label" class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Default Selling Price (Exc. Tax)</label>
+                                    {{ form.default_selling_price }}
+                                </div>
+
+                                <div id="low-stock-wrapper">
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Low Stock Alert Quantity</label>
+                                    {{ form.low_stock_alert_quantity }}
+                                    {% for error in form.low_stock_alert_quantity.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Weight (kg)</label>
+                                    {{ form.weight }}
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Service Staff Time (minutes)</label>
+                                    {{ form.service_time_minutes }}
+                                </div>
+
+                                <div class="flex items-start">
+                                    <label class="mt-8 inline-flex items-center gap-3 text-sm font-medium text-gray-700 dark:text-slate-300">
+                                        {{ form.not_for_selling }}
+                                        Not For Selling
+                                    </label>
+                                </div>
+
+                                <div class="flex items-start">
+                                    <label class="mt-8 inline-flex items-center gap-3 text-sm font-medium text-gray-700 dark:text-slate-300">
+                                        {{ form.disable_woocommerce_sync }}
+                                        Disable WooCommerce Sync
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="single-stock-imei-section" class="mt-6 p-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-950/40">
+                            <div class="flex items-center justify-between gap-3 mb-3">
+                                <h4 class="font-semibold text-gray-900 dark:text-white">Single Product IMEI Scanner Inputs</h4>
+                                <span class="text-xs text-gray-500 dark:text-slate-400">IMEI count must match single product quantity</span>
+                            </div>
+
+                            {{ form.single_imei_numbers }}
+                            <div id="single-imei-inputs" class="grid grid-cols-1 md:grid-cols-3 gap-2"></div>
+                            {% for error in form.single_imei_numbers.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                        </div>
+                    </div>
+
+                    <div id="variation-section" class="pt-4 border-t border-gray-200 dark:border-slate-700">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Variation Attributes and Combination Generator</h3>
+                                <p class="text-sm text-gray-500 dark:text-slate-400">Any number of attributes (Color, RAM, ROM, Size...) can be selected to generate combinations.</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <a href="{% url 'product:variation_attribute_list' %}"
+                                   class="inline-flex items-center rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200 px-4 py-2 text-sm font-semibold">
+                                    <i class="fas fa-sliders-h mr-2"></i>
+                                    Manage Attributes
+                                </a>
+                                <button type="button" id="generate-variations-by-attributes" class="inline-flex items-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm font-semibold">
+                                    <i class="fas fa-bolt mr-2"></i>
+                                    Generate Variations
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="variation-low-stock-host" class="hidden-section mb-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4"></div>
+
+                        <div class="mb-4 flex justify-end">
+                            <button type="button" id="add-attribute-slot" class="inline-flex items-center rounded-xl bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 text-sm font-semibold">
+                                <i class="fas fa-plus mr-2"></i>
+                                Add Attribute Slot
+                            </button>
+                        </div>
+
+                        <div id="attribute-slot-container" class="space-y-4 mb-6">
+                            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end attribute-slot" data-slot="1">
+                                <div class="md:col-span-3">
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Attribute 1</label>
+                                    <select name="variation_attr_1" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-select variation-attr-select" data-placeholder="Select attribute" data-hide-value-prefix="1" data-force-search="1">
+                                        <option value="">Select attribute</option>
+                                        {% for attr in variation_attributes %}
+                                            <option value="{{ attr.id }}">{{ attr.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="md:col-span-6">
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Values</label>
+                                    <select name="variation_values_1" multiple class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-multiselect variation-value-select" data-placeholder="Select values" data-hide-value-prefix="1" data-force-search="1"></select>
+                                </div>
+                                <div class="md:col-span-3 flex gap-2 justify-end">
+                                    <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="variation_attribute" data-field-name="variation_attr_1"><i class="fas fa-plus"></i></button>
+                                    <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="variation_attribute" data-field-name="variation_attr_1"><i class="fas fa-pen"></i></button>
+                                    <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="variation_attribute_value" data-field-name="variation_values_1" data-attribute-source="variation_attr_1"><i class="fas fa-layer-group"></i></button>
+                                    <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="variation_attribute_value" data-field-name="variation_values_1"><i class="fas fa-edit"></i></button>
+                                    <button type="button" class="remove-attribute-slot related-icon-btn bg-red-500 hover:bg-red-600 text-white"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <template id="attribute-slot-template">
+                            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end attribute-slot" data-slot="__slot__">
+                                <div class="md:col-span-3">
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Attribute __slot__</label>
+                                    <select name="variation_attr___slot__" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-select variation-attr-select" data-placeholder="Select attribute" data-hide-value-prefix="1" data-force-search="1">
+                                        <option value="">Select attribute</option>
+                                        {% for attr in variation_attributes %}
+                                            <option value="{{ attr.id }}">{{ attr.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="md:col-span-6">
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Values</label>
+                                    <select name="variation_values___slot__" multiple class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-multiselect variation-value-select" data-placeholder="Select values" data-hide-value-prefix="1" data-force-search="1"></select>
+                                </div>
+                                <div class="md:col-span-3 flex gap-2 justify-end">
+                                    <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="variation_attribute" data-field-name="variation_attr___slot__"><i class="fas fa-plus"></i></button>
+                                    <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="variation_attribute" data-field-name="variation_attr___slot__"><i class="fas fa-pen"></i></button>
+                                    <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="variation_attribute_value" data-field-name="variation_values___slot__" data-attribute-source="variation_attr___slot__"><i class="fas fa-layer-group"></i></button>
+                                    <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="variation_attribute_value" data-field-name="variation_values___slot__"><i class="fas fa-edit"></i></button>
+                                    <button type="button" class="remove-attribute-slot related-icon-btn bg-red-500 hover:bg-red-600 text-white"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{ formset.management_form }}
+
+                        <div id="variation-rows-empty-hint" class="mb-4 rounded-xl border border-dashed border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-950/40 px-4 py-3 text-sm text-gray-600 dark:text-slate-300">
+                            Select variation attributes and values, then click <strong>Generate Variations</strong> to show variation rows.
+                        </div>
+
+                        <div id="variation-rows-block" class="hidden-section">
+                            <div class="mb-4">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Variation Rows</h3>
+                            </div>
+
+                            <div id="variation-formset" class="space-y-4">
+                                {% for vform in formset %}
+                                    <div class="variation-card rounded-2xl p-5 bg-gray-50 dark:bg-slate-950/40">
+                                        <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Variation Name</label>
+                                            {{ vform.name }}
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">SKU Suffix</label>
+                                            {{ vform.sku_suffix }}
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Variation Image</label>
+                                            {{ vform.variation_image }}
+                                            {% for error in vform.variation_image.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Purchase Price (Exc. Tax)</label>
+                                            {{ vform.purchase_price_exc_tax }}
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Purchase Price (Inc. Tax)</label>
+                                            {{ vform.purchase_price_inc_tax }}
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">VAT Model</label>
+                                            {{ vform.vat_rate }}
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Applicable Tax (%)</label>
+                                            {{ vform.applicable_tax_percent }}
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Margin (%)</label>
+                                            {{ vform.margin_percent }}
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Selling Price (Exc. Tax)</label>
+                                            {{ vform.price }}
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Selling Price (Inc. Tax)</label>
+                                            {{ vform.selling_price_inc_tax }}
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Tax Type</label>
+                                            {{ vform.selling_price_tax_type }}
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Quantity</label>
+                                            {{ vform.quantity }}
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Dealer Price</label>
+                                            {{ vform.dealer_price }}
+                                        </div>
+
+                                        <div class="flex items-center gap-3 pt-8">
+                                            {{ vform.isunck }}
+                                            <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Enable IMEI/Unique</label>
+                                        </div>
+
+                                        <div class="md:col-span-4">
+                                            {{ vform.attribute_values }}
+                                            {{ vform.imei_numbers }}
+
+                                            <div class="variation-imei-panel hidden-section p-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <label class="text-sm font-semibold text-gray-700 dark:text-slate-300">IMEI / Serial Numbers (Scanner Input)</label>
+                                                    <span class="text-xs text-gray-500 dark:text-slate-400">Must match quantity</span>
+                                                </div>
+                                                <div class="variation-imei-inputs grid grid-cols-1 md:grid-cols-3 gap-2"></div>
+                                                {% for error in vform.imei_numbers.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                                            </div>
+                                        </div>
+
+                                        <div class="md:col-span-4 variation-unick-panel hidden-section">
+                                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Unique Keys (Optional)</label>
+
+                                            <div class="mb-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-950/40 p-3">
+                                                <label class="block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-slate-300">Unique Key Scanner Mode</label>
+                                                <div class="mt-2 flex flex-col gap-2 md:flex-row">
+                                                    <input type="text" class="scanner-input variation-unick-scanner md:flex-1" placeholder="Scan unique key and press Enter">
+                                                    <button type="button" class="variation-unick-apply-btn inline-flex items-center justify-center rounded-lg bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 text-sm font-semibold">Add</button>
+                                                </div>
+                                                <p class="variation-unick-feedback hidden-section text-xs text-gray-500 dark:text-slate-400 mt-2"></p>
+                                            </div>
+
+                                            {{ vform.unickkey }}
+                                            <div class="mt-3 flex justify-end gap-2">
+                                                <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="unick" data-field-name="{{ vform.unickkey.html_name }}"><i class="fas fa-plus"></i></button>
+                                                <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="unick" data-field-name="{{ vform.unickkey.html_name }}"><i class="fas fa-pen"></i></button>
+                                            </div>
+                                            {% for error in vform.unickkey.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                                        </div>
+
+                                        {% if vform.instance.pk %}
+                                            <div class="md:col-span-4">
+                                                <label class="inline-flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                                                    {{ vform.DELETE }} Delete this variation
+                                                </label>
+                                            </div>
+                                        {% endif %}
+                                        </div>
+
+                                        {% for hidden in vform.hidden_fields %}
+                                            {{ hidden }}
+                                        {% endfor %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <template id="empty-variation-form-template">
                             <div class="variation-card rounded-2xl p-5 bg-gray-50 dark:bg-slate-950/40">
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
                                     <div>
                                         <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Variation Name</label>
-                                        {{ vform.name }}
+                                        {{ formset.empty_form.name }}
                                     </div>
 
                                     <div>
                                         <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">SKU Suffix</label>
-                                        {{ vform.sku_suffix }}
+                                        {{ formset.empty_form.sku_suffix }}
                                     </div>
 
                                     <div>
-                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Price</label>
-                                        {{ vform.price }}
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Variation Image</label>
+                                        {{ formset.empty_form.variation_image }}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Purchase Price (Exc. Tax)</label>
+                                        {{ formset.empty_form.purchase_price_exc_tax }}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Purchase Price (Inc. Tax)</label>
+                                        {{ formset.empty_form.purchase_price_inc_tax }}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">VAT Model</label>
+                                        {{ formset.empty_form.vat_rate }}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Applicable Tax (%)</label>
+                                        {{ formset.empty_form.applicable_tax_percent }}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Margin (%)</label>
+                                        {{ formset.empty_form.margin_percent }}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Selling Price (Exc. Tax)</label>
+                                        {{ formset.empty_form.price }}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Selling Price (Inc. Tax)</label>
+                                        {{ formset.empty_form.selling_price_inc_tax }}
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Tax Type</label>
+                                        {{ formset.empty_form.selling_price_tax_type }}
                                     </div>
 
                                     <div>
                                         <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Quantity</label>
-                                        {{ vform.quantity }}
+                                        {{ formset.empty_form.quantity }}
                                     </div>
 
                                     <div>
                                         <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Dealer Price</label>
-                                        {{ vform.dealer_price }}
+                                        {{ formset.empty_form.dealer_price }}
                                     </div>
 
                                     <div class="flex items-center gap-3 pt-8">
-                                        {{ vform.isunck }}
-                                        <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Has Unique Key</label>
+                                        {{ formset.empty_form.isunck }}
+                                        <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Enable IMEI/Unique</label>
                                     </div>
 
-                                    <div class="md:col-span-3">
-                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Unique Keys</label>
-                                        {{ vform.unickkey }}
+                                    <div class="md:col-span-4">
+                                        {{ formset.empty_form.attribute_values }}
+                                        {{ formset.empty_form.imei_numbers }}
 
+                                        <div class="variation-imei-panel hidden-section p-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <label class="text-sm font-semibold text-gray-700 dark:text-slate-300">IMEI / Serial Numbers (Scanner Input)</label>
+                                                <span class="text-xs text-gray-500 dark:text-slate-400">Must match quantity</span>
+                                            </div>
+                                            <div class="variation-imei-inputs grid grid-cols-1 md:grid-cols-3 gap-2"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="md:col-span-4 variation-unick-panel hidden-section">
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Unique Keys (Optional)</label>
+
+                                        <div class="mb-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-950/40 p-3">
+                                            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-slate-300">Unique Key Scanner Mode</label>
+                                            <div class="mt-2 flex flex-col gap-2 md:flex-row">
+                                                <input type="text" class="scanner-input variation-unick-scanner md:flex-1" placeholder="Scan unique key and press Enter">
+                                                <button type="button" class="variation-unick-apply-btn inline-flex items-center justify-center rounded-lg bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 text-sm font-semibold">Add</button>
+                                            </div>
+                                            <p class="variation-unick-feedback hidden-section text-xs text-gray-500 dark:text-slate-400 mt-2"></p>
+                                        </div>
+
+                                        {{ formset.empty_form.unickkey }}
                                         <div class="mt-3 flex justify-end gap-2">
-                                            <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="unick" data-field-name="{{ vform.unickkey.html_name }}"><i class="fas fa-plus"></i></button>
-                                            <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="unick" data-field-name="{{ vform.unickkey.html_name }}"><i class="fas fa-pen"></i></button>
+                                            <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="unick" data-field-name="{{ formset.empty_form.unickkey.html_name }}"><i class="fas fa-plus"></i></button>
+                                            <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="unick" data-field-name="{{ formset.empty_form.unickkey.html_name }}"><i class="fas fa-pen"></i></button>
                                         </div>
                                     </div>
-
-                                    {% if vform.instance.pk %}
-                                        <div class="md:col-span-3">
-                                            <label class="inline-flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-                                                {{ vform.DELETE }} Delete this variation
-                                            </label>
-                                        </div>
-                                    {% endif %}
                                 </div>
 
-                                {% for hidden in vform.hidden_fields %}
+                                {% for hidden in formset.empty_form.hidden_fields %}
                                     {{ hidden }}
                                 {% endfor %}
                             </div>
-                        {% endfor %}
+                        </template>
                     </div>
 
-                    <template id="empty-variation-form-template">
-                        <div class="variation-card rounded-2xl p-5 bg-gray-50 dark:bg-slate-950/40">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                <div>
-                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Variation Name</label>
-                                    {{ formset.empty_form.name }}
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">SKU Suffix</label>
-                                    {{ formset.empty_form.sku_suffix }}
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Price</label>
-                                    {{ formset.empty_form.price }}
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Quantity</label>
-                                    {{ formset.empty_form.quantity }}
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Dealer Price</label>
-                                    {{ formset.empty_form.dealer_price }}
-                                </div>
-
-                                <div class="flex items-center gap-3 pt-8">
-                                    {{ formset.empty_form.isunck }}
-                                    <label class="text-sm font-medium text-gray-700 dark:text-slate-300">Has Unique Key</label>
-                                </div>
-
-                                <div class="md:col-span-3">
-                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Unique Keys</label>
-                                    {{ formset.empty_form.unickkey }}
-
-                                    <div class="mt-3 flex justify-end gap-2">
-                                        <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="unick" data-field-name="{{ formset.empty_form.unickkey.html_name }}"><i class="fas fa-plus"></i></button>
-                                        <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="unick" data-field-name="{{ formset.empty_form.unickkey.html_name }}"><i class="fas fa-pen"></i></button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {% for hidden in formset.empty_form.hidden_fields %}
-                                {{ hidden }}
-                            {% endfor %}
-                        </div>
-                    </template>
-                </div>
-
-                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
-                    <a href="{% url 'product:product_list' %}"
-                       hx-get="{% url 'product:product_list' %}"
-                       hx-target="#main-content"
-                       hx-select="#main-content"
-                       hx-swap="outerHTML"
-                       hx-push-url="true"
-                       class="px-5 py-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200">
-                        Cancel
-                    </a>
-                    <button type="submit" class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold">
-                        {% if object %}Update Product{% else %}Create Product{% endif %}
-                    </button>
-                </div>
-            </form>
+                    <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
+                        <a href="{% url 'product:product_list' %}"
+                           hx-get="{% url 'product:product_list' %}"
+                           hx-target="#main-content"
+                           hx-select="#main-content"
+                           hx-swap="outerHTML"
+                           hx-push-url="true"
+                           class="px-5 py-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200">
+                            Cancel
+                        </a>
+                        <button type="submit" class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold">{% if object %}Update Product{% else %}Create Product{% endif %}</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+{% comment %}
+Moved to static/js/product-form-page.js loaded globally in base.html.
+{{ form.media.js }}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    const addBtn = document.getElementById("add-variation-row");
+(function () {
+function initProductFormPage() {
+    const pageRoot = document.getElementById("main-content");
+    if (!pageRoot || !pageRoot.querySelector("#variation-section")) {
+        return;
+    }
+
+    if (pageRoot.dataset.productFormInitialized === "1") {
+        return;
+    }
+    pageRoot.dataset.productFormInitialized = "1";
+
+    const generateBtn = document.getElementById("generate-variations-by-attributes");
+    const addAttributeSlotBtn = document.getElementById("add-attribute-slot");
     const totalForms = document.getElementById("id_variations-TOTAL_FORMS");
-    const container = document.getElementById("variation-formset");
+    const variationContainer = document.getElementById("variation-formset");
+    const variationRowsBlock = document.getElementById("variation-rows-block");
+    const variationRowsEmptyHint = document.getElementById("variation-rows-empty-hint");
     const template = document.getElementById("empty-variation-form-template");
+    const attributeSlotContainer = document.getElementById("attribute-slot-container");
+    const attributeSlotTemplate = document.getElementById("attribute-slot-template");
 
-    if (addBtn && totalForms && container && template) {
-        addBtn.addEventListener("click", function () {
-            const formIndex = parseInt(totalForms.value, 10);
-            const html = template.innerHTML.replace(/__prefix__/g, formIndex);
-            container.insertAdjacentHTML("beforeend", html);
-            totalForms.value = formIndex + 1;
+    const purchaseExcField = document.querySelector('[name="default_purchase_price_exc_tax"]');
+    const vatRateField = document.querySelector('[name="vat_rate"]');
+    const taxField = document.querySelector('[name="applicable_tax_percent"]');
+    const productTaxTypeField = document.querySelector('[name="selling_price_tax_type"]');
+    const marginField = document.querySelector('[name="margin_percent"]');
+    const purchaseIncField = document.querySelector('[name="default_purchase_price_inc_tax"]');
+    const sellingField = document.querySelector('[name="default_selling_price"]');
+    const productTypeField = document.querySelector('[name="product_type"]');
+    const manageStockField = document.querySelector('[name="manage_stock"]');
+    const lowStockField = document.querySelector('[name="low_stock_alert_quantity"]');
+    const lowStockWrapper = document.getElementById("low-stock-wrapper");
+    const defaultSellingPriceLabel = document.getElementById("default-selling-price-label");
+    const enableImeiField = document.querySelector('[name="enable_imei_or_serial"]');
+    const singleQtyField = document.querySelector('[name="single_stock_quantity"]');
+    const singleImeiStorage = document.querySelector('[name="single_imei_numbers"]');
+    const singleImeiInputs = document.getElementById("single-imei-inputs");
+    const singleImeiSection = document.getElementById("single-stock-imei-section");
+    const singleQuantityWrapper = document.getElementById("single-quantity-wrapper");
+    const enableImeiWrapper = document.getElementById("enable-imei-wrapper");
+    const pricingTaxStockSettings = document.getElementById("pricing-tax-stock-settings");
+    const variationSection = document.getElementById("variation-section");
 
-            if (typeof initializeDynamicUI === "function") {
-                initializeDynamicUI(container);
-            }
+    function toNumber(value) {
+        const parsed = parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function formatMoney(value) {
+        return Number(value).toFixed(2);
+    }
+
+    function splitLines(value) {
+        if (!value) {
+            return [];
+        }
+        return String(value)
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter(Boolean);
+    }
+
+    function splitScannerTokens(value) {
+        if (!value) {
+            return [];
+        }
+
+        return String(value)
+            .split(/[\r\n,]+/)
+            .map((token) => token.trim())
+            .filter(Boolean);
+    }
+
+    function getUnickOptions(unickField) {
+        if (!unickField) {
+            return [];
+        }
+
+        if (unickField.tomselect) {
+            return Object.values(unickField.tomselect.options || {}).map(function (option) {
+                return {
+                    value: String(option.value || "").trim(),
+                    text: String(option.text || "").trim(),
+                };
+            });
+        }
+
+        return Array.from(unickField.options).map(function (option) {
+            return {
+                value: String(option.value || "").trim(),
+                text: String(option.text || "").trim(),
+            };
         });
     }
-});
+
+    function findUnickOptionValue(unickField, token) {
+        const normalized = String(token || "").trim().toLowerCase();
+        if (!normalized) {
+            return "";
+        }
+
+        const options = getUnickOptions(unickField);
+        const exactMatch = options.find(function (item) {
+            return item.text.toLowerCase() === normalized || item.value.toLowerCase() === normalized;
+        });
+        if (exactMatch) {
+            return exactMatch.value;
+        }
+
+        const startsWithMatch = options.find(function (item) {
+            return item.text.toLowerCase().startsWith(normalized);
+        });
+        if (startsWithMatch) {
+            return startsWithMatch.value;
+        }
+
+        const containsMatch = options.find(function (item) {
+            return item.text.toLowerCase().includes(normalized);
+        });
+        return containsMatch ? containsMatch.value : "";
+    }
+
+    function getSelectedUnickValues(unickField) {
+        if (!unickField) {
+            return [];
+        }
+
+        if (unickField.tomselect) {
+            const current = unickField.tomselect.getValue();
+            if (Array.isArray(current)) {
+                return current.map(function (value) { return String(value); });
+            }
+            return current ? [String(current)] : [];
+        }
+
+        return Array.from(unickField.selectedOptions).map(function (option) { return String(option.value); });
+    }
+
+    function setSelectedUnickValues(unickField, values) {
+        const uniqueValues = Array.from(new Set((values || []).map(function (value) {
+            return String(value);
+        }).filter(Boolean)));
+
+        if (unickField.tomselect) {
+            unickField.tomselect.setValue(uniqueValues, true);
+            return;
+        }
+
+        Array.from(unickField.options).forEach(function (option) {
+            option.selected = uniqueValues.includes(String(option.value));
+        });
+    }
+
+    function scannerFocusNext(event) {
+        if (event.key !== "Enter") {
+            return;
+        }
+
+        event.preventDefault();
+        const inputs = Array.from(event.currentTarget.closest(".scanner-input-grid").querySelectorAll(".scanner-input"));
+        const index = inputs.indexOf(event.currentTarget);
+        if (index >= 0 && inputs[index + 1]) {
+            inputs[index + 1].focus();
+            inputs[index + 1].select();
+        }
+    }
+
+    function buildScannerInputs(target, count, existingValues, onUpdate) {
+        target.innerHTML = "";
+        target.classList.add("scanner-input-grid");
+
+        for (let i = 0; i < count; i += 1) {
+            const input = document.createElement("input");
+            input.type = "text";
+            input.className = "scanner-input";
+            input.placeholder = `Scan IMEI ${i + 1}`;
+            input.value = existingValues[i] || "";
+            input.addEventListener("keydown", scannerFocusNext);
+            input.addEventListener("input", onUpdate);
+            target.appendChild(input);
+        }
+    }
+
+    function recalculateProductPrices() {
+        if (!purchaseExcField) {
+            return;
+        }
+
+        const purchaseExc = toNumber(purchaseExcField.value);
+        const taxPercent = toNumber(taxField ? taxField.value : 0) || 0;
+        const marginPercent = toNumber(marginField ? marginField.value : 0) || 0;
+        const taxType = (productTaxTypeField ? productTaxTypeField.value : "exclusive") || "exclusive";
+
+        if (purchaseExc === null) {
+            if (purchaseIncField) {
+                purchaseIncField.value = "";
+            }
+            if (sellingField) {
+                sellingField.value = "";
+            }
+            return;
+        }
+
+        if (purchaseIncField) {
+            purchaseIncField.value = formatMoney(purchaseExc * (1 + (taxPercent / 100)));
+        }
+
+        const sellingExc = purchaseExc * (1 + (marginPercent / 100));
+        const sellingInc = sellingExc * (1 + (taxPercent / 100));
+
+        if (sellingField) {
+            sellingField.value = formatMoney(taxType === "inclusive" ? sellingInc : sellingExc);
+        }
+
+        if (defaultSellingPriceLabel) {
+            defaultSellingPriceLabel.textContent = taxType === "inclusive"
+                ? "Default Selling Price (Inc. Tax)"
+                : "Default Selling Price (Exc. Tax)";
+        }
+    }
+
+    function syncMainSectionVisibility() {
+        const productType = productTypeField ? productTypeField.value : "single";
+        const isVariationMode = productType === "variable" || productType === "variation" || productType === "combo";
+
+        if (pricingTaxStockSettings) {
+            pricingTaxStockSettings.style.display = isVariationMode ? "none" : "";
+        }
+
+        if (singleQuantityWrapper) {
+            singleQuantityWrapper.style.display = isVariationMode ? "none" : "";
+        }
+
+        if (enableImeiWrapper) {
+            enableImeiWrapper.style.display = isVariationMode ? "none" : "";
+        }
+
+        if (variationSection) {
+            variationSection.style.display = isVariationMode ? "" : "none";
+        }
+
+        if (singleImeiSection) {
+            singleImeiSection.style.display = isVariationMode ? "none" : "";
+        }
+
+        syncVariationRowsVisibility();
+    }
+
+    function syncVariationRowsVisibility() {
+        const rowCount = variationContainer ? variationContainer.querySelectorAll(".variation-card").length : 0;
+        const isVariationMode = productTypeField
+            ? ["variable", "variation", "combo"].includes(productTypeField.value)
+            : false;
+
+        if (variationRowsBlock) {
+            variationRowsBlock.classList.toggle("hidden-section", !(isVariationMode && rowCount > 0));
+        }
+
+        if (variationRowsEmptyHint) {
+            variationRowsEmptyHint.classList.toggle("hidden-section", !(isVariationMode && rowCount === 0));
+        }
+    }
+
+    function syncManageStockFields() {
+        if (!lowStockWrapper || !manageStockField || !lowStockField) {
+            return;
+        }
+
+        const enabled = !!manageStockField.checked;
+        lowStockWrapper.style.display = enabled ? "" : "none";
+        lowStockField.required = enabled;
+
+        if (!enabled) {
+            lowStockField.value = "";
+        }
+    }
+
+    function renderSingleImeiInputs() {
+        if (!singleImeiStorage || !singleImeiInputs) {
+            return;
+        }
+
+        const shouldShow = productTypeField && productTypeField.value === "single" && enableImeiField && enableImeiField.checked;
+        if (singleImeiSection) {
+            singleImeiSection.style.display = shouldShow ? "" : "none";
+        }
+        if (!shouldShow) {
+            singleImeiInputs.innerHTML = "";
+            singleImeiStorage.value = "";
+            return;
+        }
+
+        const count = Math.max(0, parseInt(singleQtyField ? singleQtyField.value || "0" : "0", 10) || 0);
+        const existing = splitLines(singleImeiStorage.value);
+
+        const syncStorage = function () {
+            const values = Array.from(singleImeiInputs.querySelectorAll(".scanner-input"))
+                .map((item) => item.value.trim())
+                .filter(Boolean);
+            singleImeiStorage.value = values.join("\n");
+        };
+
+        buildScannerInputs(singleImeiInputs, count, existing, syncStorage);
+        syncStorage();
+    }
+
+    function fetchVatRateDetails(vatId) {
+        if (!vatId) {
+            return Promise.resolve({ rate_percent: "0", tax_type: "exclusive" });
+        }
+
+        return fetch(`/product/ajax/options/vat-rate/?vat_id=${encodeURIComponent(vatId)}`)
+            .then(function (response) { return response.json(); })
+            .catch(function () {
+                return { rate_percent: "0", tax_type: "exclusive" };
+            });
+    }
+
+    function applyVatRateToProduct() {
+        if (!vatRateField) {
+            return;
+        }
+
+        fetchVatRateDetails(vatRateField.value).then(function (data) {
+            if (taxField) {
+                taxField.value = data.rate_percent || "0";
+            }
+            if (productTaxTypeField && data.tax_type) {
+                productTaxTypeField.value = data.tax_type;
+            }
+            recalculateProductPrices();
+        });
+    }
+
+    function recalculateVariationRow(row) {
+        const purchaseExc = row.querySelector('[name$="-purchase_price_exc_tax"]');
+        const purchaseInc = row.querySelector('[name$="-purchase_price_inc_tax"]');
+        const tax = row.querySelector('[name$="-applicable_tax_percent"]');
+        const taxTypeField = row.querySelector('[name$="-selling_price_tax_type"]');
+        const margin = row.querySelector('[name$="-margin_percent"]');
+        const sellingExc = row.querySelector('[name$="-price"]');
+        const sellingInc = row.querySelector('[name$="-selling_price_inc_tax"]');
+
+        const purchaseExcValue = toNumber(purchaseExc ? purchaseExc.value : null);
+        const taxValue = toNumber(tax ? tax.value : 0) || 0;
+        const taxType = (taxTypeField ? taxTypeField.value : "exclusive") || "exclusive";
+        const marginValue = toNumber(margin ? margin.value : 0) || 0;
+        const multiplier = 1 + (taxValue / 100);
+
+        if (purchaseExcValue === null) {
+            if (purchaseInc) {
+                purchaseInc.value = "";
+            }
+            return;
+        }
+
+        if (purchaseInc) {
+            purchaseInc.value = formatMoney(purchaseExcValue * multiplier);
+        }
+
+        const sellingExcValue = purchaseExcValue * (1 + (marginValue / 100));
+        const sellingIncValue = sellingExcValue * multiplier;
+
+        if (taxType === "inclusive") {
+            if (sellingInc) {
+                sellingInc.value = formatMoney(sellingIncValue);
+            }
+            if (sellingExc) {
+                sellingExc.value = formatMoney(multiplier > 0 ? (sellingIncValue / multiplier) : sellingIncValue);
+            }
+            return;
+        }
+
+        if (sellingExc) {
+            sellingExc.value = formatMoney(sellingExcValue);
+        }
+        if (sellingInc) {
+            sellingInc.value = formatMoney(sellingIncValue);
+        }
+    }
+
+    function buildVariationComboKey(combo) {
+        return combo
+            .map(function (item) { return String(item.valueId); })
+            .filter(Boolean)
+            .sort()
+            .join("|");
+    }
+
+    function collectExistingVariationComboKeys() {
+        const keys = new Set();
+        Array.from(variationContainer ? variationContainer.children : []).forEach(function (row) {
+            const attributeValues = row.querySelector('[name$="-attribute_values"]');
+            if (!attributeValues) {
+                return;
+            }
+
+            let values = [];
+            if (attributeValues.tomselect) {
+                values = attributeValues.tomselect.getValue();
+            } else {
+                values = Array.from(attributeValues.selectedOptions).map(function (opt) { return String(opt.value); });
+            }
+
+            if (!Array.isArray(values)) {
+                values = values ? [String(values)] : [];
+            }
+
+            const key = values
+                .map(function (value) { return String(value); })
+                .filter(Boolean)
+                .sort()
+                .join("|");
+
+            if (key) {
+                keys.add(key);
+            }
+        });
+
+        return keys;
+    }
+
+    function applyVatRateToVariationRow(row) {
+        const vatField = row.querySelector('[name$="-vat_rate"]');
+        const taxField = row.querySelector('[name$="-applicable_tax_percent"]');
+        const taxTypeField = row.querySelector('[name$="-selling_price_tax_type"]');
+        if (!vatField) {
+            return;
+        }
+
+        fetchVatRateDetails(vatField.value).then(function (data) {
+            if (taxField) {
+                taxField.value = data.rate_percent || "0";
+            }
+            if (taxTypeField && data.tax_type) {
+                taxTypeField.value = data.tax_type;
+            }
+            recalculateVariationRow(row);
+        });
+    }
+
+    function bindVariationImeiPanel(row) {
+        const quantityField = row.querySelector('[name$="-quantity"]');
+        const enableField = row.querySelector('[name$="-isunck"]');
+        const storageField = row.querySelector('[name$="-imei_numbers"]');
+        const panel = row.querySelector('.variation-imei-panel');
+        const inputContainer = row.querySelector('.variation-imei-inputs');
+        const unickPanel = row.querySelector('.variation-unick-panel');
+        const unickField = row.querySelector('[name$="-unickkey"]');
+        const unickScannerInput = row.querySelector('.variation-unick-scanner');
+        const unickScannerFeedback = row.querySelector('.variation-unick-feedback');
+
+        if (!quantityField || !enableField || !storageField || !panel || !inputContainer) {
+            return;
+        }
+
+        const updatePanel = function () {
+            const qty = Math.max(0, parseInt(quantityField.value || "0", 10) || 0);
+            const enabled = !!enableField.checked;
+
+            if (unickPanel) {
+                unickPanel.classList.toggle("hidden-section", !enabled);
+            }
+
+            if (!enabled) {
+                panel.classList.add("hidden-section");
+                inputContainer.innerHTML = "";
+                storageField.value = "";
+
+                if (unickField) {
+                    if (unickField.tomselect) {
+                        unickField.tomselect.clear(true);
+                    } else {
+                        Array.from(unickField.options).forEach(function (opt) { opt.selected = false; });
+                    }
+                }
+
+                if (unickScannerInput) {
+                    unickScannerInput.value = "";
+                }
+
+                if (unickScannerFeedback) {
+                    unickScannerFeedback.textContent = "";
+                    unickScannerFeedback.classList.add("hidden-section");
+                    unickScannerFeedback.classList.remove("text-red-600", "dark:text-red-400");
+                    unickScannerFeedback.classList.add("text-gray-500", "dark:text-slate-400");
+                }
+                return;
+            }
+
+            if (qty === 0) {
+                panel.classList.add("hidden-section");
+                inputContainer.innerHTML = "";
+                storageField.value = "";
+                return;
+            }
+
+            panel.classList.remove("hidden-section");
+            const existing = splitLines(storageField.value);
+
+            const syncStorage = function () {
+                const values = Array.from(inputContainer.querySelectorAll(".scanner-input"))
+                    .map((item) => item.value.trim())
+                    .filter(Boolean);
+                storageField.value = values.join("\n");
+            };
+
+            buildScannerInputs(inputContainer, qty, existing, syncStorage);
+            syncStorage();
+        };
+
+        quantityField.addEventListener("input", updatePanel);
+        quantityField.addEventListener("change", updatePanel);
+        enableField.addEventListener("change", updatePanel);
+        updatePanel();
+    }
+
+    function bindVariationUnickScanner(row) {
+        const unickField = row.querySelector('[name$="-unickkey"]');
+        const scannerInput = row.querySelector('.variation-unick-scanner');
+        const applyButton = row.querySelector('.variation-unick-apply-btn');
+        const feedback = row.querySelector('.variation-unick-feedback');
+
+        if (!unickField || !scannerInput || !applyButton) {
+            return;
+        }
+
+        const showFeedback = function (message, isError) {
+            if (!feedback) {
+                return;
+            }
+
+            feedback.textContent = message || "";
+            feedback.classList.toggle("hidden-section", !message);
+            feedback.classList.toggle("text-red-600", !!isError);
+            feedback.classList.toggle("dark:text-red-400", !!isError);
+            feedback.classList.toggle("text-gray-500", !isError);
+            feedback.classList.toggle("dark:text-slate-400", !isError);
+        };
+
+        const applyScannerValues = function () {
+            const tokens = splitScannerTokens(scannerInput.value);
+            if (!tokens.length) {
+                showFeedback("Scan or paste at least one unique key first.", true);
+                return;
+            }
+
+            const matchedValues = [];
+            const unmatchedTokens = [];
+
+            tokens.forEach(function (token) {
+                const optionValue = findUnickOptionValue(unickField, token);
+                if (optionValue) {
+                    matchedValues.push(optionValue);
+                } else {
+                    unmatchedTokens.push(token);
+                }
+            });
+
+            const mergedValues = getSelectedUnickValues(unickField).concat(matchedValues);
+            setSelectedUnickValues(unickField, mergedValues);
+            scannerInput.value = "";
+
+            if (unmatchedTokens.length) {
+                showFeedback(
+                    `Matched ${matchedValues.length} key(s). ${unmatchedTokens.length} key(s) not found in list. Add missing keys using + button.`,
+                    true
+                );
+                return;
+            }
+
+            showFeedback(`Matched ${matchedValues.length} key(s) from scanner input.`, false);
+        };
+
+        if (applyButton.dataset.boundClick !== "1") {
+            applyButton.dataset.boundClick = "1";
+            applyButton.addEventListener("click", applyScannerValues);
+        }
+
+        if (scannerInput.dataset.boundKeydown !== "1") {
+            scannerInput.dataset.boundKeydown = "1";
+            scannerInput.addEventListener("keydown", function (event) {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    applyScannerValues();
+                }
+            });
+        }
+    }
+
+    function bindVariationRow(row) {
+        ['[name$="-purchase_price_exc_tax"]', '[name$="-applicable_tax_percent"]', '[name$="-margin_percent"]', '[name$="-price"]', '[name$="-selling_price_inc_tax"]', '[name$="-selling_price_tax_type"]'].forEach(function (selector) {
+            const field = row.querySelector(selector);
+            if (field) {
+                field.addEventListener("input", function () { recalculateVariationRow(row); });
+                field.addEventListener("change", function () { recalculateVariationRow(row); });
+            }
+        });
+
+        const vatField = row.querySelector('[name$="-vat_rate"]');
+        if (vatField) {
+            vatField.addEventListener("change", function () {
+                applyVatRateToVariationRow(row);
+            });
+        }
+
+        bindVariationImeiPanel(row);
+        bindVariationUnickScanner(row);
+        if (vatField && vatField.value) {
+            applyVatRateToVariationRow(row);
+        } else {
+            recalculateVariationRow(row);
+        }
+    }
+
+    function loadAttributeValues(attributeSelect) {
+        const slot = attributeSelect.closest(".attribute-slot");
+        const valuesSelect = slot ? slot.querySelector(".variation-value-select") : null;
+        if (!valuesSelect) {
+            return;
+        }
+
+        const attributeId = attributeSelect.value;
+        valuesSelect.innerHTML = "";
+
+        if (!attributeId) {
+            if (valuesSelect.tomselect) {
+                valuesSelect.tomselect.clearOptions();
+                valuesSelect.tomselect.refreshOptions(false);
+            }
+            return;
+        }
+
+        fetch(`/product/ajax/options/attribute-values/?attribute_id=${encodeURIComponent(attributeId)}`)
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                (data.results || []).forEach(function (item) {
+                    const option = document.createElement("option");
+                    option.value = String(item.id);
+                    option.textContent = item.text;
+                    option.dataset.valueCode = item.code || "";
+                    valuesSelect.appendChild(option);
+                });
+
+                if (valuesSelect.tomselect) {
+                    valuesSelect.tomselect.sync();
+                    valuesSelect.tomselect.refreshOptions(false);
+                }
+            })
+            .catch(function () {
+                // keep silent
+            });
+    }
+
+    function getNextAttributeSlotIndex() {
+        const slots = Array.from(attributeSlotContainer ? attributeSlotContainer.querySelectorAll(".attribute-slot") : []);
+        if (!slots.length) {
+            return 1;
+        }
+
+        const maxSlot = slots.reduce(function (maxValue, slot) {
+            const current = parseInt(slot.getAttribute("data-slot") || "0", 10) || 0;
+            return Math.max(maxValue, current);
+        }, 0);
+
+        return maxSlot + 1;
+    }
+
+    function bindAttributeSlot(slot) {
+        if (!slot) {
+            return;
+        }
+
+        const attrSelect = slot.querySelector(".variation-attr-select");
+        if (attrSelect && attrSelect.dataset.boundChange !== "1") {
+            attrSelect.dataset.boundChange = "1";
+            attrSelect.addEventListener("change", function () {
+                loadAttributeValues(attrSelect);
+            });
+        }
+    }
+
+    function addAttributeSlot() {
+        if (!attributeSlotTemplate || !attributeSlotContainer) {
+            return;
+        }
+
+        const nextIndex = getNextAttributeSlotIndex();
+        const html = attributeSlotTemplate.innerHTML.replace(/__slot__/g, String(nextIndex));
+        attributeSlotContainer.insertAdjacentHTML("beforeend", html);
+
+        const slot = attributeSlotContainer.lastElementChild;
+        if (!slot) {
+            return;
+        }
+
+        if (typeof initializeDynamicUI === "function") {
+            initializeDynamicUI(attributeSlotContainer);
+        }
+
+        bindAttributeSlot(slot);
+    }
+
+    function getSelectedValueObjects(slot) {
+        const attrSelect = slot.querySelector(".variation-attr-select");
+        const valuesSelect = slot.querySelector(".variation-value-select");
+        if (!attrSelect || !valuesSelect || !attrSelect.value) {
+            return null;
+        }
+
+        const attrLabel = attrSelect.options[attrSelect.selectedIndex] ? attrSelect.options[attrSelect.selectedIndex].text : "";
+        const selected = Array.from(valuesSelect.selectedOptions).map(function (opt) {
+            return {
+                attributeId: attrSelect.value,
+                attributeLabel: attrLabel,
+                valueId: opt.value,
+                valueLabel: opt.text,
+                valueCode: opt.dataset.valueCode || "",
+            };
+        });
+
+        if (!selected.length) {
+            return null;
+        }
+
+        return selected;
+    }
+
+    function cartesianProduct(arrays) {
+        return arrays.reduce(function (acc, curr) {
+            const result = [];
+            acc.forEach(function (a) {
+                curr.forEach(function (b) {
+                    result.push(a.concat([b]));
+                });
+            });
+            return result;
+        }, [[]]);
+    }
+
+    function buildSkuFromCombo(combo) {
+        return combo
+            .map(function (item) {
+                const source = (item.valueCode || item.valueLabel || "")
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9]+/g, "-")
+                    .replace(/^-+|-+$/g, "");
+                return source || "VAL";
+            })
+            .join("-");
+    }
+
+    function addVariationRow() {
+        if (!totalForms || !variationContainer || !template) {
+            return null;
+        }
+
+        const formIndex = parseInt(totalForms.value, 10);
+        const html = template.innerHTML.replace(/__prefix__/g, formIndex);
+        variationContainer.insertAdjacentHTML("beforeend", html);
+        totalForms.value = String(formIndex + 1);
+
+        const row = variationContainer.lastElementChild;
+        if (typeof initializeDynamicUI === "function") {
+            initializeDynamicUI(row);
+        }
+        bindVariationRow(row);
+        syncVariationRowsVisibility();
+        return row;
+    }
+
+    function setVariationRowCombination(row, combo) {
+        const nameField = row.querySelector('[name$="-name"]');
+        const skuField = row.querySelector('[name$="-sku_suffix"]');
+        const purchaseExc = row.querySelector('[name$="-purchase_price_exc_tax"]');
+        const vatRate = row.querySelector('[name$="-vat_rate"]');
+        const tax = row.querySelector('[name$="-applicable_tax_percent"]');
+        const taxType = row.querySelector('[name$="-selling_price_tax_type"]');
+        const margin = row.querySelector('[name$="-margin_percent"]');
+        const quantity = row.querySelector('[name$="-quantity"]');
+        const attributeValues = row.querySelector('[name$="-attribute_values"]');
+
+        if (nameField) {
+            nameField.value = combo.map(function (item) { return `${item.attributeLabel}: ${item.valueLabel}`; }).join(" / ");
+        }
+
+        if (skuField) {
+            skuField.value = buildSkuFromCombo(combo);
+        }
+
+        if (purchaseExc && purchaseExcField && purchaseExcField.value) {
+            purchaseExc.value = purchaseExcField.value;
+        }
+
+        if (tax && taxField && taxField.value) {
+            tax.value = taxField.value;
+        }
+
+        if (taxType && productTaxTypeField && productTaxTypeField.value) {
+            taxType.value = productTaxTypeField.value;
+        }
+
+        if (vatRate && vatRateField && vatRateField.value) {
+            if (vatRate.tomselect) {
+                vatRate.tomselect.setValue(vatRateField.value, true);
+            } else {
+                vatRate.value = vatRateField.value;
+            }
+        }
+
+        if (margin && marginField && marginField.value) {
+            margin.value = marginField.value;
+        }
+
+        if (quantity) {
+            const hasQuantity = String(quantity.value || "").trim() !== "";
+            if (!hasQuantity) {
+                quantity.value = "0";
+            }
+        }
+
+        if (attributeValues) {
+            const ids = combo.map(function (item) { return String(item.valueId); });
+            if (attributeValues.tomselect) {
+                const existing = new Set(Object.keys(attributeValues.tomselect.options));
+                combo.forEach(function (item) {
+                    const id = String(item.valueId);
+                    if (!existing.has(id)) {
+                        attributeValues.tomselect.addOption({ value: id, text: item.valueLabel });
+                    }
+                });
+                attributeValues.tomselect.setValue(ids, true);
+            } else {
+                combo.forEach(function (item) {
+                    const id = String(item.valueId);
+                    let option = Array.from(attributeValues.options).find(function (opt) { return String(opt.value) === id; });
+                    if (!option) {
+                        option = new Option(item.valueLabel, id, false, true);
+                        attributeValues.add(option);
+                    }
+                    option.selected = true;
+                });
+            }
+        }
+
+        if (vatRate && vatRate.value) {
+            applyVatRateToVariationRow(row);
+        } else {
+            recalculateVariationRow(row);
+        }
+    }
+
+    function generateVariationsFromAttributes() {
+        const slots = Array.from(document.querySelectorAll(".attribute-slot"));
+        const selectedGroups = [];
+        const selectedAttributeIds = new Set();
+
+        slots.forEach(function (slot) {
+            const group = getSelectedValueObjects(slot);
+            if (!group || !group.length) {
+                return;
+            }
+
+            const attributeId = String(group[0].attributeId || "");
+            if (!attributeId || selectedAttributeIds.has(attributeId)) {
+                return;
+            }
+
+            selectedAttributeIds.add(attributeId);
+            selectedGroups.push(group);
+        });
+
+        if (!selectedGroups.length) {
+            if (typeof Swal !== "undefined") {
+                Swal.fire("Select attributes and values", "Choose at least one attribute with values first.", "warning");
+            }
+            return;
+        }
+
+        const combos = cartesianProduct(selectedGroups);
+        if (!combos.length) {
+            return;
+        }
+
+        if (combos.length > 200) {
+            if (!window.confirm(`This will create ${combos.length} variation rows. Continue?`)) {
+                return;
+            }
+        }
+
+        const existingComboKeys = collectExistingVariationComboKeys();
+        let createdCount = 0;
+        let skippedCount = 0;
+
+        combos.forEach(function (combo) {
+            const comboKey = buildVariationComboKey(combo);
+            if (comboKey && existingComboKeys.has(comboKey)) {
+                skippedCount += 1;
+                return;
+            }
+
+            const row = addVariationRow();
+            if (row) {
+                setVariationRowCombination(row, combo);
+                createdCount += 1;
+                if (comboKey) {
+                    existingComboKeys.add(comboKey);
+                }
+            }
+        });
+
+        if (typeof Swal !== "undefined") {
+            Swal.fire(
+                "Variation Generation Done",
+                `Created ${createdCount} row(s). Skipped ${skippedCount} duplicate row(s).`,
+                "success"
+            );
+        }
+
+        syncVariationRowsVisibility();
+    }
+
+    if (generateBtn) {
+        generateBtn.addEventListener("click", generateVariationsFromAttributes);
+    }
+
+    if (addAttributeSlotBtn) {
+        addAttributeSlotBtn.addEventListener("click", addAttributeSlot);
+    }
+
+    if (attributeSlotContainer) {
+        attributeSlotContainer.addEventListener("click", function (event) {
+            const removeBtn = event.target.closest(".remove-attribute-slot");
+            if (!removeBtn) {
+                return;
+            }
+
+            const slots = Array.from(attributeSlotContainer.querySelectorAll(".attribute-slot"));
+            if (slots.length <= 1) {
+                return;
+            }
+
+            const slot = removeBtn.closest(".attribute-slot");
+            if (slot) {
+                slot.remove();
+            }
+        });
+
+        if (typeof initializeDynamicUI === "function") {
+            initializeDynamicUI(attributeSlotContainer);
+        }
+
+        Array.from(attributeSlotContainer.querySelectorAll(".attribute-slot")).forEach(bindAttributeSlot);
+    }
+
+    [purchaseExcField, taxField, marginField, productTaxTypeField].forEach(function (field) {
+        if (field) {
+            field.addEventListener("input", recalculateProductPrices);
+            field.addEventListener("change", recalculateProductPrices);
+        }
+    });
+
+    if (vatRateField) {
+        vatRateField.addEventListener("change", applyVatRateToProduct);
+    }
+
+    [productTypeField, enableImeiField, singleQtyField].forEach(function (field) {
+        if (field) {
+            field.addEventListener("change", function () {
+                syncMainSectionVisibility();
+                renderSingleImeiInputs();
+            });
+            field.addEventListener("input", renderSingleImeiInputs);
+        }
+    });
+
+    if (manageStockField) {
+        manageStockField.addEventListener("change", syncManageStockFields);
+    }
+
+    Array.from(variationContainer ? variationContainer.children : []).forEach(bindVariationRow);
+
+    if (vatRateField && vatRateField.value) {
+        applyVatRateToProduct();
+    } else {
+        recalculateProductPrices();
+    }
+    syncMainSectionVisibility();
+    syncVariationRowsVisibility();
+    syncManageStockFields();
+    renderSingleImeiInputs();
+}
+
+window.__initProductFormPage = initProductFormPage;
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initProductFormPage, { once: true });
+} else {
+    initProductFormPage();
+}
+
+if (!window.__productFormAfterSwapBound) {
+    window.__productFormAfterSwapBound = true;
+    document.body.addEventListener("htmx:afterSwap", function (event) {
+        const target = event.detail?.target;
+        const hasMainContent = !!(target && (target.id === "main-content" || target.querySelector?.("#main-content")));
+        if (hasMainContent && typeof window.__initProductFormPage === "function") {
+            window.__initProductFormPage();
+        }
+    });
+}
+})();
 </script>
+{% endcomment %}
 {% endblock %}

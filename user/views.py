@@ -517,6 +517,18 @@ class UserFormContextMixin:
             selected_mult_branch_ids = []
             selected_customer_group_ids = []
 
+        selected_role_ids = [str(i).strip() for i in selected_role_ids if str(i).strip()]
+        selected_mult_branch_ids = [str(i).strip() for i in selected_mult_branch_ids if str(i).strip()]
+        selected_customer_group_ids = [str(i).strip() for i in selected_customer_group_ids if str(i).strip()]
+
+        def merge_with_ids(queryset, model_cls, ids):
+            clean_ids = [str(i).strip() for i in (ids or []) if str(i).strip()]
+            if not clean_ids:
+                return queryset
+            return model_cls.objects.filter(
+                Q(pk__in=queryset.values_list("pk", flat=True)) | Q(pk__in=clean_ids)
+            ).distinct()
+
         scope = get_user_scope(request.user)
 
         filtered_scope = apply_selected_filters(
@@ -528,9 +540,13 @@ class UserFormContextMixin:
             selected_customer_group_ids=selected_customer_group_ids,
         )
 
-        branches = filtered_scope["branches"].order_by("name")
-        areas = filtered_scope["areas"].order_by("name")
-        customer_groups = filtered_scope["customer_groups"].order_by("name")
+        branches = merge_with_ids(filtered_scope["branches"], Branch, [selected_branch]).order_by("name")
+        areas = merge_with_ids(filtered_scope["areas"], Area, [selected_area]).order_by("name")
+        customer_groups = merge_with_ids(
+            filtered_scope["customer_groups"],
+            CustomerGroup,
+            selected_customer_group_ids,
+        ).order_by("name")
 
         roles = Roles.objects.order_by("name")
 
@@ -543,6 +559,8 @@ class UserFormContextMixin:
             else:
                 multibranches = multibranches.none()
 
+        multibranches = merge_with_ids(multibranches, MultiBranch, selected_mult_branch_ids).order_by("title")
+
         return {
             "object": obj,
             "errors": errors or {},
@@ -553,7 +571,7 @@ class UserFormContextMixin:
             "multibranches": multibranches,
             "selected_role_ids": selected_role_ids,
             "selected_mult_branch_ids": selected_mult_branch_ids,
-            "selected_customer_group_ids": [str(i) for i in selected_customer_group_ids],
+            "selected_customer_group_ids": selected_customer_group_ids,
             "selected_branch": selected_branch,
             "selected_area": selected_area,
         }

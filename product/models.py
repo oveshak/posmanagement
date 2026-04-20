@@ -1,10 +1,17 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
+from decimal import Decimal
 from simple_history.models import HistoricalRecords
 
 from globalapp.models import Common
 from user.models import Branch, Users
+
+
+TAX_TYPES = (
+    ("exclusive", "Exclusive"),
+    ("inclusive", "Inclusive"),
+)
 
 
 
@@ -36,6 +43,26 @@ class Category(Common):
 
     def __str__(self):
         return self.name
+
+
+class SubCategory(Common):
+    name = models.CharField(max_length=100, verbose_name="Subcategory Name")
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name="subcategories",
+        verbose_name="Category",
+    )
+    history = HistoricalRecords()
+
+    class Meta:
+        verbose_name = "Subcategory"
+        verbose_name_plural = "Subcategories"
+        ordering = ["category__name", "name"]
+        unique_together = [["category", "name"]]
+
+    def __str__(self):
+        return f"{self.category} / {self.name}"
 
 
 class Brand(Common):
@@ -76,13 +103,54 @@ class Warranty(Common):
         return self.name
 
 
+class VatRate(Common):
+    name = models.CharField(max_length=100, unique=True, verbose_name="VAT Name")
+    rate_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="VAT Rate (%)")
+    tax_type = models.CharField(
+        max_length=20,
+        choices=TAX_TYPES,
+        default="exclusive",
+        verbose_name="Tax Type",
+    )
+    history = HistoricalRecords()
+
+    class Meta:
+        verbose_name = "VAT Rate"
+        verbose_name_plural = "VAT Rates"
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.rate_percent}%)"
+
+
 # =========================
 # PRODUCT
 # =========================
 
 class Product(Common):
+    BARCODE_TYPES = (
+        ("code128", "Code 128"),
+        ("code39", "Code 39"),
+        ("ean13", "EAN-13"),
+        ("upc", "UPC"),
+    )
+
+    TAX_TYPES = TAX_TYPES
+
+    PRODUCT_TYPES = (
+        ("single", "Single"),
+        ("variable", "Variation"),
+        ("combo", "Combo"),
+    )
+
     name = models.CharField(max_length=200, verbose_name="Product Name")
     sku = models.CharField(max_length=50, unique=True, verbose_name="Product SKU")
+    barcode_type = models.CharField(
+        max_length=20,
+        choices=BARCODE_TYPES,
+        default="code128",
+        verbose_name="Barcode Type",
+    )
 
     unit_name = models.ForeignKey(
         Unit,
@@ -100,6 +168,14 @@ class Product(Common):
         related_name="products",
         verbose_name="Product Category"
     )
+    subcategory_name = models.ForeignKey(
+        SubCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
+        verbose_name="Product Subcategory"
+    )
     brand_name = models.ForeignKey(
         Brand,
         on_delete=models.SET_NULL,
@@ -116,6 +192,75 @@ class Product(Common):
         related_name="products",
         verbose_name="Product Warranty"
     )
+    business_location = models.ForeignKey(
+        Branch,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products_business_location",
+        verbose_name="Business Location",
+    )
+    manage_stock = models.BooleanField(default=False, verbose_name="Manage Stock")
+    product_description = models.TextField(blank=True, null=True, verbose_name="Product Description")
+    product_image = models.ImageField(upload_to="products/images/", blank=True, null=True, verbose_name="Product Image")
+    product_brochure = models.FileField(upload_to="products/brochures/", blank=True, null=True, verbose_name="Product Brochure")
+
+    enable_imei_or_serial = models.BooleanField(
+        default=False,
+        verbose_name="Enable Description, IMEI or Serial Number",
+    )
+    not_for_selling = models.BooleanField(default=False, verbose_name="Not For Selling")
+    weight = models.DecimalField(max_digits=10, decimal_places=3, blank=True, null=True, verbose_name="Weight (kg)")
+    service_time_minutes = models.PositiveIntegerField(blank=True, null=True, verbose_name="Service Staff Time (minutes)")
+    disable_woocommerce_sync = models.BooleanField(default=False, verbose_name="Disable WooCommerce Sync")
+    low_stock_alert_quantity = models.PositiveIntegerField(blank=True, null=True, verbose_name="Low Stock Alert Quantity")
+
+    vat_rate = models.ForeignKey(
+        VatRate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
+        verbose_name="VAT Rate",
+    )
+
+    applicable_tax_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Applicable Tax (%)")
+    selling_price_tax_type = models.CharField(
+        max_length=20,
+        choices=TAX_TYPES,
+        default="exclusive",
+        verbose_name="Selling Price Tax Type",
+    )
+    product_type = models.CharField(
+        max_length=20,
+        choices=PRODUCT_TYPES,
+        default="single",
+        verbose_name="Product Type",
+    )
+    default_purchase_price_exc_tax = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        verbose_name="Default Purchase Price (Exc. Tax)",
+    )
+    default_purchase_price_inc_tax = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        verbose_name="Default Purchase Price (Inc. Tax)",
+    )
+    margin_percent = models.DecimalField(max_digits=6, decimal_places=2, default=25, verbose_name="Margin (%)")
+    default_selling_price = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        verbose_name="Default Selling Price",
+    )
+    single_stock_quantity = models.PositiveIntegerField(default=0, verbose_name="Single Product Quantity")
+    single_imei_numbers = models.TextField(blank=True, null=True, verbose_name="Single Product IMEI Numbers")
 
     history = HistoricalRecords()
 
@@ -123,6 +268,59 @@ class Product(Common):
         verbose_name = "Product"
         verbose_name_plural = "Products"
         ordering = ["name"]
+
+    @staticmethod
+    def _parse_imei_lines(raw_value):
+        if not raw_value:
+            return []
+        return [line.strip() for line in str(raw_value).splitlines() if line.strip()]
+
+    def clean(self):
+        if self.subcategory_name and self.category_name:
+            if self.subcategory_name.category_id != self.category_name_id:
+                raise ValidationError({
+                    "subcategory_name": "Selected subcategory does not belong to selected category."
+                })
+
+        if self.subcategory_name and not self.category_name:
+            self.category_name = self.subcategory_name.category
+
+        if self.vat_rate:
+            self.applicable_tax_percent = self.vat_rate.rate_percent
+            self.selling_price_tax_type = self.vat_rate.tax_type
+
+        if self.manage_stock and not self.low_stock_alert_quantity:
+            raise ValidationError({
+                "low_stock_alert_quantity": "Low stock alert quantity is required when manage stock is enabled."
+            })
+
+        if self.default_purchase_price_exc_tax is not None:
+            tax_rate = self.applicable_tax_percent or Decimal("0")
+            calculated_inc_tax = self.default_purchase_price_exc_tax * (Decimal("1") + (tax_rate / Decimal("100")))
+            if self.default_purchase_price_inc_tax in (None, Decimal("0")):
+                self.default_purchase_price_inc_tax = calculated_inc_tax.quantize(Decimal("0.01"))
+
+            margin = self.margin_percent or Decimal("0")
+            calculated_selling_exc = self.default_purchase_price_exc_tax * (Decimal("1") + (margin / Decimal("100")))
+            if self.selling_price_tax_type == "inclusive":
+                calculated_selling = calculated_selling_exc * (Decimal("1") + (tax_rate / Decimal("100")))
+            else:
+                calculated_selling = calculated_selling_exc
+
+            if self.default_selling_price in (None, Decimal("0")):
+                self.default_selling_price = calculated_selling.quantize(Decimal("0.01"))
+
+        if self.product_type == "single" and self.enable_imei_or_serial:
+            imei_lines = self._parse_imei_lines(self.single_imei_numbers)
+            if self.single_stock_quantity and len(imei_lines) != self.single_stock_quantity:
+                raise ValidationError({
+                    "single_imei_numbers": "IMEI count must match Single Product Quantity."
+                })
+
+            if len(set(imei_lines)) != len(imei_lines):
+                raise ValidationError({
+                    "single_imei_numbers": "Duplicate IMEI numbers are not allowed."
+                })
 
     def __str__(self):
         return self.name
@@ -140,6 +338,28 @@ class VariationAttribute(Common):
 
     def __str__(self):
         return self.name
+
+
+class VariationAttributeValue(Common):
+    attribute = models.ForeignKey(
+        VariationAttribute,
+        on_delete=models.CASCADE,
+        related_name="values",
+        verbose_name="Variation Attribute",
+    )
+    value = models.CharField(max_length=100, verbose_name="Attribute Value")
+    value_code = models.CharField(max_length=30, blank=True, verbose_name="Value Code")
+    order = models.PositiveIntegerField(default=0, verbose_name="Display Order")
+    history = HistoricalRecords()
+
+    class Meta:
+        verbose_name = "Variation Attribute Value"
+        verbose_name_plural = "Variation Attribute Values"
+        ordering = ["attribute__order", "order", "value"]
+        unique_together = [["attribute", "value"]]
+
+    def __str__(self):
+        return f"{self.attribute.name}: {self.value}"
 
 
 class unick(Common):
@@ -165,8 +385,51 @@ class Variation(Common):
     )
     name = models.CharField(max_length=300, blank=True, verbose_name="Variation Name")
     sku_suffix = models.CharField(max_length=50, blank=True, verbose_name="SKU Suffix")
+    variation_image = models.ImageField(
+        upload_to="products/variations/",
+        blank=True,
+        null=True,
+        verbose_name="Variation Image",
+    )
 
     price = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="Sales Price")
+    selling_price_inc_tax = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        verbose_name="Selling Price (Inc. Tax)",
+    )
+    purchase_price_exc_tax = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        verbose_name="Purchase Price (Exc. Tax)",
+    )
+    purchase_price_inc_tax = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        verbose_name="Purchase Price (Inc. Tax)",
+    )
+    vat_rate = models.ForeignKey(
+        VatRate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="variations",
+        verbose_name="VAT Rate",
+    )
+    applicable_tax_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Applicable Tax (%)")
+    selling_price_tax_type = models.CharField(
+        max_length=20,
+        choices=Product.TAX_TYPES,
+        default="exclusive",
+        verbose_name="Selling Price Tax Type",
+    )
+    margin_percent = models.DecimalField(max_digits=6, decimal_places=2, default=25, verbose_name="Margin (%)")
     quantity = models.PositiveIntegerField(default=0, verbose_name="Quantity")
     dealer_price = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name="Dealer Price")
 
@@ -177,6 +440,13 @@ class Variation(Common):
         related_name="variations",
         verbose_name="Unique Keys"
     )
+    attribute_values = models.ManyToManyField(
+        VariationAttributeValue,
+        blank=True,
+        related_name="variations",
+        verbose_name="Attribute Values",
+    )
+    imei_numbers = models.TextField(blank=True, null=True, verbose_name="IMEI Numbers")
 
     history = HistoricalRecords()
 
@@ -184,6 +454,61 @@ class Variation(Common):
         verbose_name = "Variation"
         verbose_name_plural = "Variations"
         ordering = ["id"]
+
+    @staticmethod
+    def _parse_imei_lines(raw_value):
+        if not raw_value:
+            return []
+        return [line.strip() for line in str(raw_value).splitlines() if line.strip()]
+
+    def clean(self):
+        if self.vat_rate:
+            self.applicable_tax_percent = self.vat_rate.rate_percent
+            self.selling_price_tax_type = self.vat_rate.tax_type
+
+        tax_rate = self.applicable_tax_percent or Decimal("0")
+        tax_multiplier = Decimal("1") + (tax_rate / Decimal("100"))
+
+        if self.purchase_price_exc_tax is not None:
+            purchase_inc = self.purchase_price_exc_tax * tax_multiplier
+            if self.purchase_price_inc_tax in (None, Decimal("0")):
+                self.purchase_price_inc_tax = purchase_inc.quantize(Decimal("0.01"))
+
+            margin = self.margin_percent or Decimal("0")
+            default_selling_exc = self.purchase_price_exc_tax * (Decimal("1") + (margin / Decimal("100")))
+
+            if self.selling_price_tax_type == "inclusive":
+                if self.selling_price_inc_tax in (None, Decimal("0")):
+                    if self.price not in (None, Decimal("0")):
+                        self.selling_price_inc_tax = (self.price * tax_multiplier).quantize(Decimal("0.01"))
+                    else:
+                        self.selling_price_inc_tax = (default_selling_exc * tax_multiplier).quantize(Decimal("0.01"))
+
+                if self.selling_price_inc_tax is not None:
+                    if tax_multiplier != Decimal("0"):
+                        self.price = (self.selling_price_inc_tax / tax_multiplier).quantize(Decimal("0.01"))
+                    else:
+                        self.price = self.selling_price_inc_tax.quantize(Decimal("0.01"))
+            else:
+                if self.price in (None, Decimal("0")):
+                    self.price = default_selling_exc.quantize(Decimal("0.01"))
+
+        if self.price is not None and self.selling_price_inc_tax in (None, Decimal("0")):
+            selling_inc = self.price * tax_multiplier
+            if self.selling_price_inc_tax in (None, Decimal("0")):
+                self.selling_price_inc_tax = selling_inc.quantize(Decimal("0.01"))
+
+        if self.isunck:
+            imei_lines = self._parse_imei_lines(self.imei_numbers)
+            if self.quantity and len(imei_lines) != self.quantity:
+                raise ValidationError({
+                    "imei_numbers": "IMEI count must match variation quantity when unique/IMEI is enabled."
+                })
+
+            if len(set(imei_lines)) != len(imei_lines):
+                raise ValidationError({
+                    "imei_numbers": "Duplicate IMEI numbers are not allowed for a variation."
+                })
 
     def __str__(self):
         return f"{self.product_name.name} - {self.name}"

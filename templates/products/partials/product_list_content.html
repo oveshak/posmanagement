@@ -25,19 +25,26 @@
           hx-select="#main-content"
           hx-swap="outerHTML"
           hx-push-url="true"
-          class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-200 dark:border-slate-800">
+            class="grid grid-cols-1 md:grid-cols-5 gap-4 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-200 dark:border-slate-800">
 
         <input type="text" name="search" value="{{ selected_search }}" placeholder="Search by name / sku"
                class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
 
-        <select name="category" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white js-enhanced-select">
+        <select name="category" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white js-enhanced-select" data-selected-value="{{ selected_category|default:'' }}">
             <option value="">All Categories</option>
             {% for item in categories %}
                 <option value="{{ item.id }}" {% if selected_category == item.id|stringformat:'s' %}selected{% endif %}>{{ item.name }}</option>
             {% endfor %}
         </select>
 
-        <select name="brand" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white js-enhanced-select">
+        <select name="subcategory" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white js-enhanced-select" data-selected-value="{{ selected_subcategory|default:'' }}">
+            <option value="">All Subcategories</option>
+            {% for item in subcategories %}
+                <option value="{{ item.id }}" {% if selected_subcategory == item.id|stringformat:'s' %}selected{% endif %}>{{ item.name }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="brand" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white js-enhanced-select" data-selected-value="{{ selected_brand|default:'' }}">
             <option value="">All Brands</option>
             {% for item in brands %}
                 <option value="{{ item.id }}" {% if selected_brand == item.id|stringformat:'s' %}selected{% endif %}>{{ item.name }}</option>
@@ -64,6 +71,7 @@
                         <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Product</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold uppercase">SKU</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Category</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Subcategory</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Brand</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Warranty</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Variations</th>
@@ -76,6 +84,7 @@
                             <td class="px-6 py-4 font-semibold text-gray-900 dark:text-white">{{ item.name }}</td>
                             <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ item.sku }}</td>
                             <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ item.category_name|default:"—" }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ item.subcategory_name|default:"—" }}</td>
                             <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ item.brand_name|default:"—" }}</td>
                             <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ item.warranty_name|default:"—" }}</td>
                             <td class="px-6 py-4">
@@ -104,7 +113,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-slate-400">No products found.</td>
+                            <td colspan="8" class="px-6 py-12 text-center text-gray-500 dark:text-slate-400">No products found.</td>
                         </tr>
                     {% endfor %}
                 </tbody>

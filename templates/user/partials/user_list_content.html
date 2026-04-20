@@ -41,7 +41,7 @@
                     {% endfor %}
                 </select>
 
-                <select name="area" class="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white js-enhanced-select">
+                <select name="area" class="rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm text-gray-900 dark:text-white js-enhanced-select" data-selected-value="{{ request.GET.area|default:'' }}">
                     <option value="">All Areas</option>
                     {% for area in areas %}
                         <option value="{{ area.id }}" {% if request.GET.area == area.id|stringformat:'s' %}selected{% endif %}>

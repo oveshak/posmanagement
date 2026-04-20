@@ -6,13 +6,18 @@
 {% block page_subtitle %}Manage role permissions and menus{% endblock %}
 
 {% block content %}
-<div class="min-h-screen">
-  <div class="l mx-auto">
+<div id="main-content"
+     data-page-title="{% if object %}Update Role{% else %}Create Role{% endif %} - Management"
+     data-page-subtitle="Assign menus and permissions for this role."
+     class="flex-1 overflow-y-auto p-5 sm:p-6 page-content"
+     style="background:var(--surface-alt);">
+  <div class="min-h-screen">
+    <div class="l mx-auto">
      <div class="mb-6 flex items-center justify-between gap-4">
         <div>
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
                 {% if object %}Update Role{% else %}Create Role{% endif %}
-            </h2>
+            </h1>
             <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
                 Assign menus and permissions for this role.
             </p>
@@ -43,7 +48,8 @@
             </div>
         </form>
     </div>
-  </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
  

@@ -171,9 +171,12 @@ def apply_selected_filters(
 
     if selected_customer_group_ids:
         customer_groups = customer_groups.filter(id__in=selected_customer_group_ids)
-        # Keep branch/area synced with selected customer group(s).
-        branches = branches.filter(id__in=customer_groups.values_list("branch_id", flat=True))
-        areas = areas.filter(id__in=customer_groups.values_list("area_id", flat=True))
+        # Keep branch/area synced with selected customer group(s), but do not
+        # override an explicitly selected branch/area from the UI (edit forms).
+        if not selected_branch:
+            branches = branches.filter(id__in=customer_groups.values_list("branch_id", flat=True))
+        if not selected_area:
+            areas = areas.filter(id__in=customer_groups.values_list("area_id", flat=True))
 
     return {
         "branches": branches.distinct(),

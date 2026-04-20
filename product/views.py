@@ -966,9 +966,11 @@
 
 
 
+import json
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -988,6 +990,10 @@ from user.views import is_htmx, htmx_trigger_response
 from .models import (
     Unit,
     Category,
+    SubCategory,
+    VatRate,
+    VariationAttribute,
+    VariationAttributeValue,
     Brand,
     Warranty,
     Product,
@@ -1001,6 +1007,10 @@ from .forms import (
     VariationFormSet,
     UnitForm,
     CategoryForm,
+    SubCategoryForm,
+    VatRateForm,
+    VariationAttributeForm,
+    VariationAttributeValueForm,
     BrandForm,
     VariationQuickForm,
     WarrantyForm,
@@ -1053,7 +1063,7 @@ class ProductListView(LoginRequiredMixin, HtmxListMixin, ListView):
 
     def get_queryset(self):
         qs = Product.objects.select_related(
-            "unit_name", "category_name", "brand_name", "warranty_name"
+            "unit_name", "category_name", "subcategory_name", "brand_name", "warranty_name", "business_location"
         ).prefetch_related("variations").order_by("name")
 
         scope = get_user_scope(self.request.user)
@@ -1066,6 +1076,7 @@ class ProductListView(LoginRequiredMixin, HtmxListMixin, ListView):
 
         search = self.request.GET.get("search", "").strip()
         category_id = self.request.GET.get("category", "").strip()
+        subcategory_id = self.request.GET.get("subcategory", "").strip()
         brand_id = self.request.GET.get("brand", "").strip()
 
         if search:
@@ -1073,11 +1084,15 @@ class ProductListView(LoginRequiredMixin, HtmxListMixin, ListView):
                 Q(name__icontains=search) |
                 Q(sku__icontains=search) |
                 Q(category_name__name__icontains=search) |
+                Q(subcategory_name__name__icontains=search) |
                 Q(brand_name__name__icontains=search)
             )
 
         if category_id:
             qs = qs.filter(category_name_id=category_id)
+
+        if subcategory_id:
+            qs = qs.filter(subcategory_name_id=subcategory_id)
 
         if brand_id:
             qs = qs.filter(brand_name_id=brand_id)
@@ -1088,9 +1103,15 @@ class ProductListView(LoginRequiredMixin, HtmxListMixin, ListView):
         context = super().get_context_data(**kwargs)
         base_qs = self.get_queryset()
         context["categories"] = Category.objects.filter(products__in=base_qs).distinct().order_by("name")
+        selected_category = self.request.GET.get("category", "").strip()
+        sub_qs = SubCategory.objects.filter(products__in=base_qs).select_related("category").distinct()
+        if selected_category:
+            sub_qs = sub_qs.filter(category_id=selected_category)
+        context["subcategories"] = sub_qs.order_by("category__name", "name")
         context["brands"] = Brand.objects.filter(products__in=base_qs).distinct().order_by("name")
         context["selected_search"] = self.request.GET.get("search", "").strip()
-        context["selected_category"] = self.request.GET.get("category", "").strip()
+        context["selected_category"] = selected_category
+        context["selected_subcategory"] = self.request.GET.get("subcategory", "").strip()
         context["selected_brand"] = self.request.GET.get("brand", "").strip()
         return context
 
@@ -1101,15 +1122,16 @@ class ProductCreateView(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template_name, {
-            "form": ProductForm(),
+            "form": ProductForm(request=request),
             "formset": VariationFormSet(prefix="variations"),
+            "variation_attributes": VariationAttribute.objects.order_by("order", "name"),
             "object": None,
         })
 
     @transaction.atomic
     def post(self, request, *args, **kwargs):
-        form = ProductForm(request.POST)
-        formset = VariationFormSet(request.POST, prefix="variations")
+        form = ProductForm(request.POST, request.FILES, request=request)
+        formset = VariationFormSet(request.POST, request.FILES, prefix="variations")
 
         if form.is_valid() and formset.is_valid():
             product = form.save()
@@ -1123,6 +1145,7 @@ class ProductCreateView(LoginRequiredMixin, View):
         return render(request, self.template_name, {
             "form": form,
             "formset": formset,
+            "variation_attributes": VariationAttribute.objects.order_by("order", "name"),
             "object": None,
         })
 
@@ -1140,16 +1163,17 @@ class ProductUpdateView(LoginRequiredMixin, View):
     def get(self, request, pk, *args, **kwargs):
         obj = self.get_object(pk)
         return render(request, self.template_name, {
-            "form": ProductForm(instance=obj),
+            "form": ProductForm(instance=obj, request=request),
             "formset": VariationFormSet(instance=obj, prefix="variations"),
+            "variation_attributes": VariationAttribute.objects.order_by("order", "name"),
             "object": obj,
         })
 
     @transaction.atomic
     def post(self, request, pk, *args, **kwargs):
         obj = self.get_object(pk)
-        form = ProductForm(request.POST, instance=obj)
-        formset = VariationFormSet(request.POST, instance=obj, prefix="variations")
+        form = ProductForm(request.POST, request.FILES, instance=obj, request=request)
+        formset = VariationFormSet(request.POST, request.FILES, instance=obj, prefix="variations")
 
         if form.is_valid() and formset.is_valid():
             changes = build_form_changes(form)
@@ -1169,6 +1193,7 @@ class ProductUpdateView(LoginRequiredMixin, View):
         return render(request, self.template_name, {
             "form": form,
             "formset": formset,
+            "variation_attributes": VariationAttribute.objects.order_by("order", "name"),
             "object": obj,
         })
 
@@ -1308,6 +1333,7 @@ class MasterListBaseView(LoginRequiredMixin, HtmxListMixin, ListView):
     delete_url_name = ""
     create_label = "Item"
     search_includes_duration = False
+    show_parent_category = False
 
     def get_queryset(self):
         qs = self.model.objects.order_by("name")
@@ -1338,6 +1364,7 @@ class MasterListBaseView(LoginRequiredMixin, HtmxListMixin, ListView):
         context["create_label"] = self.create_label
         context["selected_search"] = self.request.GET.get("search", "").strip()
         context["show_warranty_columns"] = self.search_includes_duration
+        context["show_parent_category"] = self.show_parent_category
         return context
 
 
@@ -1474,6 +1501,77 @@ class CategoryDeleteView(BaseNoTemplateDeleteView):
     success_message = "Category deleted successfully."
 
 
+class SubCategoryListView(MasterListBaseView):
+    model = SubCategory
+    page_title = "Subcategories"
+    page_subtitle = "Manage product subcategories"
+    list_url_name = "product:subcategory_list"
+    create_url_name = "product:subcategory_create"
+    edit_url_name = "product:subcategory_update"
+    delete_url_name = "product:subcategory_delete"
+    create_label = "Subcategory"
+    show_parent_category = True
+
+    def get_queryset(self):
+        qs = self.model.objects.select_related("category").order_by("category__name", "name")
+        search = self.request.GET.get("search", "").strip()
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search) |
+                Q(category__name__icontains=search)
+            )
+        return qs
+
+
+class SubCategoryCreateView(MasterCreateBaseView):
+    form_class = SubCategoryForm
+    success_url = reverse_lazy("product:subcategory_list")
+    object_label = "Subcategory"
+
+
+class SubCategoryUpdateView(MasterUpdateBaseView):
+    model = SubCategory
+    form_class = SubCategoryForm
+    success_url = reverse_lazy("product:subcategory_list")
+    object_label = "Subcategory"
+
+
+class SubCategoryDeleteView(BaseNoTemplateDeleteView):
+    model = SubCategory
+    success_url = reverse_lazy("product:subcategory_list")
+    success_message = "Subcategory deleted successfully."
+
+
+class VariationAttributeListView(MasterListBaseView):
+    model = VariationAttribute
+    page_title = "Variation Attributes"
+    page_subtitle = "Manage variation attribute groups like Color, RAM, ROM"
+    list_url_name = "product:variation_attribute_list"
+    create_url_name = "product:variation_attribute_create"
+    edit_url_name = "product:variation_attribute_update"
+    delete_url_name = "product:variation_attribute_delete"
+    create_label = "Variation Attribute"
+
+
+class VariationAttributeCreateView(MasterCreateBaseView):
+    form_class = VariationAttributeForm
+    success_url = reverse_lazy("product:variation_attribute_list")
+    object_label = "Variation Attribute"
+
+
+class VariationAttributeUpdateView(MasterUpdateBaseView):
+    model = VariationAttribute
+    form_class = VariationAttributeForm
+    success_url = reverse_lazy("product:variation_attribute_list")
+    object_label = "Variation Attribute"
+
+
+class VariationAttributeDeleteView(BaseNoTemplateDeleteView):
+    model = VariationAttribute
+    success_url = reverse_lazy("product:variation_attribute_list")
+    success_message = "Variation attribute deleted successfully."
+
+
 class BrandListView(MasterListBaseView):
     model = Brand
     page_title = "Brands"
@@ -1533,6 +1631,36 @@ class WarrantyDeleteView(BaseNoTemplateDeleteView):
     model = Warranty
     success_url = reverse_lazy("product:warranty_list")
     success_message = "Warranty deleted successfully."
+
+
+class VatRateListView(MasterListBaseView):
+    model = VatRate
+    page_title = "VAT Rates"
+    page_subtitle = "Manage VAT models and rates"
+    list_url_name = "product:vat_rate_list"
+    create_url_name = "product:vat_rate_create"
+    edit_url_name = "product:vat_rate_update"
+    delete_url_name = "product:vat_rate_delete"
+    create_label = "VAT Rate"
+
+
+class VatRateCreateView(MasterCreateBaseView):
+    form_class = VatRateForm
+    success_url = reverse_lazy("product:vat_rate_list")
+    object_label = "VAT Rate"
+
+
+class VatRateUpdateView(MasterUpdateBaseView):
+    model = VatRate
+    form_class = VatRateForm
+    success_url = reverse_lazy("product:vat_rate_list")
+    object_label = "VAT Rate"
+
+
+class VatRateDeleteView(BaseNoTemplateDeleteView):
+    model = VatRate
+    success_url = reverse_lazy("product:vat_rate_list")
+    success_message = "VAT Rate deleted successfully."
 
 
 # ---------------- RELATED MODAL ----------------
@@ -1696,6 +1824,10 @@ def related_object_modal(request, model_name, pk=None):
         "unick": {"model": unick, "form": UnickForm},
         "unit": {"model": Unit, "form": UnitForm},
         "category": {"model": Category, "form": CategoryForm},
+        "subcategory": {"model": SubCategory, "form": SubCategoryForm},
+        "vat_rate": {"model": VatRate, "form": VatRateForm},
+        "variation_attribute": {"model": VariationAttribute, "form": VariationAttributeForm},
+        "variation_attribute_value": {"model": VariationAttributeValue, "form": VariationAttributeValueForm},
         "brand": {"model": Brand, "form": BrandForm},
         "warranty": {"model": Warranty, "form": WarrantyForm},
         "branch": {"model": Branch, "form": BranchQuickForm},
@@ -1710,6 +1842,8 @@ def related_object_modal(request, model_name, pk=None):
 
     instance = get_object_or_404(model_class, pk=pk) if pk else None
     parent_field = request.GET.get("parent_field") or request.POST.get("_parent_field", "")
+    category_id = request.GET.get("category_id", "").strip() or request.POST.get("category", "").strip()
+    attribute_id = request.GET.get("attribute_id", "").strip() or request.POST.get("attribute", "").strip()
 
     if request.method == "POST":
         try:
@@ -1745,10 +1879,16 @@ def related_object_modal(request, model_name, pk=None):
                 }
             })
     else:
+        initial = None
+        if model_name == "subcategory" and category_id and not instance:
+            initial = {"category": category_id}
+        if model_name == "variation_attribute_value" and attribute_id and not instance:
+            initial = {"attribute": attribute_id}
+
         try:
-            form = form_class(instance=instance, request=request)
+            form = form_class(instance=instance, request=request, initial=initial)
         except TypeError:
-            form = form_class(instance=instance)
+            form = form_class(instance=instance, initial=initial)
 
     return render(request, "common/related_modal_form.html", {
         "form": form,
@@ -1758,6 +1898,68 @@ def related_object_modal(request, model_name, pk=None):
         "parent_field": parent_field,
         "post_url": request.path,
         "form_partial_template": "user/model_form.html",
+    })
+
+
+@login_required
+@require_GET
+def ajax_subcategories_by_category(request):
+    category_id = request.GET.get("category_id", "").strip()
+    qs = SubCategory.objects.select_related("category").order_by("category__name", "name")
+
+    if category_id:
+        qs = qs.filter(category_id=category_id)
+
+    return JsonResponse({
+        "results": [{"id": obj.pk, "text": obj.name} for obj in qs]
+    })
+
+
+@login_required
+@require_GET
+def ajax_attribute_values_by_attribute(request):
+    attribute_id = request.GET.get("attribute_id", "").strip()
+    qs = VariationAttributeValue.objects.select_related("attribute").order_by("attribute__order", "order", "value")
+
+    if attribute_id:
+        qs = qs.filter(attribute_id=attribute_id)
+
+    return JsonResponse({
+        "results": [
+            {
+                "id": obj.pk,
+                "text": obj.value,
+                "code": obj.value_code or "",
+                "attribute": obj.attribute.name,
+            }
+            for obj in qs
+        ]
+    })
+
+
+@login_required
+@require_GET
+def ajax_vat_rate_detail(request):
+    vat_id = request.GET.get("vat_id", "").strip()
+    if not vat_id:
+        return JsonResponse({
+            "id": "",
+            "rate_percent": "0",
+            "tax_type": "exclusive",
+        })
+
+    vat = VatRate.objects.filter(pk=vat_id).first()
+    if not vat:
+        return JsonResponse({
+            "id": "",
+            "rate_percent": "0",
+            "tax_type": "exclusive",
+        })
+
+    return JsonResponse({
+        "id": vat.pk,
+        "rate_percent": str(vat.rate_percent),
+        "tax_type": vat.tax_type,
     })
 
 
@@ -1807,4 +2009,77 @@ def ajax_unick_by_variation(request):
 
     return JsonResponse({
         "results": [{"id": obj.pk, "text": str(obj)} for obj in qs]
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def ajax_resolve_unick_from_scanner(request):
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({
+            "results": [],
+            "unmatched": [],
+            "error": "Invalid JSON payload.",
+        }, status=400)
+
+    raw_tokens = payload.get("tokens", [])
+    create_missing = bool(payload.get("create_missing", True))
+
+    if isinstance(raw_tokens, str):
+        raw_tokens = [chunk.strip() for chunk in raw_tokens.replace("\r", "\n").replace(",", "\n").split("\n")]
+    elif not isinstance(raw_tokens, list):
+        raw_tokens = []
+
+    distinct_tokens = []
+    seen_tokens = set()
+    for token in raw_tokens[:300]:
+        cleaned = str(token or "").strip()
+        if not cleaned:
+            continue
+        fingerprint = cleaned.lower()
+        if fingerprint in seen_tokens:
+            continue
+        seen_tokens.add(fingerprint)
+        distinct_tokens.append(cleaned)
+
+    resolved = []
+    unmatched = []
+    seen_ids = set()
+
+    for token in distinct_tokens:
+        matched_obj = unick.objects.filter(
+            Q(key1__iexact=token) | Q(key2__iexact=token)
+        ).order_by("id").first()
+
+        if not matched_obj and create_missing:
+            if len(token) > 100:
+                unmatched.append(token)
+                continue
+
+            try:
+                matched_obj = unick.objects.create(key1=token)
+            except IntegrityError:
+                matched_obj = unick.objects.filter(
+                    Q(key1__iexact=token) | Q(key2__iexact=token)
+                ).order_by("id").first()
+
+        if not matched_obj:
+            unmatched.append(token)
+            continue
+
+        if matched_obj.pk in seen_ids:
+            continue
+        seen_ids.add(matched_obj.pk)
+        resolved.append({
+            "id": matched_obj.pk,
+            "text": str(matched_obj),
+            "key1": matched_obj.key1,
+            "key2": matched_obj.key2 or "",
+        })
+
+    return JsonResponse({
+        "results": resolved,
+        "unmatched": unmatched,
     })

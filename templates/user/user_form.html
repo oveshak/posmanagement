@@ -8,14 +8,17 @@
 {% block page_subtitle %}Manage user information, roles, branches, areas and customer groups{% endblock %}
 
 {% block content %}
-
-
-    <div class=" mx-auto">
+<div id="main-content"
+     data-page-title="{% if object %}Update User{% else %}Create User{% endif %} - Management"
+     data-page-subtitle="Manage user information, roles, branches, areas and customer groups"
+     class="flex-1 overflow-y-auto p-5 sm:p-6 page-content"
+     style="background:var(--surface-alt);">
+    <div class="mx-auto">
         <div class="mb-6 flex items-center justify-between gap-4">
             <div>
-                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
                     {% if object %}Update User{% else %}Create User{% endif %}
-                </h2>
+                </h1>
                 <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
                     Fill in the required details below.
                 </p>
@@ -99,7 +102,7 @@
 
                     <div>
                         <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Branch</label>
-                        <select name="branch" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-select" data-placeholder="Search Branch">
+                        <select name="branch" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-select" data-placeholder="Search Branch" data-selected-value="{% if request.POST.branch %}{{ request.POST.branch }}{% elif object and object.branch_id %}{{ object.branch_id }}{% endif %}">
                             <option value="">---------</option>
                             {% for item in branches %}
                                 <option value="{{ item.id }}" {% if request.POST.branch == item.id|stringformat:'s' %}selected{% elif object and object.branch_id == item.id %}selected{% endif %}>{{ item.name }}</option>
@@ -160,7 +163,7 @@
 
                     <div class="md:col-span-2">
                         <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Roles</label>
-                        <select name="roles" multiple class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-multiselect" data-placeholder="Search Roles">
+                        <select name="roles" multiple class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-multiselect" data-placeholder="Search Roles" data-selected-value="{{ selected_role_ids|join:',' }}">
                             {% for item in roles %}
                                 <option value="{{ item.id }}" {% if item.id|stringformat:'s' in selected_role_ids %}selected{% endif %}>{{ item.name }}</option>
                             {% endfor %}
@@ -174,7 +177,7 @@
                     <div class="md:col-span-2">
                         <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Multi Branch</label>
                     
-                        <select name="mult_branch" multiple class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-multiselect" data-placeholder="Search Multi Branch">
+                        <select name="mult_branch" multiple class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-multiselect" data-placeholder="Search Multi Branch" data-selected-value="{{ selected_mult_branch_ids|join:',' }}">
                         {% for item in multibranches %}
                             <option value="{{ item.id }}" {% if item.id|stringformat:'s' in selected_mult_branch_ids %}selected{% endif %}>{{ item.title }}</option>
                         {% endfor %}
@@ -187,7 +190,7 @@
 
                     <div class="md:col-span-2">
                         <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Customer Group</label>
-                        <select name="customer_group" multiple class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-multiselect" data-placeholder="Search Customer Group">
+                        <select name="customer_group" multiple class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white js-enhanced-multiselect" data-placeholder="Search Customer Group" data-selected-value="{{ selected_customer_group_ids|join:',' }}">
                             {% for item in customer_groups %}
                                 <option value="{{ item.id }}" {% if item.id|stringformat:'s' in selected_customer_group_ids %}selected{% endif %}>{{ item.name }}</option>
                             {% endfor %}
@@ -240,6 +243,7 @@
             </form>
         </div>
     </div>
+</div>
 
 {% endblock %}
 

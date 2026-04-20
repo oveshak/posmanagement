@@ -44,12 +44,14 @@
 
         html, body {
             height: 100%;
+            margin: 0;
         }
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background: var(--surface-alt);
             color: var(--text-main);
+            overflow: hidden;
         }
 
         ::-webkit-scrollbar { width: 5px; height: 5px; }

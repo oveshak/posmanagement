@@ -22,13 +22,23 @@
      * ============ UTILITY FUNCTIONS ============
      */
 
+    function prefixFromPathname(pathname = "") {
+        const path = (pathname || "").toString();
+        if (path.startsWith("/user/")) return "/user";
+        if (path.startsWith("/product/")) return "/product";
+        if (path.startsWith("/globalapp/")) return "/globalapp";
+        if (path.startsWith("/dashboard/")) return "/dashboard";
+        return "";
+    }
+
     function appPrefix() {
+        // HTMX can keep <body> static while URL/path changes. Prefer current path.
+        const fromPath = prefixFromPathname(window.location.pathname || "");
+        if (fromPath) return fromPath;
+
         const fromBody = (document.body?.dataset?.appPrefix || "").trim();
         if (fromBody) return fromBody.replace(/\/$/, "");
-        if (window.location.pathname.startsWith("/user/")) return "/user";
-        if (window.location.pathname.startsWith("/product/")) return "/product";
-        if (window.location.pathname.startsWith("/globalapp/")) return "/globalapp";
-        if (window.location.pathname.startsWith("/dashboard/")) return "/dashboard";
+
         return "";
     }
 
@@ -94,12 +104,87 @@
         return document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || "";
     }
 
+    function resolveRequestForm(elt) {
+        if (!elt) return null;
+        if (elt.tagName === "FORM") return elt;
+        if (typeof elt.closest === "function") return elt.closest("form");
+        return null;
+    }
+
+    function clearSubmitFallback(form) {
+        if (!form || !form.__submitFallbackTimer) return;
+        window.clearTimeout(form.__submitFallbackTimer);
+        delete form.__submitFallbackTimer;
+    }
+
+    function scheduleSubmitFallback(form, timeoutMs = 15000) {
+        if (!form) return;
+        clearSubmitFallback(form);
+
+        form.__submitFallbackTimer = window.setTimeout(() => {
+            if (form.dataset.submitting === "1") {
+                console.warn("⏱️ Modal submit fallback reset triggered");
+                resetSubmittingState(form);
+            }
+        }, timeoutMs);
+    }
+
+    function ensureModalSubmitWiring(form) {
+        if (!form || !form.closest("#modal-body")) return;
+
+        const action = (form.getAttribute("action") || "").trim();
+        const hxPost = (form.getAttribute("hx-post") || "").trim();
+
+        if ((!hxPost || hxPost === "null") && action && action !== "null") {
+            form.setAttribute("hx-post", action);
+        }
+
+        if (!form.hasAttribute("hx-target")) {
+            form.setAttribute("hx-target", "#modal-body");
+        }
+
+        if (!form.hasAttribute("hx-swap")) {
+            form.setAttribute("hx-swap", "innerHTML");
+        }
+
+        const enctype = (form.getAttribute("enctype") || "").toLowerCase();
+        if (enctype === "multipart/form-data" && !form.hasAttribute("hx-encoding")) {
+            form.setAttribute("hx-encoding", "multipart/form-data");
+        }
+
+        if (typeof htmx !== "undefined" && htmx.process) {
+            htmx.process(form);
+        }
+    }
+
+    function resetSubmittingState(form) {
+        if (!form) return;
+
+        clearSubmitFallback(form);
+        delete form.dataset.submitting;
+
+        const submitButtons = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+        submitButtons.forEach((btn) => {
+            btn.disabled = false;
+            if (btn.tagName === "BUTTON" && btn.dataset.originalText) {
+                btn.innerHTML = btn.dataset.originalText;
+            } else if (btn.tagName === "INPUT" && btn.dataset.originalText) {
+                btn.value = btn.dataset.originalText;
+            }
+        });
+    }
+
     function syncPageChromeFromMainContent(mainEl = null, responseText = "") {
         const mainContent = mainEl || document.getElementById("main-content");
         if (!mainContent) return;
 
+        const resolvedPrefix = prefixFromPathname(window.location.pathname || "");
+        if (resolvedPrefix && document.body) {
+            document.body.dataset.appPrefix = resolvedPrefix;
+        }
+
         let responseTitle = "";
-        if (responseText && responseText.includes("<title")) {
+        if (responseText && responseText.includes("<title>")) {
             try {
                 const parsed = new DOMParser().parseFromString(responseText, "text/html");
                 responseTitle = (parsed.querySelector("title")?.textContent || "").trim();
@@ -313,24 +398,83 @@
     }
 
     function buildTomSelectConfig(el, isMulti) {
+        const hideValuePrefix = el.dataset.hideValuePrefix === "1";
+        const forceSearch = el.dataset.forceSearch === "1";
+
+        function getOptionLabel(data) {
+            if (!data) return "";
+            const text = data.text == null ? "" : String(data.text).trim();
+            if (hideValuePrefix) {
+                return text;
+            }
+            return formatOptionWithId(data.value, data.text);
+        }
+
         return {
             create: false,
             allowEmptyOption: true,
             placeholder: el.dataset.placeholder || "Search...",
             maxOptions: 500,
             searchField: ["text", "value"],
+            hideSelected: forceSearch ? false : isMulti,
+            closeAfterSelect: forceSearch ? false : !isMulti,
+            openOnFocus: true,
+            selectOnTab: true,
             plugins: isMulti ? ["remove_button", "clear_button"] : ["dropdown_input", "clear_button"],
             render: {
                 option: function (data, escape) {
-                    const label = formatOptionWithId(data.value, data.text);
+                    const label = getOptionLabel(data);
                     return `<div>${escape(label)}</div>`;
                 },
                 item: function (data, escape) {
-                    const label = formatOptionWithId(data.value, data.text);
+                    const label = getOptionLabel(data);
                     return `<div>${escape(label)}</div>`;
                 }
             }
         };
+    }
+
+    function getInitialSelectValues(el) {
+        const explicit = (el.dataset.selectedValue || "").trim();
+
+        if (el.multiple) {
+            if (explicit) {
+                return explicit
+                    .split(",")
+                    .map((v) => v.trim())
+                    .filter(Boolean);
+            }
+            return Array.from(el.selectedOptions)
+                .map((opt) => String(opt.value))
+                .filter(Boolean);
+        }
+
+        if (explicit) return [explicit];
+        const domValue = (el.value || "").toString().trim();
+        return domValue ? [domValue] : [];
+    }
+
+    function seedSingleSelectFromData(select) {
+        if (!select || select.multiple) return;
+
+        const preferred = (select.dataset.selectedValue || "").trim();
+        if (!preferred) return;
+
+        const existing = Array.from(select.options).find(
+            (opt) => String(opt.value) === preferred
+        );
+
+        if (existing) {
+            existing.selected = true;
+            select.value = preferred;
+            return;
+        }
+
+        // Keep UI non-empty until dependent options are reloaded.
+        const synthetic = new Option(preferred, preferred, false, true);
+        synthetic.dataset.synthetic = "1";
+        select.add(synthetic);
+        select.value = preferred;
     }
 
     function initTomSelect(root = document) {
@@ -343,7 +487,30 @@
             // Skip hidden selects used only for transport.
             if (el.type === "hidden") return;
 
-            new TomSelect(el, buildTomSelectConfig(el, !!el.multiple));
+            seedSingleSelectFromData(el);
+
+            const initialValues = getInitialSelectValues(el);
+            const control = new TomSelect(el, buildTomSelectConfig(el, !!el.multiple));
+
+            if (initialValues.length) {
+                if (el.multiple) {
+                    control.setValue(initialValues, true);
+                } else {
+                    control.setValue(initialValues[0], true);
+                }
+            }
+
+            el.dataset.selectedValue = el.multiple
+                ? initialValues.join(",")
+                : (initialValues[0] || "");
+
+            control.on("change", function (value) {
+                if (Array.isArray(value)) {
+                    el.dataset.selectedValue = value.filter(Boolean).map(String).join(",");
+                    return;
+                }
+                el.dataset.selectedValue = value ? String(value) : "";
+            });
         });
     }
 
@@ -476,6 +643,19 @@
         run();
     }
 
+    async function stabilizeRelatedSelection(fieldName, option, root = document) {
+        if (!fieldName || !option) return;
+
+        ensureRelatedOptionSelected(fieldName, option, root, 20, 100, true);
+
+        const targetField = findField(fieldName, root);
+        const container = getDependentContainer(targetField);
+        if (container) {
+            await syncDependentDropdowns(container);
+            ensureRelatedOptionSelected(fieldName, option, root, 20, 100, true);
+        }
+    }
+
     function getSelectedValue(fieldName, root = null) {
         const el = findField(fieldName, root);
         if (!el) return "";
@@ -494,15 +674,35 @@
     function getSelectedValues(select) {
         if (!select) return [];
         if (select.multiple) {
-            return Array.from(select.selectedOptions).map((opt) => String(opt.value));
+            const selected = Array.from(select.selectedOptions).map((opt) => String(opt.value));
+            if (selected.length) return selected;
+            return (select.dataset.selectedValue || "")
+                .split(",")
+                .map((v) => v.trim())
+                .filter(Boolean);
         }
-        return select.value ? [String(select.value)] : [];
+        if (select.value) return [String(select.value)];
+        const fallback = (select.dataset.selectedValue || "").trim();
+        return fallback ? [fallback] : [];
     }
 
     function replaceSelectOptions(select, results, selectedValues = []) {
         if (!select) return;
 
-        const selectedSet = new Set((selectedValues || []).map((v) => String(v)));
+        const previousOptionTextByValue = new Map(
+            Array.from(select.options).map((opt) => [String(opt.value), opt.text])
+        );
+
+        const fallbackSelectedValues = (select.dataset.selectedValue || "")
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean);
+
+        const effectiveSelectedValues = (selectedValues && selectedValues.length)
+            ? selectedValues
+            : fallbackSelectedValues;
+
+        const selectedSet = new Set((effectiveSelectedValues || []).map((v) => String(v)));
         const existingPlaceholder = Array.from(select.options).find((opt) => String(opt.value) === "");
         const placeholderText = existingPlaceholder ? existingPlaceholder.text : "---------";
 
@@ -512,12 +712,31 @@
             select.add(new Option(placeholderText, "", false, selectedSet.size === 0));
         }
 
+        const addedValues = new Set();
+
         (results || []).forEach((item) => {
             const value = String(item.id);
             const text = item.text || value;
             const isSelected = selectedSet.has(value);
             select.add(new Option(text, value, false, isSelected));
+            addedValues.add(value);
         });
+
+        // Keep previously selected value(s) visible even if current API response
+        // doesn't include them (e.g., strict branch/area scoped options in update mode).
+        selectedSet.forEach((value) => {
+            if (!value || addedValues.has(value)) return;
+            const fallbackText = previousOptionTextByValue.get(value) || value;
+            select.add(new Option(fallbackText, value, false, true));
+        });
+
+        if (select.multiple) {
+            select.dataset.selectedValue = Array.from(selectedSet).join(",");
+        } else {
+            const singleValue = Array.from(selectedSet)[0] || "";
+            select.dataset.selectedValue = singleValue;
+            select.value = singleValue;
+        }
 
         refreshTomSelect(select);
     }
@@ -536,7 +755,16 @@
         const areaField = getFieldInContainer(container, ["area"]);
         if (!branchField || !areaField) return;
 
-        const previousAreaSelection = getSelectedValues(areaField);
+        const selectedFromControl = getSelectedValues(areaField);
+        const selectedFromData = (areaField.dataset.selectedValue || "")
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean);
+
+        const previousAreaSelection = selectedFromControl.length
+            ? selectedFromControl
+            : selectedFromData;
+        const hadAreaSelection = previousAreaSelection.length > 0;
         const params = new URLSearchParams();
         if (branchField.value) {
             params.set("branch_id", branchField.value);
@@ -546,8 +774,89 @@
             const query = params.toString();
             const data = await fetchJSON(`/user/ajax/options/areas/${query ? `?${query}` : ""}`);
             replaceSelectOptions(areaField, data.results || [], previousAreaSelection);
+
+            // If branch is selected but area is empty (legacy data), pick the first
+            // available area so update forms/modals don't render with a blank area.
+            if (!areaField.multiple && branchField.value && !hadAreaSelection) {
+                const firstAreaOption = Array.from(areaField.options).find((opt) => String(opt.value || "").trim() !== "");
+                if (firstAreaOption) {
+                    const value = String(firstAreaOption.value);
+                    areaField.value = value;
+                    areaField.dataset.selectedValue = value;
+                    refreshTomSelect(areaField);
+                }
+            }
         } catch (error) {
             console.warn("Failed to reload areas by branch", error);
+        }
+    }
+
+    async function reloadSubcategoriesForCategory(container) {
+        const categoryField = getFieldInContainer(container, ["category_name", "category"]);
+        const subcategoryField = getFieldInContainer(container, ["subcategory_name", "subcategory"]);
+        if (!categoryField || !subcategoryField) return;
+
+        const previousCategorySelection = (subcategoryField.dataset.lastCategoryValue || "").trim();
+        const currentCategorySelection = String(categoryField.value || "").trim();
+        const categoryChanged = previousCategorySelection !== "" && previousCategorySelection !== currentCategorySelection;
+
+        const existingOptionTextByValue = new Map(
+            Array.from(subcategoryField.options).map((opt) => [String(opt.value), opt.text])
+        );
+
+        const selectedFromControl = getSelectedValues(subcategoryField);
+        const selectedFromData = (subcategoryField.dataset.selectedValue || "")
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean);
+
+        const previousSelection = selectedFromControl.length
+            ? selectedFromControl
+            : selectedFromData;
+
+        const previousSingleSelection = !subcategoryField.multiple && previousSelection.length
+            ? String(previousSelection[0])
+            : "";
+
+        const previousSingleText = previousSingleSelection
+            ? String(existingOptionTextByValue.get(previousSingleSelection) || previousSingleSelection)
+            : "";
+
+        const params = new URLSearchParams();
+        if (categoryField.value) {
+            params.set("category_id", categoryField.value);
+        }
+
+        try {
+            const query = params.toString();
+            const data = await fetchJSON(`/product/ajax/options/subcategories/${query ? `?${query}` : ""}`);
+            const selectedForReplacement = categoryChanged ? [] : previousSelection;
+            replaceSelectOptions(subcategoryField, data.results || [], selectedForReplacement);
+
+            if (!subcategoryField.multiple && previousSingleSelection && !categoryChanged) {
+                let option = Array.from(subcategoryField.options).find((opt) => String(opt.value) === previousSingleSelection);
+
+                if (!option) {
+                    option = new Option(previousSingleText, previousSingleSelection, false, true);
+                    subcategoryField.add(option);
+                } else {
+                    option.selected = true;
+                }
+
+                subcategoryField.value = previousSingleSelection;
+                subcategoryField.dataset.selectedValue = previousSingleSelection;
+                refreshTomSelect(subcategoryField);
+            }
+
+            if (categoryChanged) {
+                subcategoryField.value = "";
+                subcategoryField.dataset.selectedValue = "";
+                refreshTomSelect(subcategoryField);
+            }
+
+            subcategoryField.dataset.lastCategoryValue = currentCategorySelection;
+        } catch (error) {
+            console.warn("Failed to reload subcategories by category", error);
         }
     }
 
@@ -557,7 +866,15 @@
         const customerGroupField = getFieldInContainer(container, ["customer_group", "total_customers"]);
         if (!customerGroupField) return;
 
-        const previousCustomerGroupSelection = getSelectedValues(customerGroupField);
+        const selectedFromControl = getSelectedValues(customerGroupField);
+        const selectedFromData = (customerGroupField.dataset.selectedValue || "")
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean);
+
+        const previousCustomerGroupSelection = selectedFromControl.length
+            ? selectedFromControl
+            : selectedFromData;
         const params = new URLSearchParams();
 
         if (branchField && branchField.value) {
@@ -579,6 +896,7 @@
     async function syncDependentDropdowns(container) {
         if (!container) return;
         await reloadAreasForBranch(container);
+        await reloadSubcategoriesForCategory(container);
         await reloadCustomerGroups(container);
     }
 
@@ -615,11 +933,69 @@
                     await reloadCustomerGroups(container);
                 });
             });
+
+            root.querySelectorAll('select[name="category_name"], select[name="category"]').forEach((categoryField) => {
+                const container = getDependentContainer(categoryField);
+                containersToInit.add(container);
+
+                if (categoryField.dataset.boundDependentSubcategory === "1") return;
+                categoryField.dataset.boundDependentSubcategory = "1";
+
+                categoryField.addEventListener("change", async () => {
+                    await reloadSubcategoriesForCategory(container);
+                });
+            });
         }
 
         containersToInit.forEach((container) => {
             syncDependentDropdowns(container);
         });
+    }
+
+    function initializeProductTypeVisibility(root = document) {
+        const mainContent = root?.id === "main-content"
+            ? root
+            : (root?.querySelector?.("#main-content") || document.getElementById("main-content"));
+
+        if (!mainContent) return;
+
+        const productTypeField = mainContent.querySelector('[name="product_type"]');
+        if (!productTypeField) return;
+
+        const pricingTaxStockSettings = mainContent.querySelector("#pricing-tax-stock-settings");
+        const variationSection = mainContent.querySelector("#variation-section");
+        const singleQuantityWrapper = mainContent.querySelector("#single-quantity-wrapper");
+        const enableImeiWrapper = mainContent.querySelector("#enable-imei-wrapper");
+        const singleImeiSection = mainContent.querySelector("#single-stock-imei-section");
+
+        const applyVisibility = function () {
+            const productTypeValue = String(productTypeField.value || "").toLowerCase();
+            const isVariationMode = ["variable", "variation", "combo"].includes(productTypeValue);
+
+            if (pricingTaxStockSettings) {
+                pricingTaxStockSettings.style.display = isVariationMode ? "none" : "";
+            }
+            if (singleQuantityWrapper) {
+                singleQuantityWrapper.style.display = isVariationMode ? "none" : "";
+            }
+            if (enableImeiWrapper) {
+                enableImeiWrapper.style.display = isVariationMode ? "none" : "";
+            }
+            if (variationSection) {
+                variationSection.style.display = isVariationMode ? "" : "none";
+            }
+            if (singleImeiSection) {
+                singleImeiSection.style.display = isVariationMode ? "none" : "";
+            }
+        };
+
+        if (productTypeField.dataset.boundProductTypeVisibility !== "1") {
+            productTypeField.dataset.boundProductTypeVisibility = "1";
+            productTypeField.addEventListener("change", applyVisibility);
+            productTypeField.addEventListener("input", applyVisibility);
+        }
+
+        applyVisibility();
     }
 
     /**
@@ -628,9 +1004,10 @@
 
     function clearBindingMarkers(root) {
         if (!root?.querySelectorAll) return;
-        root.querySelectorAll("[data-bound-click], [data-bound-dependent], [data-submit-guard-bound], [data-main-ajax-bound], [data-submitting], [data-original-text]").forEach((el) => {
+        root.querySelectorAll("[data-bound-click], [data-bound-dependent], [data-bound-dependent-subcategory], [data-submit-guard-bound], [data-main-ajax-bound], [data-submitting], [data-original-text]").forEach((el) => {
             el.removeAttribute("data-bound-click");
             el.removeAttribute("data-bound-dependent");
+            el.removeAttribute("data-bound-dependent-subcategory");
             el.removeAttribute("data-submit-guard-bound");
             el.removeAttribute("data-main-ajax-bound");
             el.removeAttribute("data-submitting");
@@ -799,6 +1176,19 @@
                     if (areaId) params.area_id = areaId;
                 }
 
+                if (modelName === "subcategory") {
+                    const categoryId = getSelectedValue("category_name", root) || getSelectedValue("category", root);
+                    if (categoryId) params.category_id = categoryId;
+                }
+
+                if (modelName === "variation_attribute_value") {
+                    const sourceFieldName = this.dataset.attributeSource;
+                    const attributeId = sourceFieldName
+                        ? getSelectedValue(sourceFieldName, root)
+                        : (getSelectedValue("attribute", root) || getSelectedValue("variation_attribute", root));
+                    if (attributeId) params.attribute_id = attributeId;
+                }
+
                 const modal = getModalContainer();
                 // Check if modal is visible (not hidden)
                 const isNested = modal && !modal.classList.contains("hidden");
@@ -857,19 +1247,12 @@
 
             if (form.dataset.submitGuardBound === "1") return;
             form.dataset.submitGuardBound = "1";
-            
-            let hxPost = form.getAttribute('hx-post');
-            let action = form.getAttribute('action');
-            
-            // AGGRESSIVE FIX: If hx-post is null/empty/whitespace, use action
-            if (!hxPost || hxPost === 'null' || (hxPost && !hxPost.trim())) {
-                if (action && action !== 'null' && action.trim()) {
-                    form.setAttribute('hx-post', action);
-                    hxPost = action;
-                }
-            }
+
+            ensureModalSubmitWiring(form);
 
             form.addEventListener("submit", function (event) {
+                ensureModalSubmitWiring(form);
+
                 // Check if already submitting
                 if (form.dataset.submitting === "1") {
                     event.preventDefault();
@@ -891,6 +1274,8 @@
                     }
                 });
 
+                scheduleSubmitFallback(form);
+
                 // Let HTMX/native submit continue through one single request pipeline.
                 return true;
             });
@@ -898,17 +1283,7 @@
             // Re-enable buttons if form response is an error (200 with HTML, not 204)
             form.addEventListener("htmx:responseError", function (event) {
                 console.log(`❌ Form response error`);
-                delete form.dataset.submitting;
-
-                const submitButtons = form.querySelectorAll('button[type="submit"], input[type="submit"]');
-                submitButtons.forEach((btn) => {
-                    btn.disabled = false;
-                    if (btn.tagName === "BUTTON" && btn.dataset.originalText) {
-                        btn.innerHTML = btn.dataset.originalText;
-                    } else if (btn.tagName === "INPUT" && btn.dataset.originalText) {
-                        btn.value = btn.dataset.originalText;
-                    }
-                });
+                resetSubmittingState(form);
             });
         });
     }
@@ -984,7 +1359,12 @@
         initializeFormSubmitGuard(root);
         initializeMainContentForms(root);
         initializeDependentHandlers(root);
+        initializeProductTypeVisibility(root);
     }
+
+    // Expose this for page-specific scripts (e.g., dynamic product variation slots)
+    // so newly injected selects can be enhanced consistently.
+    window.initializeDynamicUI = initializeDynamicUI;
 
     /**
      * ============ MODAL SAVE HANDLING ============
@@ -1050,6 +1430,10 @@
         // Step 6: Re-initialize everything
         console.log(`   Step 6: Re-initializing UI...`);
         initializeDynamicUI(body);
+
+        if (typeof htmx !== "undefined" && htmx.process) {
+            htmx.process(body);
+        }
         
         // Step 7: Restore form state
         console.log(`   Step 7: Restoring form state...`);
@@ -1071,7 +1455,7 @@
         
         if (detail.parentField && detail.option) {
             console.log(`      ✅ Calling ensureRelatedOptionSelected("${detail.parentField}", ...)`);
-            ensureRelatedOptionSelected(detail.parentField, detail.option, body, 20, 100, true);
+            await stabilizeRelatedSelection(detail.parentField, detail.option, body);
         } else {
             console.log(`      ⚠️ Cannot auto-select: missing parentField or option`);
         }
@@ -1203,7 +1587,7 @@
         
         if (detail.parentField && detail.option) {
             console.log(`   Auto-selecting on parent page: ${detail.parentField} = ${detail.option.text}`);
-            ensureRelatedOptionSelected(detail.parentField, detail.option, document, 15, 150, true);
+            await stabilizeRelatedSelection(detail.parentField, detail.option, document);
         }
 
         // Close modal after showing the message (increased timeout for better UX)
@@ -1258,6 +1642,9 @@
                 
                 // Re-initialize
                 initializeDynamicUI(body);
+                if (typeof htmx !== "undefined" && htmx.process) {
+                    htmx.process(body);
+                }
                 restoreSelectOptions(body, previous.selectOptions || {});
                 restoreFormState(body, previous.state);
                 
@@ -1459,7 +1846,10 @@
 
     // HTMX event handlers
     document.body.addEventListener("htmx:beforeRequest", function (event) {
-        // Minimal logging - beforeRequest
+        const form = resolveRequestForm(event.detail?.elt);
+        if (form && form.closest("#modal-body")) {
+            ensureModalSubmitWiring(form);
+        }
     });
 
     document.body.addEventListener("htmx:beforeSwap", function (event) {
@@ -1538,9 +1928,11 @@
     document.body.addEventListener("htmx:afterRequest", async function (event) {
         const elt = event.detail?.elt;
         const xhr = event.detail?.xhr;
+        const requestForm = resolveRequestForm(elt);
+        const isModalRequest = !!(requestForm?.closest?.("#modal-body") || elt?.closest?.("#modal-body"));
 
         // Keep location in sync for non-modal forms after server redirects.
-        if (elt?.tagName === "FORM" && !elt.closest("#modal-body") && xhr?.responseURL) {
+        if (requestForm && !requestForm.closest("#modal-body") && xhr?.responseURL) {
             try {
                 const next = new URL(xhr.responseURL, window.location.origin);
                 const nextUrl = `${next.pathname}${next.search}${next.hash}`;
@@ -1552,25 +1944,10 @@
                 // ignore malformed responseURL
             }
         }
-        
-        // GUARD: If we're just loading a form, skip all processing
-        if (isModalFormLoading && xhr?.status === 200 && elt?.closest('#modal-body') && elt?.tagName !== "FORM") {
-            return;
-        }
-        
-        // Always clear submitting flag for forms
-        if (elt && elt.tagName === "FORM") {
-            delete elt.dataset.submitting;
 
-            const submitButtons = elt.querySelectorAll('button[type="submit"], input[type="submit"]');
-            submitButtons.forEach((btn) => {
-                btn.disabled = false;
-                if (btn.tagName === "BUTTON" && btn.dataset.originalText) {
-                    btn.innerHTML = btn.dataset.originalText;
-                } else if (btn.tagName === "INPUT" && btn.dataset.originalText) {
-                    btn.value = btn.dataset.originalText;
-                }
-            });
+        // Always clear submitting flag for forms
+        if (requestForm) {
+            resetSubmittingState(requestForm);
         }
 
         // Process related:saved events for 204 responses OR if HX-Trigger header is present
@@ -1611,7 +1988,7 @@
             if (detail) {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 await handleRelatedSaved(detail);
-            } else if (elt?.closest('#modal-body')) {
+            } else if (isModalRequest) {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 await handleRelatedSaved({
                     parentField: "",
@@ -1623,6 +2000,15 @@
             await new Promise(resolve => setTimeout(resolve, 100));
             await handleRelatedSaved(detail);
         }
+    });
+
+    ["htmx:responseError", "htmx:sendError", "htmx:timeout", "htmx:sendAbort"].forEach((eventName) => {
+        document.body.addEventListener(eventName, function (event) {
+            const form = resolveRequestForm(event.detail?.elt);
+            if (form && form.closest("#modal-body")) {
+                resetSubmittingState(form);
+            }
+        });
     });
 
     console.log(`\n✅ Modal System Script Loaded Successfully!\n`);

@@ -88,6 +88,14 @@ from .views import (
     CategoryCreateView,
     CategoryUpdateView,
     CategoryDeleteView,
+    SubCategoryListView,
+    SubCategoryCreateView,
+    SubCategoryUpdateView,
+    SubCategoryDeleteView,
+    VariationAttributeListView,
+    VariationAttributeCreateView,
+    VariationAttributeUpdateView,
+    VariationAttributeDeleteView,
     BrandListView,
     BrandCreateView,
     BrandUpdateView,
@@ -96,13 +104,21 @@ from .views import (
     WarrantyCreateView,
     WarrantyUpdateView,
     WarrantyDeleteView,
+    VatRateListView,
+    VatRateCreateView,
+    VatRateUpdateView,
+    VatRateDeleteView,
     BranchStockListView,
     BranchStockCreateView,
     BranchStockUpdateView,
     BranchStockDeleteView,
     related_object_modal,
+    ajax_subcategories_by_category,
+    ajax_attribute_values_by_attribute,
+    ajax_vat_rate_detail,
     ajax_variations_by_product,
     ajax_unick_by_variation,
+    ajax_resolve_unick_from_scanner,
 )
 app_name = "product"
 urlpatterns = [
@@ -116,6 +132,16 @@ urlpatterns = [
     path("categories/<int:pk>/edit/", CategoryUpdateView.as_view(), name="category_update"),
     path("categories/<int:pk>/delete/", CategoryDeleteView.as_view(), name="category_delete"),
 
+    path("subcategories/", SubCategoryListView.as_view(), name="subcategory_list"),
+    path("subcategories/create/", SubCategoryCreateView.as_view(), name="subcategory_create"),
+    path("subcategories/<int:pk>/edit/", SubCategoryUpdateView.as_view(), name="subcategory_update"),
+    path("subcategories/<int:pk>/delete/", SubCategoryDeleteView.as_view(), name="subcategory_delete"),
+
+    path("variation-attributes/", VariationAttributeListView.as_view(), name="variation_attribute_list"),
+    path("variation-attributes/create/", VariationAttributeCreateView.as_view(), name="variation_attribute_create"),
+    path("variation-attributes/<int:pk>/edit/", VariationAttributeUpdateView.as_view(), name="variation_attribute_update"),
+    path("variation-attributes/<int:pk>/delete/", VariationAttributeDeleteView.as_view(), name="variation_attribute_delete"),
+
     path("brands/", BrandListView.as_view(), name="brand_list"),
     path("brands/create/", BrandCreateView.as_view(), name="brand_create"),
     path("brands/<int:pk>/edit/", BrandUpdateView.as_view(), name="brand_update"),
@@ -125,6 +151,11 @@ urlpatterns = [
     path("warranties/create/", WarrantyCreateView.as_view(), name="warranty_create"),
     path("warranties/<int:pk>/edit/", WarrantyUpdateView.as_view(), name="warranty_update"),
     path("warranties/<int:pk>/delete/", WarrantyDeleteView.as_view(), name="warranty_delete"),
+
+    path("vat-rates/", VatRateListView.as_view(), name="vat_rate_list"),
+    path("vat-rates/create/", VatRateCreateView.as_view(), name="vat_rate_create"),
+    path("vat-rates/<int:pk>/edit/", VatRateUpdateView.as_view(), name="vat_rate_update"),
+    path("vat-rates/<int:pk>/delete/", VatRateDeleteView.as_view(), name="vat_rate_delete"),
 
     path("products/", ProductListView.as_view(), name="product_list"),
     path("products/create/", ProductCreateView.as_view(), name="product_create"),
@@ -138,6 +169,10 @@ urlpatterns = [
 
     path("ajax/related/<str:model_name>/create/", related_object_modal, name="related_object_create"),
     path("ajax/related/<str:model_name>/<int:pk>/edit/", related_object_modal, name="related_object_edit"),
+    path("ajax/options/subcategories/", ajax_subcategories_by_category, name="ajax_subcategories_by_category"),
+    path("ajax/options/attribute-values/", ajax_attribute_values_by_attribute, name="ajax_attribute_values_by_attribute"),
+    path("ajax/options/vat-rate/", ajax_vat_rate_detail, name="ajax_vat_rate_detail"),
     path("ajax/options/variations/", ajax_variations_by_product, name="ajax_variations_by_product"),
     path("ajax/options/unick/", ajax_unick_by_variation, name="ajax_unick_by_variation"),
+    path("ajax/options/unick/resolve/", ajax_resolve_unick_from_scanner, name="ajax_resolve_unick_from_scanner"),
 ]

@@ -5,6 +5,7 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.contrib.auth.models import Permission
 from django.db import transaction
+from django.db.models import Q
 
 from user.scope import get_user_scope, is_global_user
 
@@ -71,8 +72,88 @@ class StyledModelForm(forms.ModelForm):
         field.widget.attrs["can_add_related"] = self._has_perm(add_perm)
         field.widget.attrs["can_change_related"] = self._has_perm(change_perm)
 
+    def _merge_queryset_with_ids(self, queryset, selected_ids):
+        target_model = getattr(queryset, "model", None)
+        if queryset is None or target_model is None:
+            return queryset
+
+        if selected_ids is None:
+            return queryset
+
+        if not isinstance(selected_ids, (list, tuple, set)):
+            selected_ids = [selected_ids]
+
+        clean_ids = [str(pk).strip() for pk in selected_ids if str(pk).strip()]
+        if not clean_ids:
+            return queryset
+
+        return target_model.objects.filter(
+            Q(pk__in=queryset.values_list("pk", flat=True)) | Q(pk__in=clean_ids)
+        ).distinct()
+
+    def _get_selected_ids_for_field(self, name, field):
+        if isinstance(field, forms.ModelMultipleChoiceField):
+            if self.is_bound:
+                raw_values = self.data.getlist(name)
+                return [str(v).strip() for v in raw_values if str(v).strip()]
+
+            # In update mode, prefer related manager values to avoid
+            # partial/first-only values coming from field initial.
+            if getattr(self, "instance", None) and getattr(self.instance, "pk", None):
+                manager = getattr(self.instance, name, None)
+                if manager is not None and hasattr(manager, "values_list"):
+                    return [str(v) for v in manager.values_list("pk", flat=True)]
+
+            initial_value = self.initial.get(name, None)
+            if initial_value is not None:
+                if hasattr(initial_value, "values_list"):
+                    return [str(v) for v in initial_value.values_list("pk", flat=True)]
+                if isinstance(initial_value, (str, int)):
+                    selected = str(initial_value).strip()
+                    if "," in selected:
+                        return [v.strip() for v in selected.split(",") if v.strip()]
+                    return [selected] if selected else []
+                return [str(getattr(v, "pk", v)).strip() for v in initial_value if str(getattr(v, "pk", v)).strip()]
+
+            return []
+
+        if isinstance(field, forms.ModelChoiceField):
+            if self.is_bound:
+                raw_value = self.data.get(name, "")
+                selected = str(raw_value).strip()
+                return [selected] if selected else []
+
+            initial_value = self.initial.get(name, None)
+            if hasattr(initial_value, "pk"):
+                return [str(initial_value.pk)]
+            if initial_value not in (None, ""):
+                selected = str(initial_value).strip()
+                return [selected] if selected else []
+
+            if getattr(self, "instance", None):
+                selected = str(getattr(self.instance, f"{name}_id", "") or "").strip()
+                return [selected] if selected else []
+
+        return []
+
+    def _ensure_selected_queryset_members(self, name, field):
+        if not isinstance(field, (forms.ModelChoiceField, forms.ModelMultipleChoiceField)):
+            return
+
+        queryset = getattr(field, "queryset", None)
+        target_model = getattr(queryset, "model", None)
+        if queryset is None or target_model is None:
+            return
+
+        selected_ids = self._get_selected_ids_for_field(name, field)
+        if not selected_ids:
+            return
+
+        field.queryset = self._merge_queryset_with_ids(queryset, selected_ids)
+
     def apply_styles(self):
         for name, field in self.fields.items():
+            self._ensure_selected_queryset_members(name, field)
             widget = field.widget
 
             if isinstance(widget, forms.Textarea):
@@ -94,37 +175,13 @@ class StyledModelForm(forms.ModelForm):
                 widget.attrs["class"] = f'{widget.attrs.get("class", "")} {INPUT_CLASS}'.strip()
 
             # IMPORTANT: keep selected values for TomSelect
-            if isinstance(field, forms.ModelChoiceField):
-                if self.is_bound:
-                    selected_value = self.data.get(name, "")
-                else:
-                    initial_value = self.initial.get(name, None)
-                    if hasattr(initial_value, "pk"):
-                        selected_value = initial_value.pk
-                    elif initial_value not in (None, ""):
-                        selected_value = initial_value
-                    else:
-                        selected_value = getattr(self.instance, f"{name}_id", "") if getattr(self, "instance", None) else ""
-
-                widget.attrs["data-selected-value"] = str(selected_value or "")
-
-            elif isinstance(field, forms.ModelMultipleChoiceField):
-                if self.is_bound:
-                    selected_values = self.data.getlist(name)
-                else:
-                    initial_value = self.initial.get(name, None)
-                    if initial_value is not None:
-                        if hasattr(initial_value, "values_list"):
-                            selected_values = [str(v) for v in initial_value.values_list("pk", flat=True)]
-                        else:
-                            selected_values = [str(getattr(v, "pk", v)) for v in initial_value]
-                    elif getattr(self, "instance", None) and getattr(self.instance, "pk", None):
-                        manager = getattr(self.instance, name, None)
-                        selected_values = [str(v) for v in manager.values_list("pk", flat=True)] if manager else []
-                    else:
-                        selected_values = []
-
+            if isinstance(field, forms.ModelMultipleChoiceField):
+                selected_values = self._get_selected_ids_for_field(name, field)
                 widget.attrs["data-selected-value"] = ",".join(selected_values)
+
+            elif isinstance(field, forms.ModelChoiceField):
+                selected_ids = self._get_selected_ids_for_field(name, field)
+                widget.attrs["data-selected-value"] = selected_ids[0] if selected_ids else ""
 
             manual_config = self.related_config.get(name)
             if manual_config:
@@ -172,6 +229,7 @@ class RoleQuickForm(StyledModelForm):
         self.fields["permissions"].queryset = Permission.objects.select_related("content_type").order_by(
             "content_type__app_label", "codename"
         )
+        self.apply_styles()
 
 
 
@@ -198,6 +256,7 @@ class MenuQuickForm(StyledModelForm):
         self.fields["permissions"].queryset = Permission.objects.select_related("content_type").order_by(
             "content_type__app_label", "codename"
         )
+        self.apply_styles()
 
 class UserQuickForm(StyledModelForm):
     related_config = {
@@ -280,14 +339,14 @@ class UserQuickForm(StyledModelForm):
 
         if self.instance.pk:
             if self.instance.branch_id:
-                branch_qs = (branch_qs | Branch.objects.filter(pk=self.instance.branch_id)).distinct()
+                branch_qs = self._merge_queryset_with_ids(branch_qs, [self.instance.branch_id])
 
             if self.instance.area_id:
-                area_qs = (area_qs | Area.objects.filter(pk=self.instance.area_id)).distinct()
+                area_qs = self._merge_queryset_with_ids(area_qs, [self.instance.area_id])
 
             current_cg_ids = list(self.instance.customer_group.values_list("id", flat=True))
             if current_cg_ids:
-                customer_group_qs = (customer_group_qs | CustomerGroup.objects.filter(pk__in=current_cg_ids)).distinct()
+                customer_group_qs = self._merge_queryset_with_ids(customer_group_qs, current_cg_ids)
 
         self.fields["branch"].queryset = branch_qs.order_by("name")
         self.fields["area"].queryset = area_qs.order_by("name")
@@ -301,6 +360,8 @@ class UserQuickForm(StyledModelForm):
             self.fields["mult_branch"].queryset = MultiBranch.objects.filter(
                 multi_branch__id__in=allowed_branch_ids
             ).distinct().order_by("title")
+
+        self.apply_styles()
 
     def clean(self):
         cleaned = super().clean()
@@ -398,6 +459,8 @@ class BranchQuickForm(StyledModelForm):
         if self.instance.pk:
             self.fields["manager"].queryset = self.instance.branch_staff.all().order_by("name", "email")
 
+        self.apply_styles()
+
     def clean(self):
         cleaned = super().clean()
         manager = cleaned.get("manager")
@@ -472,6 +535,8 @@ class AreaQuickForm(StyledModelForm):
         self.fields["area_staff"].queryset = Users.objects.filter(is_deleted=False).order_by("name", "email")
         self.fields["total_customers"].queryset = scope["customer_groups"].order_by("name")
 
+        self.apply_styles()
+
 
     def save(self, commit=True):
         obj = super().save(commit=False)
@@ -541,9 +606,40 @@ class CustomerGroupQuickForm(StyledModelForm):
         user = getattr(self.request, "user", None)
         scope = get_user_scope(user)
 
-        self.fields["branch"].queryset = scope["branches"].order_by("name")
-        self.fields["area"].queryset = scope["areas"].order_by("name")
+        branch_qs = scope["branches"]
+        area_qs = scope["areas"]
+
+        # Keep current instance selections visible in update mode even if
+        # they are outside current scoped filters.
+        if self.instance.pk:
+            if self.instance.branch_id:
+                branch_qs = self._merge_queryset_with_ids(branch_qs, [self.instance.branch_id])
+            if self.instance.area_id:
+                area_qs = self._merge_queryset_with_ids(area_qs, [self.instance.area_id])
+
+        selected_branch_id = ""
+        if self.is_bound:
+            selected_branch_id = str(self.data.get("branch", "") or "").strip()
+        elif self.instance.pk and self.instance.branch_id:
+            selected_branch_id = str(self.instance.branch_id)
+
+        selected_area_id = ""
+        if self.is_bound:
+            selected_area_id = str(self.data.get("area", "") or "").strip()
+        elif self.instance.pk and self.instance.area_id:
+            selected_area_id = str(self.instance.area_id)
+
+        if selected_branch_id:
+            area_qs = area_qs.filter(parent_branch_id=selected_branch_id)
+
+        if selected_area_id:
+            area_qs = self._merge_queryset_with_ids(area_qs, [selected_area_id])
+
+        self.fields["branch"].queryset = branch_qs.order_by("name")
+        self.fields["area"].queryset = area_qs.order_by("name")
         self.fields["customer_group_staff"].queryset = Users.objects.filter(is_deleted=False).order_by("name", "email")
+
+        self.apply_styles()
 
     def clean(self):
         cleaned = super().clean()
@@ -610,6 +706,7 @@ class MultiBranchQuickForm(StyledModelForm):
         scope = get_user_scope(user)
 
         self.fields["multi_branch"].queryset = scope["branches"].order_by("name")
+        self.apply_styles()
 
 # aliases for existing imports/usages
 RoleForm = RoleQuickForm

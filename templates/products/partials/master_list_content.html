@@ -52,6 +52,9 @@
                     <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
                         <tr>
                             <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Name</th>
+                            {% if show_parent_category %}
+                                <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Category</th>
+                            {% endif %}
                             {% if show_warranty_columns %}
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Duration</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase">Duration Type</th>
@@ -64,6 +67,10 @@
                         {% for item in items %}
                             <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/70">
                                 <td class="px-6 py-4 text-sm text-gray-800 dark:text-slate-200">{{ item.name }}</td>
+
+                                {% if show_parent_category %}
+                                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ item.category|default:"—" }}</td>
+                                {% endif %}
 
                                 {% if show_warranty_columns %}
                                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{{ item.duration }}</td>
@@ -91,7 +98,7 @@
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="{% if show_warranty_columns %}4{% else %}2{% endif %}"
+                                <td colspan="{% if show_parent_category and show_warranty_columns %}5{% elif show_parent_category or show_warranty_columns %}3{% else %}2{% endif %}"
                                     class="px-6 py-12 text-center text-gray-600 dark:text-slate-400">
                                     No {{ create_label|lower }} found.
                                 </td>
