@@ -27,5 +27,5 @@ class PurchaseTemplateRenderTests(SimpleTestCase):
             {"form": self.PurchaseFormStub(), "object": None},
         )
 
-        self.assertIn("<form method=\"post\"", html)
+        self.assertIn('<form method="post"', html)
         self.assertNotIn("hx-post=", html)
