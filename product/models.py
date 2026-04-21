@@ -616,6 +616,18 @@ class PurchaseItem(Common):
         verbose_name="Unique Identifiers"
     )
     qty = models.PositiveIntegerField(verbose_name="Quantity")
+    unit_cost_before_tax = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Unit Cost (Before Tax)")
+    discount_percent = models.DecimalField(max_digits=6, decimal_places=2, default=0, verbose_name="Discount Percent")
+    discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Discount Amount")
+    unit_cost_tax_percent = models.DecimalField(max_digits=6, decimal_places=2, default=0, verbose_name="Unit Cost Tax Percent")
+    unit_cost_after_tax = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Unit Cost (After Tax)")
+    subtotal_before_tax = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Subtotal Before Tax")
+    product_tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Product Tax Amount")
+    net_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Net Cost")
+    line_total = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Line Total")
+    line_profit_margin_percent = models.DecimalField(max_digits=6, decimal_places=2, default=0, verbose_name="Line Profit Margin Percent")
+    unit_selling_price_inc_tax = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Unit Selling Price (Inc. Tax)")
+    imei_or_serials = models.TextField(blank=True, verbose_name="IMEI/Serials")
     unit_price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -648,6 +660,20 @@ class PurchaseItem(Common):
 
 
 class Purchase(Common):
+    DISCOUNT_TYPES = (
+        ("none", "None"),
+        ("fixed", "Fixed"),
+        ("percent", "Percent"),
+    )
+
+    PAYMENT_METHODS = (
+        ("cash", "Cash"),
+        ("bank", "Bank"),
+        ("mobile_banking", "Mobile Banking"),
+        ("card", "Card"),
+        ("other", "Other"),
+    )
+
     supplier_name = models.ForeignKey(
         Supplier,
         on_delete=models.SET_NULL,
@@ -655,6 +681,17 @@ class Purchase(Common):
         related_name="purchases",
         verbose_name="Supplier"
     )
+    reference_no = models.CharField(max_length=100, blank=True, verbose_name="Reference No")
+    business_location = models.ForeignKey(
+        Branch,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="purchases",
+        verbose_name="Business Location",
+    )
+    pay_term = models.CharField(max_length=100, blank=True, verbose_name="Pay Term")
+    attach_document = models.FileField(upload_to="purchases/docs/", blank=True, null=True, verbose_name="Attach Document")
     purchaseitem = models.ManyToManyField(
         PurchaseItem,
         blank=True,
@@ -662,6 +699,33 @@ class Purchase(Common):
     )
     purchase_date = models.DateField(verbose_name="Purchase Date")
     total_amount = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="Total Amount")
+    discount_type = models.CharField(max_length=20, choices=DISCOUNT_TYPES, default="none", verbose_name="Discount Type")
+    discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Discount Amount")
+    purchase_tax_rate = models.ForeignKey(
+        VatRate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="purchase_taxes",
+        verbose_name="Purchase Tax",
+    )
+    purchase_tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Purchase Tax Amount")
+    additional_notes = models.TextField(blank=True, verbose_name="Additional Notes")
+    shipping_details = models.TextField(blank=True, verbose_name="Shipping Details")
+    additional_shipping_charges = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Additional Shipping Charges")
+    additional_expense_name_1 = models.CharField(max_length=120, blank=True, verbose_name="Additional Expense Name 1")
+    additional_expense_amount_1 = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Additional Expense Amount 1")
+    additional_expense_name_2 = models.CharField(max_length=120, blank=True, verbose_name="Additional Expense Name 2")
+    additional_expense_amount_2 = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Additional Expense Amount 2")
+    additional_expense_name_3 = models.CharField(max_length=120, blank=True, verbose_name="Additional Expense Name 3")
+    additional_expense_amount_3 = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Additional Expense Amount 3")
+    advance_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Advance Balance")
+    payment_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Payment Amount")
+    paid_on = models.DateTimeField(blank=True, null=True, verbose_name="Paid On")
+    payment_method = models.CharField(max_length=30, choices=PAYMENT_METHODS, default="cash", verbose_name="Payment Method")
+    payment_account = models.CharField(max_length=120, blank=True, verbose_name="Payment Account")
+    payment_note = models.TextField(blank=True, verbose_name="Payment Note")
+    payment_due = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Payment Due")
     purchase_status = models.CharField(max_length=20, verbose_name="Purchase Status")
     vendor_cheque_details = models.TextField(blank=True, null=True, verbose_name="Vendor Cheque Details")
 

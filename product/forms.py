@@ -1,594 +1,3 @@
-# # # from django import forms
-# # # from django.forms import inlineformset_factory
-
-
-
-# # # from .models import (
-# # #     Product,
-# # #     Variation,
-# # #     unick,
-# # #     PurchaseItem,
-# # #     Purchase,
-# # #     PurchaseReturn,
-# # #     StockTransfer,
-# # #     StockTransferLine,
-# # #     StockAdjustment,
-# # #     VendorCheque,
-# # #     RepairRequest,
-# # # )
-
-
-# # # class DateInput(forms.DateInput):
-# # #     input_type = "date"
-
-
-# # # class PurchaseItemForm(forms.ModelForm):
-# # #     class Meta:
-# # #         model = PurchaseItem
-# # #         fields = [
-# # #             "purchase_product",
-# # #             "purchase_product_variation",
-# # #             "unickkey",
-# # #             "qty",
-# # #             "unit_price",
-# # #         ]
-# # #         widgets = {
-# # #             "purchase_product": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# # #             "purchase_product_variation": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# # #             "unickkey": forms.SelectMultiple(attrs={"class": "form-select js-enhanced-multiselect"}),
-# # #             "qty": forms.NumberInput(attrs={"class": "form-input"}),
-# # #             "unit_price": forms.NumberInput(attrs={"class": "form-input", "step": "0.01"}),
-# # #         }
-
-# # #     def clean(self):
-# # #         cleaned = super().clean()
-# # #         product = cleaned.get("purchase_product")
-# # #         variation = cleaned.get("purchase_product_variation")
-# # #         qty = cleaned.get("qty")
-
-# # #         if variation and product and variation.product_name_id != product.id:
-# # #             self.add_error("purchase_product_variation", "Variation does not belong to selected product.")
-
-# # #         if qty is not None and qty <= 0:
-# # #             self.add_error("qty", "Quantity must be greater than 0.")
-
-# # #         return cleaned
-
-
-# # # class PurchaseForm(forms.ModelForm):
-# # #     class Meta:
-# # #         model = Purchase
-# # #         fields = [
-# # #             "supplier_name",
-# # #             "purchase_date",
-# # #             "total_amount",
-# # #             "purchase_status",
-# # #             "vendor_cheque_details",
-# # #         ]
-# # #         widgets = {
-# # #             "supplier_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# # #             "purchase_date": DateInput(attrs={"class": "form-input"}),
-# # #             "total_amount": forms.NumberInput(attrs={"class": "form-input", "step": "0.01"}),
-# # #             "purchase_status": forms.TextInput(attrs={"class": "form-input"}),
-# # #             "vendor_cheque_details": forms.Textarea(attrs={"class": "form-textarea", "rows": 3}),
-# # #         }
-
-
-# # # class PurchaseReturnForm(forms.ModelForm):
-# # #     class Meta:
-# # #         model = PurchaseReturn
-# # #         fields = ["purchase_name", "return_date"]
-# # #         widgets = {
-# # #             "purchase_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# # #             "return_date": DateInput(attrs={"class": "form-input"}),
-# # #         }
-
-
-# # # class StockTransferForm(forms.ModelForm):
-# # #     class Meta:
-# # #         model = StockTransfer
-# # #         fields = [
-# # #             "from_branch_name",
-# # #             "to_branch_name",
-# # #             "transfer_date",
-# # #             "stc_status",
-# # #         ]
-# # #         widgets = {
-# # #             "from_branch_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# # #             "to_branch_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# # #             "transfer_date": DateInput(attrs={"class": "form-input"}),
-# # #             "stc_status": forms.TextInput(attrs={"class": "form-input"}),
-# # #         }
-
-
-# # # class StockTransferLineForm(forms.ModelForm):
-# # #     class Meta:
-# # #         model = StockTransferLine
-# # #         fields = [
-# # #             "product",
-# # #             "variation",
-# # #             "quantity",
-# # #             "unickkeys",
-# # #         ]
-# # #         widgets = {
-# # #             "product": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# # #             "variation": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# # #             "quantity": forms.NumberInput(attrs={"class": "form-input"}),
-# # #             "unickkeys": forms.SelectMultiple(attrs={"class": "form-select js-enhanced-multiselect"}),
-# # #         }
-
-# # #     def clean(self):
-# # #         cleaned = super().clean()
-# # #         product = cleaned.get("product")
-# # #         variation = cleaned.get("variation")
-# # #         quantity = cleaned.get("quantity")
-
-# # #         if variation and product and variation.product_name_id != product.id:
-# # #             self.add_error("variation", "Variation does not belong to selected product.")
-
-# # #         if quantity is not None and quantity <= 0:
-# # #             self.add_error("quantity", "Quantity must be greater than 0.")
-
-# # #         return cleaned
-
-
-# # # StockTransferLineFormSet = inlineformset_factory(
-# # #     StockTransfer,
-# # #     StockTransferLine,
-# # #     form=StockTransferLineForm,
-# # #     extra=1,
-# # #     can_delete=True,
-# # # )
-
-
-# # # class StockAdjustmentForm(forms.ModelForm):
-# # #     class Meta:
-# # #         model = StockAdjustment
-# # #         fields = [
-# # #             "branch_name",
-# # #             "product_name",
-# # #             "quantity_adjusted",
-# # #             "reason",
-# # #         ]
-# # #         widgets = {
-# # #             "branch_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# # #             "product_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# # #             "quantity_adjusted": forms.NumberInput(attrs={"class": "form-input"}),
-# # #             "reason": forms.Textarea(attrs={"class": "form-textarea", "rows": 3}),
-# # #         }
-
-
-# # # class VendorChequeForm(forms.ModelForm):
-# # #     class Meta:
-# # #         model = VendorCheque
-# # #         fields = [
-# # #             "cheque_number",
-# # #             "vendor_name",
-# # #             "issue_date",
-# # #             "amount",
-# # #             "vndcq_status",
-# # #         ]
-# # #         widgets = {
-# # #             "cheque_number": forms.TextInput(attrs={"class": "form-input"}),
-# # #             "vendor_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# # #             "issue_date": DateInput(attrs={"class": "form-input"}),
-# # #             "amount": forms.NumberInput(attrs={"class": "form-input", "step": "0.01"}),
-# # #             "vndcq_status": forms.TextInput(attrs={"class": "form-input"}),
-# # #         }
-
-
-# # # class RepairRequestForm(forms.ModelForm):
-# # #     class Meta:
-# # #         model = RepairRequest
-# # #         fields = [
-# # #             "product_name",
-# # #             "customer_name",
-# # #             "branch_name",
-# # #             "requested_by_user_name",
-# # #             "request_date",
-# # #             "repair_status",
-# # #             "notes",
-# # #         ]
-# # #         widgets = {
-# # #             "product_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# # #             "customer_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# # #             "branch_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# # #             "requested_by_user_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# # #             "request_date": DateInput(attrs={"class": "form-input"}),
-# # #             "repair_status": forms.TextInput(attrs={"class": "form-input"}),
-# # #             "notes": forms.Textarea(attrs={"class": "form-textarea", "rows": 3}),
-# # #         }
-
-# # from django import forms
-# # from django.forms import inlineformset_factory
-
-# # from user.models import Branch, Users
-# # from .models import (
-# #     Unit, Category, Brand, Warranty,
-# #     Product, Variation, unick, Supplier,
-# #     PurchaseItem, Purchase, PurchaseReturn,
-# #     StockTransfer, StockTransferLine,
-# #     StockAdjustment, VendorCheque, RepairRequest,
-# # )
-
-
-# # class DateInput(forms.DateInput):
-# #     input_type = "date"
-
-
-# # class SupplierForm(forms.ModelForm):
-# #     class Meta:
-# #         model = Supplier
-# #         fields = ["name", "contact_number", "email", "address"]
-# #         widgets = {
-# #             "name": forms.TextInput(attrs={"class": "form-input"}),
-# #             "contact_number": forms.TextInput(attrs={"class": "form-input"}),
-# #             "email": forms.EmailInput(attrs={"class": "form-input"}),
-# #             "address": forms.Textarea(attrs={"class": "form-textarea", "rows": 3}),
-# #         }
-
-
-# # class ProductForm(forms.ModelForm):
-# #     class Meta:
-# #         model = Product
-# #         fields = ["name", "sku", "unit_name", "category_name", "brand_name", "warranty_name"]
-# #         widgets = {
-# #             "name": forms.TextInput(attrs={"class": "form-input"}),
-# #             "sku": forms.TextInput(attrs={"class": "form-input"}),
-# #             "unit_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "category_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "brand_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "warranty_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #         }
-
-
-# # class VariationForm(forms.ModelForm):
-# #     class Meta:
-# #         model = Variation
-# #         fields = ["product_name", "name", "sku_suffix", "price", "quantity", "dealer_price", "isunck", "unickkey"]
-# #         widgets = {
-# #             "product_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "name": forms.TextInput(attrs={"class": "form-input"}),
-# #             "sku_suffix": forms.TextInput(attrs={"class": "form-input"}),
-# #             "price": forms.NumberInput(attrs={"class": "form-input", "step": "0.01"}),
-# #             "quantity": forms.NumberInput(attrs={"class": "form-input"}),
-# #             "dealer_price": forms.NumberInput(attrs={"class": "form-input", "step": "0.01"}),
-# #             "unickkey": forms.SelectMultiple(attrs={"class": "form-select js-enhanced-multiselect"}),
-# #         }
-
-
-# # class UnickForm(forms.ModelForm):
-# #     class Meta:
-# #         model = unick
-# #         fields = ["key1", "key2"]
-# #         widgets = {
-# #             "key1": forms.TextInput(attrs={"class": "form-input"}),
-# #             "key2": forms.TextInput(attrs={"class": "form-input"}),
-# #         }
-
-
-# # class PurchaseItemForm(forms.ModelForm):
-# #     class Meta:
-# #         model = PurchaseItem
-# #         fields = [
-# #             "purchase_product",
-# #             "purchase_product_variation",
-# #             "unickkey",
-# #             "qty",
-# #             "unit_price",
-# #         ]
-# #         widgets = {
-# #             "purchase_product": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "purchase_product_variation": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "unickkey": forms.SelectMultiple(attrs={"class": "form-select js-enhanced-multiselect"}),
-# #             "qty": forms.NumberInput(attrs={"class": "form-input"}),
-# #             "unit_price": forms.NumberInput(attrs={"class": "form-input", "step": "0.01"}),
-# #         }
-
-# #     def clean(self):
-# #         cleaned = super().clean()
-# #         product = cleaned.get("purchase_product")
-# #         variation = cleaned.get("purchase_product_variation")
-# #         qty = cleaned.get("qty")
-
-# #         if variation and product and variation.product_name_id != product.id:
-# #             self.add_error("purchase_product_variation", "Variation does not belong to selected product.")
-
-# #         if qty is not None and qty <= 0:
-# #             self.add_error("qty", "Quantity must be greater than 0.")
-
-# #         return cleaned
-
-
-# # class PurchaseForm(forms.ModelForm):
-# #     class Meta:
-# #         model = Purchase
-# #         fields = [
-# #             "supplier_name",
-# #             "purchase_date",
-# #             "total_amount",
-# #             "purchase_status",
-# #             "vendor_cheque_details",
-# #         ]
-# #         widgets = {
-# #             "supplier_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "purchase_date": DateInput(attrs={"class": "form-input"}),
-# #             "total_amount": forms.NumberInput(attrs={"class": "form-input", "step": "0.01"}),
-# #             "purchase_status": forms.TextInput(attrs={"class": "form-input"}),
-# #             "vendor_cheque_details": forms.Textarea(attrs={"class": "form-textarea", "rows": 3}),
-# #         }
-
-
-# # class PurchaseReturnForm(forms.ModelForm):
-# #     class Meta:
-# #         model = PurchaseReturn
-# #         fields = ["purchase_name", "return_date"]
-# #         widgets = {
-# #             "purchase_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "return_date": DateInput(attrs={"class": "form-input"}),
-# #         }
-
-
-# # class StockTransferForm(forms.ModelForm):
-# #     class Meta:
-# #         model = StockTransfer
-# #         fields = [
-# #             "from_branch_name",
-# #             "to_branch_name",
-# #             "transfer_date",
-# #             "stc_status",
-# #         ]
-# #         widgets = {
-# #             "from_branch_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "to_branch_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "transfer_date": DateInput(attrs={"class": "form-input"}),
-# #             "stc_status": forms.TextInput(attrs={"class": "form-input"}),
-# #         }
-
-
-# # class StockTransferLineForm(forms.ModelForm):
-# #     class Meta:
-# #         model = StockTransferLine
-# #         fields = [
-# #             "product",
-# #             "variation",
-# #             "quantity",
-# #             "unickkeys",
-# #         ]
-# #         widgets = {
-# #             "product": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "variation": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "quantity": forms.NumberInput(attrs={"class": "form-input"}),
-# #             "unickkeys": forms.SelectMultiple(attrs={"class": "form-select js-enhanced-multiselect"}),
-# #         }
-
-# #     def clean(self):
-# #         cleaned = super().clean()
-# #         product = cleaned.get("product")
-# #         variation = cleaned.get("variation")
-# #         quantity = cleaned.get("quantity")
-
-# #         if variation and product and variation.product_name_id != product.id:
-# #             self.add_error("variation", "Variation does not belong to selected product.")
-
-# #         if quantity is not None and quantity <= 0:
-# #             self.add_error("quantity", "Quantity must be greater than 0.")
-
-# #         return cleaned
-
-
-# # StockTransferLineFormSet = inlineformset_factory(
-# #     StockTransfer,
-# #     StockTransferLine,
-# #     form=StockTransferLineForm,
-# #     extra=1,
-# #     can_delete=True,
-# # )
-
-
-# # class StockAdjustmentForm(forms.ModelForm):
-# #     class Meta:
-# #         model = StockAdjustment
-# #         fields = [
-# #             "branch_name",
-# #             "product_name",
-# #             "quantity_adjusted",
-# #             "reason",
-# #         ]
-# #         widgets = {
-# #             "branch_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "product_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "quantity_adjusted": forms.NumberInput(attrs={"class": "form-input"}),
-# #             "reason": forms.Textarea(attrs={"class": "form-textarea", "rows": 3}),
-# #         }
-
-
-# # class VendorChequeForm(forms.ModelForm):
-# #     class Meta:
-# #         model = VendorCheque
-# #         fields = [
-# #             "cheque_number",
-# #             "vendor_name",
-# #             "issue_date",
-# #             "amount",
-# #             "vndcq_status",
-# #         ]
-# #         widgets = {
-# #             "cheque_number": forms.TextInput(attrs={"class": "form-input"}),
-# #             "vendor_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "issue_date": DateInput(attrs={"class": "form-input"}),
-# #             "amount": forms.NumberInput(attrs={"class": "form-input", "step": "0.01"}),
-# #             "vndcq_status": forms.TextInput(attrs={"class": "form-input"}),
-# #         }
-
-
-# # class RepairRequestForm(forms.ModelForm):
-# #     class Meta:
-# #         model = RepairRequest
-# #         fields = [
-# #             "product_name",
-# #             "customer_name",
-# #             "branch_name",
-# #             "requested_by_user_name",
-# #             "request_date",
-# #             "repair_status",
-# #             "notes",
-# #         ]
-# #         widgets = {
-# #             "product_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "customer_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "branch_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "requested_by_user_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-# #             "request_date": DateInput(attrs={"class": "form-input"}),
-# #             "repair_status": forms.TextInput(attrs={"class": "form-input"}),
-# #             "notes": forms.Textarea(attrs={"class": "form-textarea", "rows": 3}),
-# #         }
-
-
-# from django import forms
-# from django.forms import inlineformset_factory
-
-# from .models import (
-#     Unit,
-#     Category,
-#     Brand,
-#     Warranty,
-#     Product,
-#     Variation,
-#     unick,
-# )
-
-
-# class ProductForm(forms.ModelForm):
-#     class Meta:
-#         model = Product
-#         fields = [
-#             "name",
-#             "sku",
-#             "unit_name",
-#             "category_name",
-#             "brand_name",
-#             "warranty_name",
-#         ]
-#         widgets = {
-#             "name": forms.TextInput(attrs={"class": "form-input"}),
-#             "sku": forms.TextInput(attrs={"class": "form-input"}),
-#             "unit_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-#             "category_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-#             "brand_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-#             "warranty_name": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-#         }
-
-
-# class VariationForm(forms.ModelForm):
-#     class Meta:
-#         model = Variation
-#         fields = [
-#             "name",
-#             "sku_suffix",
-#             "price",
-#             "quantity",
-#             "dealer_price",
-#             "isunck",
-#             "unickkey",
-#         ]
-#         widgets = {
-#             "name": forms.TextInput(attrs={"class": "form-input"}),
-#             "sku_suffix": forms.TextInput(attrs={"class": "form-input"}),
-#             "price": forms.NumberInput(attrs={"class": "form-input", "step": "0.01"}),
-#             "quantity": forms.NumberInput(attrs={"class": "form-input"}),
-#             "dealer_price": forms.NumberInput(attrs={"class": "form-input", "step": "0.01"}),
-#             "isunck": forms.CheckboxInput(attrs={"class": "form-checkbox"}),
-#             "unickkey": forms.SelectMultiple(attrs={"class": "form-select js-enhanced-multiselect"}),
-#         }
-
-#     def clean(self):
-#         cleaned = super().clean()
-#         isunck = cleaned.get("isunck")
-#         unickkeys = cleaned.get("unickkey")
-
-#         if isunck and not unickkeys:
-#             self.add_error("unickkey", "Unique key required when 'Has Unique Key' is checked.")
-
-#         return cleaned
-
-
-# VariationFormSet = inlineformset_factory(
-#     Product,
-#     Variation,
-#     form=VariationForm,
-#     extra=1,
-#     can_delete=True,
-# )
-
-
-# class UnitForm(forms.ModelForm):
-#     class Meta:
-#         model = Unit
-#         fields = ["name"]
-#         widgets = {
-#             "name": forms.TextInput(attrs={"class": "form-input"}),
-#         }
-
-
-# class CategoryForm(forms.ModelForm):
-#     class Meta:
-#         model = Category
-#         fields = ["name"]
-#         widgets = {
-#             "name": forms.TextInput(attrs={"class": "form-input"}),
-#         }
-
-
-# class BrandForm(forms.ModelForm):
-#     class Meta:
-#         model = Brand
-#         fields = ["name"]
-#         widgets = {
-#             "name": forms.TextInput(attrs={"class": "form-input"}),
-#         }
-
-
-# class WarrantyForm(forms.ModelForm):
-#     class Meta:
-#         model = Warranty
-#         fields = ["name", "duration", "duration_type"]
-#         widgets = {
-#             "name": forms.TextInput(attrs={"class": "form-input"}),
-#             "duration": forms.NumberInput(attrs={"class": "form-input"}),
-#             "duration_type": forms.Select(attrs={"class": "form-select js-enhanced-select"}),
-#         }
-
-
-# class UnickForm(forms.ModelForm):
-#     class Meta:
-#         model = unick
-#         fields = ["key1", "key2"]
-#         widgets = {
-#             "key1": forms.TextInput(attrs={"class": "form-input"}),
-#             "key2": forms.TextInput(attrs={"class": "form-input"}),
-#         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 from decimal import Decimal
 
 from django import forms
@@ -611,6 +20,9 @@ from .models import (
     Variation,
     unick,
     BranchProductStock,
+    Purchase,
+    PurchaseItem,
+    Supplier,
 )
 
 
@@ -1377,3 +789,114 @@ class BranchProductStockForm(ProductStyledModelForm):
             self.add_error("product_variation", "Variation does not belong to selected product.")
         return cleaned
 
+
+class PurchaseForm(ProductStyledModelForm):
+    class Meta:
+        model = Purchase
+        fields = [
+            "supplier_name",
+            "reference_no",
+            "business_location",
+            "purchase_date",
+            "purchase_status",
+            "pay_term",
+            "attach_document",
+            "total_amount",
+            "discount_type",
+            "discount_amount",
+            "purchase_tax_rate",
+            "purchase_tax_amount",
+            "additional_notes",
+            "shipping_details",
+            "additional_shipping_charges",
+            "additional_expense_name_1",
+            "additional_expense_amount_1",
+            "additional_expense_name_2",
+            "additional_expense_amount_2",
+            "additional_expense_name_3",
+            "additional_expense_amount_3",
+            "advance_balance",
+            "payment_amount",
+            "paid_on",
+            "payment_method",
+            "payment_account",
+            "payment_note",
+            "payment_due",
+            "vendor_cheque_details",
+        ]
+        widgets = {
+            "supplier_name": forms.Select(attrs={"class": COMMON_SELECT, "data-force-search": "1", "data-placeholder": "Search supplier"}),
+            "reference_no": forms.TextInput(attrs={"class": COMMON_INPUT, "placeholder": "Reference No"}),
+            "business_location": forms.Select(attrs={"class": COMMON_SELECT, "data-force-search": "1", "data-placeholder": "Business location"}),
+            "purchase_date": DateInput(attrs={"class": COMMON_INPUT}),
+            "purchase_status": forms.TextInput(attrs={"class": COMMON_INPUT, "placeholder": "Purchase status"}),
+            "pay_term": forms.TextInput(attrs={"class": COMMON_INPUT, "placeholder": "Pay term"}),
+            "attach_document": forms.ClearableFileInput(attrs={"class": COMMON_INPUT}),
+            "total_amount": forms.NumberInput(attrs={"class": COMMON_INPUT, "step": "0.01", "min": "0", "readonly": "readonly"}),
+            "discount_type": forms.Select(attrs={"class": COMMON_SELECT}),
+            "discount_amount": forms.NumberInput(attrs={"class": COMMON_INPUT, "step": "0.01", "min": "0"}),
+            "purchase_tax_rate": forms.Select(attrs={"class": COMMON_SELECT, "data-force-search": "1", "data-placeholder": "Purchase tax"}),
+            "purchase_tax_amount": forms.NumberInput(attrs={"class": COMMON_INPUT, "step": "0.01", "min": "0", "readonly": "readonly"}),
+            "additional_notes": forms.Textarea(attrs={"class": COMMON_TEXTAREA, "rows": 3}),
+            "shipping_details": forms.Textarea(attrs={"class": COMMON_TEXTAREA, "rows": 2}),
+            "additional_shipping_charges": forms.NumberInput(attrs={"class": COMMON_INPUT, "step": "0.01", "min": "0"}),
+            "additional_expense_name_1": forms.TextInput(attrs={"class": COMMON_INPUT, "placeholder": "Expense name"}),
+            "additional_expense_amount_1": forms.NumberInput(attrs={"class": COMMON_INPUT, "step": "0.01", "min": "0"}),
+            "additional_expense_name_2": forms.TextInput(attrs={"class": COMMON_INPUT, "placeholder": "Expense name"}),
+            "additional_expense_amount_2": forms.NumberInput(attrs={"class": COMMON_INPUT, "step": "0.01", "min": "0"}),
+            "additional_expense_name_3": forms.TextInput(attrs={"class": COMMON_INPUT, "placeholder": "Expense name"}),
+            "additional_expense_amount_3": forms.NumberInput(attrs={"class": COMMON_INPUT, "step": "0.01", "min": "0"}),
+            "advance_balance": forms.NumberInput(attrs={"class": COMMON_INPUT, "step": "0.01", "min": "0"}),
+            "payment_amount": forms.NumberInput(attrs={"class": COMMON_INPUT, "step": "0.01", "min": "0"}),
+            "paid_on": forms.DateTimeInput(attrs={"class": COMMON_INPUT, "type": "datetime-local"}),
+            "payment_method": forms.Select(attrs={"class": COMMON_SELECT}),
+            "payment_account": forms.TextInput(attrs={"class": COMMON_INPUT}),
+            "payment_note": forms.Textarea(attrs={"class": COMMON_TEXTAREA, "rows": 2}),
+            "payment_due": forms.NumberInput(attrs={"class": COMMON_INPUT, "step": "0.01", "min": "0", "readonly": "readonly"}),
+            "vendor_cheque_details": forms.Textarea(attrs={"class": COMMON_TEXTAREA, "rows": 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        request = kwargs.pop("request", None)
+        super().__init__(*args, **kwargs)
+
+        self.fields["supplier_name"].queryset = Supplier.objects.order_by("name")
+        self.fields["purchase_tax_rate"].queryset = VatRate.objects.order_by("name")
+
+        if request and request.user.is_authenticated:
+            scope = get_user_scope(request.user)
+            self.fields["business_location"].queryset = scope["branches"]
+        else:
+            self.fields["business_location"].queryset = Branch.objects.order_by("name")
+
+        related_map = {
+            "supplier_name": "supplier",
+            "business_location": "branch",
+            "purchase_tax_rate": "vat_rate",
+        }
+
+        for field_name, model_name in related_map.items():
+            field = self.fields[field_name]
+            field.widget.attrs["data_related_model"] = model_name
+            field.widget.attrs["data_parent_field"] = field_name
+            field.widget.attrs["can_add_related"] = True
+            field.widget.attrs["can_change_related"] = True
+
+        self.apply_selected_state()
+
+class PurchaseItemForm(ProductStyledModelForm):
+    class Meta:
+        model = PurchaseItem
+        fields = '__all__'
+
+
+class SupplierForm(ProductStyledModelForm):
+    class Meta:
+        model = Supplier
+        fields = ["name", "contact_number", "email", "address"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": COMMON_INPUT}),
+            "contact_number": forms.TextInput(attrs={"class": COMMON_INPUT}),
+            "email": forms.EmailInput(attrs={"class": COMMON_INPUT}),
+            "address": forms.Textarea(attrs={"class": COMMON_TEXTAREA, "rows": 3}),
+        }

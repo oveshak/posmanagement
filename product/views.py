@@ -19,13 +19,11 @@
 # # from .forms import (
 # #     PurchaseForm,
 # #     PurchaseItemForm,
-# #     PurchaseReturnForm,
 # #     StockTransferForm,
-# #     StockTransferLineFormSet,
+
 # #     StockAdjustmentForm,
 # #     VendorChequeForm,
-# #     RepairRequestForm,
-# # )
+
 # # from .models import (
 # #     Product,
 # #     Variation,
@@ -35,32 +33,18 @@
 # #     PurchaseReturn,
 # #     StockTransfer,
 # #     StockTransferLine,
-# #     StockAdjustment,
+
 # #     VendorCheque,
 # #     RepairRequest,
-# # )
 
-
-# # class HtmxListMixin:
-# #     partial_template_name = None
 
 # #     def get_template_names(self):
 # #         if self.request.headers.get("HX-Request") == "true" and self.partial_template_name:
 # #             return [self.partial_template_name]
 # #         return [self.template_name]
-
-
-# # class BaseNoTemplateDeleteView(LoginRequiredMixin, View):
-# #     model = None
-# #     success_url = None
-# #     success_message = "Deleted successfully."
-
-# #     def post(self, request, pk, *args, **kwargs):
-# #         obj = get_object_or_404(self.model, pk=pk)
-# #         label = str(obj)
 # #         obj.delete()
 
-# #         log_activity(request, "delete", f"Deleted {label}")
+
 # #         messages.success(request, self.success_message)
 
 # #         if is_htmx(request):
@@ -69,154 +53,8 @@
 # #                     "message": self.success_message,
 # #                     "refreshList": True,
 # #                 }
-# #             })
 
 # #         return redirect(self.success_url)
-
-
-# # # ---------------- PURCHASE ----------------
-
-# # class PurchaseListView(LoginRequiredMixin, HtmxListMixin, ListView):
-# #     model = Purchase
-# #     template_name = "products/purchase_list.html"
-# #     partial_template_name = "products/partials/purchase_list_content.html"
-# #     context_object_name = "purchases"
-# #     paginate_by = 20
-
-# #     def get_queryset(self):
-# #         qs = Purchase.objects.select_related("supplier_name").prefetch_related("purchaseitem").order_by("-purchase_date", "-id")
-# #         search = self.request.GET.get("search", "").strip()
-# #         status = self.request.GET.get("purchase_status", "").strip()
-
-# #         if search:
-# #             qs = qs.filter(
-# #                 Q(supplier_name__name__icontains=search) |
-# #                 Q(vendor_cheque_details__icontains=search)
-# #             )
-# #         if status:
-# #             qs = qs.filter(purchase_status__icontains=status)
-
-# #         return qs
-
-# #     def get_context_data(self, **kwargs):
-# #         context = super().get_context_data(**kwargs)
-# #         context["selected_search"] = self.request.GET.get("search", "").strip()
-# #         context["selected_status"] = self.request.GET.get("purchase_status", "").strip()
-# #         return context
-
-
-# # class PurchaseCreateView(LoginRequiredMixin, View):
-# #     template_name = "products/purchase_form.html"
-# #     success_url = reverse_lazy("purchase_list")
-
-# #     def get(self, request, *args, **kwargs):
-# #         context = {
-# #             "form": PurchaseForm(),
-# #             "item_form": PurchaseItemForm(),
-# #             "items": [],
-# #             "object": None,
-# #         }
-# #         return render(request, self.template_name, context)
-
-# #     @transaction.atomic
-# #     def post(self, request, *args, **kwargs):
-# #         form = PurchaseForm(request.POST)
-# #         item_ids = request.POST.getlist("purchaseitem_ids")
-# #         items = PurchaseItem.objects.filter(id__in=item_ids)
-
-# #         if form.is_valid():
-# #             purchase = form.save()
-# #             purchase.purchaseitem.set(items)
-
-# #             total = sum([(item.unit_price or Decimal("0")) * item.qty for item in items], Decimal("0"))
-# #             purchase.total_amount = total
-# #             purchase.save(update_fields=["total_amount"])
-
-# #             log_activity(request, "create", f"Created purchase #{purchase.id}")
-# #             messages.success(request, "Purchase created successfully.")
-# #             return redirect(self.success_url)
-
-# #         context = {
-# #             "form": form,
-# #             "item_form": PurchaseItemForm(),
-# #             "items": items,
-# #             "object": None,
-# #         }
-# #         return render(request, self.template_name, context)
-
-
-# # class PurchaseUpdateView(LoginRequiredMixin, View):
-# #     template_name = "products/purchase_form.html"
-# #     success_url = reverse_lazy("purchase_list")
-
-# #     def get_object(self, pk):
-# #         return get_object_or_404(Purchase.objects.prefetch_related("purchaseitem"), pk=pk)
-
-# #     def get(self, request, pk, *args, **kwargs):
-# #         obj = self.get_object(pk)
-# #         context = {
-# #             "form": PurchaseForm(instance=obj),
-# #             "item_form": PurchaseItemForm(),
-# #             "items": obj.purchaseitem.all(),
-# #             "object": obj,
-# #         }
-# #         return render(request, self.template_name, context)
-
-# #     @transaction.atomic
-# #     def post(self, request, pk, *args, **kwargs):
-# #         obj = self.get_object(pk)
-# #         form = PurchaseForm(request.POST, instance=obj)
-# #         item_ids = request.POST.getlist("purchaseitem_ids")
-# #         items = PurchaseItem.objects.filter(id__in=item_ids)
-
-# #         if form.is_valid():
-# #             purchase = form.save()
-# #             purchase.purchaseitem.set(items)
-
-# #             total = sum([(item.unit_price or Decimal("0")) * item.qty for item in items], Decimal("0"))
-# #             purchase.total_amount = total
-# #             purchase.save(update_fields=["total_amount"])
-
-# #             log_activity(request, "update", f"Updated purchase #{purchase.id}")
-# #             messages.success(request, "Purchase updated successfully.")
-# #             return redirect(self.success_url)
-
-# #         context = {
-# #             "form": form,
-# #             "item_form": PurchaseItemForm(),
-# #             "items": items,
-# #             "object": obj,
-# #         }
-# #         return render(request, self.template_name, context)
-
-
-# # class PurchaseDeleteView(BaseNoTemplateDeleteView):
-# #     model = Purchase
-# #     success_url = reverse_lazy("purchase_list")
-# #     success_message = "Purchase deleted successfully."
-
-
-# # class PurchaseItemQuickCreateView(LoginRequiredMixin, View):
-# #     template_name = "products/modals/purchase_item_form.html"
-
-# #     def get(self, request, *args, **kwargs):
-# #         return render(request, self.template_name, {"form": PurchaseItemForm(), "object": None})
-
-# #     def post(self, request, *args, **kwargs):
-# #         form = PurchaseItemForm(request.POST)
-# #         if form.is_valid():
-# #             obj = form.save()
-# #             return htmx_trigger_response({
-# #                 "purchase:item-saved": {
-# #                     "id": obj.id,
-# #                     "product": str(obj.purchase_product) if obj.purchase_product else "",
-# #                     "variation": str(obj.purchase_product_variation) if obj.purchase_product_variation else "",
-# #                     "qty": obj.qty,
-# #                     "unit_price": str(obj.unit_price),
-# #                     "message": "Purchase item saved successfully.",
-# #                 }
-# #             })
-# #         return render(request, self.template_name, {"form": form, "object": None})
 
 
 # # # ---------------- PURCHASE RETURN ----------------
@@ -967,11 +805,12 @@
 
 
 import json
+from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
@@ -1000,6 +839,9 @@ from .models import (
     Variation,
     unick,
     BranchProductStock,
+    Purchase,
+    PurchaseItem,
+    Supplier,
 )
 from .forms import (
     ProductForm,
@@ -1016,6 +858,9 @@ from .forms import (
     WarrantyForm,
     UnickForm,
     BranchProductStockForm,
+    PurchaseForm,
+    PurchaseItemForm,
+    SupplierForm,
 )
 
 
@@ -1202,6 +1047,492 @@ class ProductDeleteView(BaseNoTemplateDeleteView):
     model = Product
     success_url = reverse_lazy("product:product_list")
     success_message = "Product deleted successfully."
+
+
+class ProductDetailView(LoginRequiredMixin, View):
+    template_name = "products/product_view.html"
+
+    def get(self, request, pk, *args, **kwargs):
+        obj = get_object_or_404(
+            Product.objects.select_related(
+                "unit_name", "category_name", "subcategory_name", "brand_name", "warranty_name", "vat_rate"
+            ).prefetch_related("variations__attribute_values__attribute", "variations__unickkey"),
+            pk=pk,
+        )
+        return render(request, self.template_name, {"object": obj})
+
+
+# ---------------- PURCHASE CRUD ----------------
+
+def _to_decimal(value, default="0"):
+    try:
+        return Decimal(str(value or default).strip() or default)
+    except (InvalidOperation, ValueError, AttributeError):
+        return Decimal(default)
+
+
+def _recalculate_purchase_totals(purchase):
+    items = purchase.purchaseitem.all()
+    sub_total = sum([_to_decimal(i.line_total or i.net_cost or (i.unit_price or 0) * (i.qty or 0)) for i in items], Decimal("0"))
+
+    discount_amount = _to_decimal(purchase.discount_amount)
+    if purchase.discount_type == "percent":
+        discount_amount = (sub_total * discount_amount / Decimal("100")).quantize(Decimal("0.01"))
+
+    taxable_base = max(sub_total - discount_amount, Decimal("0"))
+    purchase_tax_amount = Decimal("0")
+    if purchase.purchase_tax_rate_id:
+        purchase_tax_amount = (taxable_base * _to_decimal(purchase.purchase_tax_rate.rate_percent) / Decimal("100")).quantize(Decimal("0.01"))
+
+    other_charges = (
+        _to_decimal(purchase.additional_shipping_charges)
+        + _to_decimal(purchase.additional_expense_amount_1)
+        + _to_decimal(purchase.additional_expense_amount_2)
+        + _to_decimal(purchase.additional_expense_amount_3)
+    )
+
+    total_amount = taxable_base + purchase_tax_amount + other_charges
+    payment_due = total_amount - (_to_decimal(purchase.advance_balance) + _to_decimal(purchase.payment_amount))
+
+    purchase.purchase_tax_amount = purchase_tax_amount
+    purchase.total_amount = total_amount.quantize(Decimal("0.01"))
+    purchase.payment_due = payment_due.quantize(Decimal("0.01"))
+    purchase.save(update_fields=["purchase_tax_amount", "total_amount", "payment_due"])
+
+def _build_purchase_item_rows(request):
+    product_ids = request.POST.getlist("item_product")
+    variation_ids = request.POST.getlist("item_variation")
+    qty_values = request.POST.getlist("item_qty")
+    price_values = request.POST.getlist("item_unit_price")
+    discount_values = request.POST.getlist("item_discount_percent")
+    unit_tax_values = request.POST.getlist("item_tax_percent")
+    unit_after_tax_values = request.POST.getlist("item_unit_cost_after_tax")
+    subtotal_values = request.POST.getlist("item_subtotal")
+    product_tax_values = request.POST.getlist("item_product_tax")
+    net_cost_values = request.POST.getlist("item_net_cost")
+    line_total_values = request.POST.getlist("item_line_total")
+    margin_values = request.POST.getlist("item_margin_percent")
+    selling_values = request.POST.getlist("item_selling_inc_tax")
+    imei_values = request.POST.getlist("item_imei_or_serial")
+
+    max_len = max(
+        len(product_ids), len(variation_ids), len(qty_values), len(price_values),
+        len(discount_values), len(unit_tax_values), len(unit_after_tax_values),
+        len(subtotal_values), len(product_tax_values), len(net_cost_values),
+        len(line_total_values), len(margin_values), len(selling_values), len(imei_values), 0,
+    )
+    rows = []
+    errors = []
+
+    for idx in range(max_len):
+        product_id = (product_ids[idx] if idx < len(product_ids) else "").strip()
+        variation_id = (variation_ids[idx] if idx < len(variation_ids) else "").strip()
+        qty_raw = (qty_values[idx] if idx < len(qty_values) else "").strip()
+        unit_price_raw = (price_values[idx] if idx < len(price_values) else "").strip()
+        discount_raw = (discount_values[idx] if idx < len(discount_values) else "").strip()
+        unit_tax_raw = (unit_tax_values[idx] if idx < len(unit_tax_values) else "").strip()
+        unit_after_tax_raw = (unit_after_tax_values[idx] if idx < len(unit_after_tax_values) else "").strip()
+        subtotal_raw = (subtotal_values[idx] if idx < len(subtotal_values) else "").strip()
+        product_tax_raw = (product_tax_values[idx] if idx < len(product_tax_values) else "").strip()
+        net_cost_raw = (net_cost_values[idx] if idx < len(net_cost_values) else "").strip()
+        line_total_raw = (line_total_values[idx] if idx < len(line_total_values) else "").strip()
+        margin_raw = (margin_values[idx] if idx < len(margin_values) else "").strip()
+        selling_raw = (selling_values[idx] if idx < len(selling_values) else "").strip()
+        imei_raw = (imei_values[idx] if idx < len(imei_values) else "").strip()
+
+        if not any([product_id, variation_id, qty_raw, unit_price_raw]):
+            continue
+
+        if not product_id:
+            errors.append(f"Row {idx + 1}: Product is required.")
+            continue
+
+        if not variation_id:
+            errors.append(f"Row {idx + 1}: Variation is required.")
+            continue
+
+        product = Product.objects.filter(pk=product_id).first()
+        variation = Variation.objects.filter(pk=variation_id).first()
+
+        if not product:
+            errors.append(f"Row {idx + 1}: Invalid product selected.")
+            continue
+
+        if not variation:
+            errors.append(f"Row {idx + 1}: Invalid variation selected.")
+            continue
+
+        if variation.product_name_id != product.id:
+            errors.append(f"Row {idx + 1}: Variation does not belong to selected product.")
+            continue
+
+        try:
+            qty = int(qty_raw or "0")
+        except ValueError:
+            errors.append(f"Row {idx + 1}: Quantity must be a number.")
+            continue
+
+        unit_price = _to_decimal(unit_price_raw)
+        if unit_price < 0:
+            errors.append(f"Row {idx + 1}: Unit price must be numeric.")
+            continue
+
+        if qty <= 0:
+            errors.append(f"Row {idx + 1}: Quantity must be greater than 0.")
+            continue
+
+        imei_enabled = bool(variation.isunck or product.enable_imei_or_serial)
+        imei_entries = [x.strip() for x in imei_raw.replace(",", "\n").splitlines() if x.strip()]
+        if imei_enabled:
+            if len(set(imei_entries)) != len(imei_entries):
+                errors.append(f"Row {idx + 1}: Duplicate IMEI/serial values found.")
+                continue
+            if imei_entries and len(imei_entries) != qty:
+                errors.append(f"Row {idx + 1}: IMEI/serial count must match quantity.")
+                continue
+
+        discount_percent = _to_decimal(discount_raw)
+        unit_tax_percent = _to_decimal(unit_tax_raw)
+        unit_cost_after_tax = _to_decimal(unit_after_tax_raw)
+        subtotal_before_tax = _to_decimal(subtotal_raw)
+        product_tax_amount = _to_decimal(product_tax_raw)
+        net_cost = _to_decimal(net_cost_raw)
+        line_total = _to_decimal(line_total_raw)
+        line_profit_margin_percent = _to_decimal(margin_raw)
+        unit_selling_price_inc_tax = _to_decimal(selling_raw)
+
+        if subtotal_before_tax <= 0:
+            subtotal_before_tax = (unit_price * qty).quantize(Decimal("0.01"))
+
+        if unit_cost_after_tax <= 0:
+            unit_cost_after_tax = (unit_price * (Decimal("1") + unit_tax_percent / Decimal("100"))).quantize(Decimal("0.01"))
+
+        if product_tax_amount <= 0:
+            product_tax_amount = ((subtotal_before_tax - (subtotal_before_tax * discount_percent / Decimal("100"))) * unit_tax_percent / Decimal("100")).quantize(Decimal("0.01"))
+
+        if net_cost <= 0:
+            net_cost = (subtotal_before_tax - (subtotal_before_tax * discount_percent / Decimal("100")) + product_tax_amount).quantize(Decimal("0.01"))
+
+        if line_total <= 0:
+            line_total = net_cost
+
+        rows.append(
+            {
+                "product": product,
+                "variation": variation,
+                "qty": qty,
+                "unit_price": unit_price,
+                "unit_cost_before_tax": unit_price,
+                "discount_percent": discount_percent,
+                "discount_amount": (subtotal_before_tax * discount_percent / Decimal("100")).quantize(Decimal("0.01")),
+                "unit_cost_tax_percent": unit_tax_percent,
+                "unit_cost_after_tax": unit_cost_after_tax,
+                "subtotal_before_tax": subtotal_before_tax,
+                "product_tax_amount": product_tax_amount,
+                "net_cost": net_cost,
+                "line_total": line_total,
+                "line_profit_margin_percent": line_profit_margin_percent,
+                "unit_selling_price_inc_tax": unit_selling_price_inc_tax,
+                "imei_or_serials": "\n".join(imei_entries) if imei_entries else imei_raw,
+            }
+        )
+
+    return rows, errors
+
+
+def _build_item_rows_for_template(items):
+    return [
+        {
+            "product_id": str(item.purchase_product_id or ""),
+            "variation_id": str(item.purchase_product_variation_id or ""),
+            "qty": str(item.qty or 1),
+            "unit_price": str(item.unit_price or "0"),
+            "discount_percent": str(item.discount_percent or "0"),
+            "unit_tax_percent": str(item.unit_cost_tax_percent or "0"),
+            "unit_cost_after_tax": str(item.unit_cost_after_tax or "0"),
+            "subtotal": str(item.subtotal_before_tax or "0"),
+            "product_tax": str(item.product_tax_amount or "0"),
+            "net_cost": str(item.net_cost or "0"),
+            "line_total": str(item.line_total or "0"),
+            "margin_percent": str(item.line_profit_margin_percent or "0"),
+            "selling_inc_tax": str(item.unit_selling_price_inc_tax or "0"),
+            "imei_or_serial": str(item.imei_or_serials or ""),
+        }
+        for item in items
+    ]
+
+class PurchaseListView(LoginRequiredMixin, HtmxListMixin, ListView):
+    model = Purchase
+    template_name = "products/purchase_list.html"
+    partial_template_name = "products/partials/purchase_list_content.html"
+    context_object_name = "purchases"
+    paginate_by = 20
+
+    def get_queryset(self):
+        qs = Purchase.objects.select_related("supplier_name").prefetch_related("purchaseitem").order_by("-purchase_date", "-id")
+        search = self.request.GET.get("search", "").strip()
+        status = self.request.GET.get("purchase_status", "").strip()
+
+        if search:
+            qs = qs.filter(
+                Q(supplier_name__name__icontains=search) |
+                Q(vendor_cheque_details__icontains=search)
+            )
+        if status:
+            qs = qs.filter(purchase_status__icontains=status)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["selected_search"] = self.request.GET.get("search", "").strip()
+        context["selected_status"] = self.request.GET.get("purchase_status", "").strip()
+        return context
+
+
+class PurchaseDetailView(LoginRequiredMixin, View):
+    template_name = "products/purchase_view.html"
+
+    def get(self, request, pk, *args, **kwargs):
+        obj = get_object_or_404(Purchase.objects.select_related("supplier_name").prefetch_related("purchaseitem"), pk=pk)
+        items = obj.purchaseitem.select_related("purchase_product", "purchase_product_variation")
+        item_rows = []
+        for item in items:
+            line_total = (item.unit_price or Decimal("0")) * (item.qty or 0)
+            item_rows.append({"item": item, "line_total": line_total})
+
+        return render(request, self.template_name, {
+            "object": obj,
+            "items": items,
+            "item_rows": item_rows,
+            "items_total": sum([row["line_total"] for row in item_rows], Decimal("0")),
+        })
+
+
+class SupplierDetailView(LoginRequiredMixin, View):
+    template_name = "products/supplier_view.html"
+
+    def get(self, request, pk, *args, **kwargs):
+        obj = get_object_or_404(Supplier, pk=pk)
+        purchases = Purchase.objects.filter(supplier_name=obj).prefetch_related("purchaseitem").order_by("-purchase_date", "-id")[:20]
+        total_amount = sum([p.total_amount or Decimal("0") for p in purchases], Decimal("0"))
+        return render(request, self.template_name, {
+            "object": obj,
+            "purchases": purchases,
+            "total_amount": total_amount,
+        })
+
+
+class PurchaseCreateView(LoginRequiredMixin, View):
+    template_name = "products/purchase_form.html"
+    success_url = reverse_lazy("product:purchase_list")
+
+    def get(self, request, *args, **kwargs):
+        context = {
+            "form": PurchaseForm(request=request),
+            "items": [],
+            "item_rows": [],
+            "products": Product.objects.order_by("name"),
+            "object": None,
+        }
+        return render(request, self.template_name, context)
+
+    @transaction.atomic
+    def post(self, request, *args, **kwargs):
+        form = PurchaseForm(request.POST, request.FILES, request=request)
+        item_rows, row_errors = _build_purchase_item_rows(request)
+
+        if form.is_valid() and not row_errors:
+            purchase = form.save()
+            created_items = []
+            for row in item_rows:
+                created_items.append(PurchaseItem.objects.create(
+                    purchase_product=row["product"],
+                    purchase_product_variation=row["variation"],
+                    qty=row["qty"],
+                    unit_price=row["unit_price"],
+                    unit_cost_before_tax=row["unit_cost_before_tax"],
+                    discount_percent=row["discount_percent"],
+                    discount_amount=row["discount_amount"],
+                    unit_cost_tax_percent=row["unit_cost_tax_percent"],
+                    unit_cost_after_tax=row["unit_cost_after_tax"],
+                    subtotal_before_tax=row["subtotal_before_tax"],
+                    product_tax_amount=row["product_tax_amount"],
+                    net_cost=row["net_cost"],
+                    line_total=row["line_total"],
+                    line_profit_margin_percent=row["line_profit_margin_percent"],
+                    unit_selling_price_inc_tax=row["unit_selling_price_inc_tax"],
+                    imei_or_serials=row["imei_or_serials"],
+                ))
+
+            purchase.purchaseitem.set(created_items)
+
+            _recalculate_purchase_totals(purchase)
+
+            log_activity(request, "create", f"Created purchase #{purchase.id}")
+            messages.success(request, "Purchase created successfully.")
+            return redirect(self.success_url)
+
+        for error in row_errors:
+            messages.error(request, error)
+
+        context = {
+            "form": form,
+            "items": [],
+            "item_rows": [
+                {
+                    "product_id": request.POST.getlist("item_product")[i] if i < len(request.POST.getlist("item_product")) else "",
+                    "variation_id": request.POST.getlist("item_variation")[i] if i < len(request.POST.getlist("item_variation")) else "",
+                    "qty": request.POST.getlist("item_qty")[i] if i < len(request.POST.getlist("item_qty")) else "",
+                    "unit_price": request.POST.getlist("item_unit_price")[i] if i < len(request.POST.getlist("item_unit_price")) else "",
+                    "discount_percent": request.POST.getlist("item_discount_percent")[i] if i < len(request.POST.getlist("item_discount_percent")) else "",
+                    "unit_tax_percent": request.POST.getlist("item_tax_percent")[i] if i < len(request.POST.getlist("item_tax_percent")) else "",
+                    "unit_cost_after_tax": request.POST.getlist("item_unit_cost_after_tax")[i] if i < len(request.POST.getlist("item_unit_cost_after_tax")) else "",
+                    "subtotal": request.POST.getlist("item_subtotal")[i] if i < len(request.POST.getlist("item_subtotal")) else "",
+                    "product_tax": request.POST.getlist("item_product_tax")[i] if i < len(request.POST.getlist("item_product_tax")) else "",
+                    "net_cost": request.POST.getlist("item_net_cost")[i] if i < len(request.POST.getlist("item_net_cost")) else "",
+                    "line_total": request.POST.getlist("item_line_total")[i] if i < len(request.POST.getlist("item_line_total")) else "",
+                    "margin_percent": request.POST.getlist("item_margin_percent")[i] if i < len(request.POST.getlist("item_margin_percent")) else "",
+                    "selling_inc_tax": request.POST.getlist("item_selling_inc_tax")[i] if i < len(request.POST.getlist("item_selling_inc_tax")) else "",
+                    "imei_or_serial": request.POST.getlist("item_imei_or_serial")[i] if i < len(request.POST.getlist("item_imei_or_serial")) else "",
+                }
+                for i in range(max(
+                    len(request.POST.getlist("item_product")),
+                    len(request.POST.getlist("item_variation")),
+                    len(request.POST.getlist("item_qty")),
+                    len(request.POST.getlist("item_unit_price")),
+                    len(request.POST.getlist("item_discount_percent")),
+                    len(request.POST.getlist("item_tax_percent")),
+                    len(request.POST.getlist("item_unit_cost_after_tax")),
+                    len(request.POST.getlist("item_subtotal")),
+                    len(request.POST.getlist("item_product_tax")),
+                    len(request.POST.getlist("item_net_cost")),
+                    len(request.POST.getlist("item_line_total")),
+                    len(request.POST.getlist("item_margin_percent")),
+                    len(request.POST.getlist("item_selling_inc_tax")),
+                    len(request.POST.getlist("item_imei_or_serial")),
+                    1,
+                ))
+            ],
+            "products": Product.objects.order_by("name"),
+            "object": None,
+        }
+        return render(request, self.template_name, context)
+
+
+class PurchaseUpdateView(LoginRequiredMixin, View):
+    template_name = "products/purchase_form.html"
+    success_url = reverse_lazy("product:purchase_list")
+
+    def get_object(self, pk):
+        return get_object_or_404(Purchase.objects.prefetch_related("purchaseitem"), pk=pk)
+
+    def get(self, request, pk, *args, **kwargs):
+        obj = self.get_object(pk)
+        context = {
+            "form": PurchaseForm(instance=obj, request=request),
+            "items": obj.purchaseitem.all(),
+            "item_rows": _build_item_rows_for_template(obj.purchaseitem.all()),
+            "products": Product.objects.order_by("name"),
+            "object": obj,
+        }
+        return render(request, self.template_name, context)
+
+    @transaction.atomic
+    def post(self, request, pk, *args, **kwargs):
+        obj = self.get_object(pk)
+        form = PurchaseForm(request.POST, request.FILES, instance=obj, request=request)
+        item_rows, row_errors = _build_purchase_item_rows(request)
+
+        if form.is_valid() and not row_errors:
+            purchase = form.save()
+            old_items = list(purchase.purchaseitem.all())
+            purchase.purchaseitem.clear()
+
+            created_items = []
+            for row in item_rows:
+                created_items.append(PurchaseItem.objects.create(
+                    purchase_product=row["product"],
+                    purchase_product_variation=row["variation"],
+                    qty=row["qty"],
+                    unit_price=row["unit_price"],
+                    unit_cost_before_tax=row["unit_cost_before_tax"],
+                    discount_percent=row["discount_percent"],
+                    discount_amount=row["discount_amount"],
+                    unit_cost_tax_percent=row["unit_cost_tax_percent"],
+                    unit_cost_after_tax=row["unit_cost_after_tax"],
+                    subtotal_before_tax=row["subtotal_before_tax"],
+                    product_tax_amount=row["product_tax_amount"],
+                    net_cost=row["net_cost"],
+                    line_total=row["line_total"],
+                    line_profit_margin_percent=row["line_profit_margin_percent"],
+                    unit_selling_price_inc_tax=row["unit_selling_price_inc_tax"],
+                    imei_or_serials=row["imei_or_serials"],
+                ))
+
+            purchase.purchaseitem.set(created_items)
+
+            for old_item in old_items:
+                if not old_item.purchase_set.exists():
+                    old_item.delete()
+
+            _recalculate_purchase_totals(purchase)
+
+            log_activity(request, "update", f"Updated purchase #{purchase.id}")
+            messages.success(request, "Purchase updated successfully.")
+            return redirect(self.success_url)
+
+        for error in row_errors:
+            messages.error(request, error)
+
+        context = {
+            "form": form,
+            "items": obj.purchaseitem.all(),
+            "item_rows": [
+                {
+                    "product_id": request.POST.getlist("item_product")[i] if i < len(request.POST.getlist("item_product")) else "",
+                    "variation_id": request.POST.getlist("item_variation")[i] if i < len(request.POST.getlist("item_variation")) else "",
+                    "qty": request.POST.getlist("item_qty")[i] if i < len(request.POST.getlist("item_qty")) else "",
+                    "unit_price": request.POST.getlist("item_unit_price")[i] if i < len(request.POST.getlist("item_unit_price")) else "",
+                    "discount_percent": request.POST.getlist("item_discount_percent")[i] if i < len(request.POST.getlist("item_discount_percent")) else "",
+                    "unit_tax_percent": request.POST.getlist("item_tax_percent")[i] if i < len(request.POST.getlist("item_tax_percent")) else "",
+                    "unit_cost_after_tax": request.POST.getlist("item_unit_cost_after_tax")[i] if i < len(request.POST.getlist("item_unit_cost_after_tax")) else "",
+                    "subtotal": request.POST.getlist("item_subtotal")[i] if i < len(request.POST.getlist("item_subtotal")) else "",
+                    "product_tax": request.POST.getlist("item_product_tax")[i] if i < len(request.POST.getlist("item_product_tax")) else "",
+                    "net_cost": request.POST.getlist("item_net_cost")[i] if i < len(request.POST.getlist("item_net_cost")) else "",
+                    "line_total": request.POST.getlist("item_line_total")[i] if i < len(request.POST.getlist("item_line_total")) else "",
+                    "margin_percent": request.POST.getlist("item_margin_percent")[i] if i < len(request.POST.getlist("item_margin_percent")) else "",
+                    "selling_inc_tax": request.POST.getlist("item_selling_inc_tax")[i] if i < len(request.POST.getlist("item_selling_inc_tax")) else "",
+                    "imei_or_serial": request.POST.getlist("item_imei_or_serial")[i] if i < len(request.POST.getlist("item_imei_or_serial")) else "",
+                }
+                for i in range(max(
+                    len(request.POST.getlist("item_product")),
+                    len(request.POST.getlist("item_variation")),
+                    len(request.POST.getlist("item_qty")),
+                    len(request.POST.getlist("item_unit_price")),
+                    len(request.POST.getlist("item_discount_percent")),
+                    len(request.POST.getlist("item_tax_percent")),
+                    len(request.POST.getlist("item_unit_cost_after_tax")),
+                    len(request.POST.getlist("item_subtotal")),
+                    len(request.POST.getlist("item_product_tax")),
+                    len(request.POST.getlist("item_net_cost")),
+                    len(request.POST.getlist("item_line_total")),
+                    len(request.POST.getlist("item_margin_percent")),
+                    len(request.POST.getlist("item_selling_inc_tax")),
+                    len(request.POST.getlist("item_imei_or_serial")),
+                    1,
+                ))
+            ],
+            "products": Product.objects.order_by("name"),
+            "object": obj,
+        }
+        return render(request, self.template_name, context)
+
+
+class PurchaseDeleteView(BaseNoTemplateDeleteView):
+    model = Purchase
+    success_url = reverse_lazy("product:purchase_list")
+    success_message = "Purchase deleted successfully."
 
 
 # ---------------- BRANCH STOCK CRUD ----------------
@@ -1822,6 +2153,7 @@ def related_object_modal(request, model_name, pk=None):
         "product": {"model": Product, "form": ProductForm},
         "variation": {"model": Variation, "form": VariationQuickForm},
         "unick": {"model": unick, "form": UnickForm},
+        "supplier": {"model": Supplier, "form": SupplierForm},
         "unit": {"model": Unit, "form": UnitForm},
         "category": {"model": Category, "form": CategoryForm},
         "subcategory": {"model": SubCategory, "form": SubCategoryForm},
@@ -1969,13 +2301,17 @@ def ajax_vat_rate_detail(request):
 @require_GET
 def ajax_variations_by_product(request):
     product_id = request.GET.get("product_id", "").strip()
-    qs = Variation.objects.all().order_by("name", "id")
+    qs = Variation.objects.select_related("product_name").all().order_by("name", "id")
 
     scope = get_user_scope(request.user)
     allowed_branch_ids = list(scope["branches"].values_list("id", flat=True))
     if not is_global_user(request.user):
         if allowed_branch_ids:
-            qs = qs.filter(branch_stocks__stock_branch_id__in=allowed_branch_ids)
+            scoped_qs = qs.filter(branch_stocks__stock_branch_id__in=allowed_branch_ids).distinct()
+            # Fallback: if no branch-stock mapped variation exists, keep unscoped variations
+            # so purchase row variation selection still works.
+            if scoped_qs.exists():
+                qs = scoped_qs
         else:
             qs = qs.none()
 
@@ -1983,7 +2319,22 @@ def ajax_variations_by_product(request):
         qs = qs.filter(product_name_id=product_id)
 
     return JsonResponse({
-        "results": [{"id": obj.pk, "text": str(obj)} for obj in qs]
+        "results": [
+            {
+                "id": obj.pk,
+                "text": str(obj),
+                "name": obj.name,
+                "sku": f"{obj.product_name.sku}-{obj.sku_suffix}" if obj.sku_suffix else obj.product_name.sku,
+                "purchase_price_exc_tax": float(obj.purchase_price_exc_tax or 0),
+                "purchase_price_inc_tax": float(obj.purchase_price_inc_tax or 0),
+                "margin_percent": float(obj.margin_percent or 0),
+                "selling_price_inc_tax": float(obj.selling_price_inc_tax or 0),
+                "applicable_tax_percent": float(obj.applicable_tax_percent or 0),
+                "qty": int(obj.quantity or 0),
+                "imei_enabled": bool(obj.isunck or (obj.product_name and obj.product_name.enable_imei_or_serial)),
+            }
+            for obj in qs
+        ]
     })
 
 
@@ -2083,3 +2434,81 @@ def ajax_resolve_unick_from_scanner(request):
         "results": resolved,
         "unmatched": unmatched,
     })
+
+
+@login_required
+@require_GET
+def ajax_search_purchase_products(request):
+    """Search products and variation details for purchase UI."""
+    query = request.GET.get("q", "").strip()
+
+    qs = Product.objects.select_related(
+        "unit_name", "category_name", "subcategory_name", "brand_name", "vat_rate"
+    ).prefetch_related("variations").order_by("name", "id")
+
+    scope = get_user_scope(request.user)
+    allowed_branch_ids = list(scope["branches"].values_list("id", flat=True))
+    if not is_global_user(request.user):
+        if allowed_branch_ids:
+            scoped_qs = qs.filter(
+                Q(branch_product_stocks__stock_branch_id__in=allowed_branch_ids)
+            ).distinct()
+            # Fallback: if branch stock table is not populated yet, still allow searching
+            # products for purchase entry.
+            if scoped_qs.exists():
+                qs = scoped_qs
+        else:
+            qs = qs.none()
+
+    if query:
+        qs = qs.filter(
+            Q(name__icontains=query)
+            | Q(sku__icontains=query)
+            | Q(variations__name__icontains=query)
+            | Q(variations__sku_suffix__icontains=query)
+            | Q(category_name__name__icontains=query)
+        ).distinct()
+
+    results = []
+    for product in qs[:50]:
+        variations_data = []
+        for variation in product.variations.all():
+            variations_data.append(
+                {
+                    "id": variation.pk,
+                    "name": variation.name,
+                    "text": f"{variation.name} ({f'{product.sku}-{variation.sku_suffix}' if variation.sku_suffix else product.sku})",
+                    "sku": f"{product.sku}-{variation.sku_suffix}" if variation.sku_suffix else product.sku,
+                    "purchase_price_exc_tax": float(variation.purchase_price_exc_tax or 0),
+                    "purchase_price_inc_tax": float(variation.purchase_price_inc_tax or 0),
+                    "margin_percent": float(variation.margin_percent or 0),
+                    "selling_price_exc_tax": float(variation.price or 0),
+                    "selling_price_inc_tax": float(variation.selling_price_inc_tax or 0),
+                    "selling_price_tax_type": variation.selling_price_tax_type or "exclusive",
+                    "applicable_tax_percent": float(variation.applicable_tax_percent or 0),
+                    "qty": int(variation.quantity or 0),
+                    "imei_enabled": bool(variation.isunck or product.enable_imei_or_serial),
+                }
+            )
+
+        results.append(
+            {
+                "id": product.pk,
+                "name": product.name,
+                "sku": product.sku,
+                "category": product.category_name.name if product.category_name else "",
+                "subcategory": product.subcategory_name.name if product.subcategory_name else "",
+                "brand": product.brand_name.name if product.brand_name else "",
+                "unit": product.unit_name.name if product.unit_name else "",
+                "vat_rate": float(product.vat_rate.rate_percent) if product.vat_rate else 0,
+                "vat_tax_type": product.vat_rate.tax_type if product.vat_rate else "exclusive",
+                "default_purchase_price_exc_tax": float(product.default_purchase_price_exc_tax or 0),
+                "default_purchase_price_inc_tax": float(product.default_purchase_price_inc_tax or 0),
+                "default_selling_price": float(product.default_selling_price or 0),
+                "manage_stock": bool(product.manage_stock),
+                "enable_imei_or_serial": bool(product.enable_imei_or_serial),
+                "variations": variations_data,
+            }
+        )
+
+    return JsonResponse({"results": results})

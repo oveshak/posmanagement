@@ -4,7 +4,7 @@
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Purchases</h1>
             <p class="text-sm text-gray-500 dark:text-slate-400">Manage purchases and purchase items</p>
         </div>
-        <a href="{% url 'purchase_create' %}"
+        <a href="{% url 'product:purchase_create' %}"
            class="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 font-semibold">
             + Create Purchase
         </a>
@@ -12,7 +12,7 @@
 
     <form method="get"
           data-filter-form="true"
-          hx-get="{% url 'purchase_list' %}"
+            hx-get="{% url 'product:purchase_list' %}"
           hx-target="#main-content"
           hx-select="#main-content"
           hx-swap="outerHTML"
@@ -26,7 +26,7 @@
 
         <div class="flex gap-3">
             <button type="submit" class="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3">Filter</button>
-            <a href="{% url 'purchase_list' %}" class="flex-1 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 font-semibold px-5 py-3 text-center">Reset</a>
+            <a href="{% url 'product:purchase_list' %}" class="flex-1 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 font-semibold px-5 py-3 text-center">Reset</a>
         </div>
     </form>
 
@@ -53,8 +53,12 @@
                             <td class="px-6 py-4">{{ item.purchase_status }}</td>
                             <td class="px-6 py-4">
                                 <div class="flex gap-2">
-                                    <a href="{% url 'purchase_update' item.pk %}" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-semibold">Edit</a>
-                                    <a href="{% url 'purchase_delete' item.pk %}" class="delete-btn bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-semibold" data-url="{% url 'purchase_delete' item.pk %}">Delete</a>
+                                    <a href="{% url 'product:purchase_view' item.pk %}" class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-semibold">View</a>
+                                    <a href="{% url 'product:purchase_update' item.pk %}" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-semibold">Edit</a>
+                                    <form action="{% url 'product:purchase_delete' item.pk %}" method="post" onsubmit="return confirm('Delete this purchase?');" class="inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-semibold">Delete</button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>

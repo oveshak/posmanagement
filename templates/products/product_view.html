@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Product View{% endblock %}
+
+{% block content %}
+<div id="main-content" class="space-y-6 p-5 sm:p-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ object.name }}</h1>
+            <p class="text-sm text-gray-500 dark:text-slate-400">SKU: {{ object.sku }}</p>
+        </div>
+        <a href="{% url 'product:product_update' object.id %}" class="rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-semibold">Edit Product</a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="rounded-xl border border-gray-200 dark:border-slate-700 p-4"><div class="text-xs text-gray-500 uppercase">Category</div><div class="mt-1">{{ object.category_name|default:"-" }}</div></div>
+        <div class="rounded-xl border border-gray-200 dark:border-slate-700 p-4"><div class="text-xs text-gray-500 uppercase">Subcategory</div><div class="mt-1">{{ object.subcategory_name|default:"-" }}</div></div>
+        <div class="rounded-xl border border-gray-200 dark:border-slate-700 p-4"><div class="text-xs text-gray-500 uppercase">Brand</div><div class="mt-1">{{ object.brand_name|default:"-" }}</div></div>
+        <div class="rounded-xl border border-gray-200 dark:border-slate-700 p-4"><div class="text-xs text-gray-500 uppercase">Unit</div><div class="mt-1">{{ object.unit_name|default:"-" }}</div></div>
+        <div class="rounded-xl border border-gray-200 dark:border-slate-700 p-4"><div class="text-xs text-gray-500 uppercase">VAT</div><div class="mt-1">{{ object.vat_rate|default:"-" }}</div></div>
+        <div class="rounded-xl border border-gray-200 dark:border-slate-700 p-4"><div class="text-xs text-gray-500 uppercase">Default Selling Price</div><div class="mt-1">{{ object.default_selling_price|default:"0" }}</div></div>
+    </div>
+
+    <div class="rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-900">
+        <div class="px-5 py-4 border-b border-gray-200 dark:border-slate-700 font-semibold">Variations</div>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[900px]">
+                <thead class="bg-gray-50 dark:bg-slate-800 text-xs uppercase">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Name</th>
+                        <th class="px-4 py-3 text-left">SKU Suffix</th>
+                        <th class="px-4 py-3 text-left">Purchase (Ex)</th>
+                        <th class="px-4 py-3 text-left">Purchase (Inc)</th>
+                        <th class="px-4 py-3 text-left">Selling (Ex)</th>
+                        <th class="px-4 py-3 text-left">Qty</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-slate-700">
+                    {% for variation in object.variations.all %}
+                    <tr>
+                        <td class="px-4 py-3">{{ variation.name|default:"-" }}</td>
+                        <td class="px-4 py-3">{{ variation.sku_suffix|default:"-" }}</td>
+                        <td class="px-4 py-3">{{ variation.purchase_price_exc_tax|default:"0" }}</td>
+                        <td class="px-4 py-3">{{ variation.purchase_price_inc_tax|default:"0" }}</td>
+                        <td class="px-4 py-3">{{ variation.price|default:"0" }}</td>
+                        <td class="px-4 py-3">{{ variation.quantity }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="px-4 py-10 text-center text-gray-500">No variations found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

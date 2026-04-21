@@ -4,101 +4,633 @@
 {% block title %}{% if object %}Update Purchase{% else %}Create Purchase{% endif %}{% endblock %}
 
 {% block content %}
-<div id="main-content" data-page-title="{% if object %}Update Purchase{% else %}Create Purchase{% endif %} - Management" data-page-subtitle="Manage purchase and purchase items" class="flex-1 overflow-y-auto p-5 sm:p-6 page-content" style="background:var(--surface-alt);">
-<div class="min-h-screen">
-    <div class="mx-auto max-w-7xl">
-        <div class="mb-6 flex items-center justify-between gap-4">
-            <div>
-                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-                    {% if object %}Update Purchase{% else %}Create Purchase{% endif %}
-                </h2>
-            </div>
-
-            <a href="{% url 'purchase_list' %}"
-               class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200">
-                <i class="fas fa-arrow-left mr-2"></i> Back
-            </a>
+<div id="main-content" data-page-title="{% if object %}Update Purchase{% else %}Add Purchase{% endif %} - Management" data-page-subtitle="Full purchase entry with tax, shipping, expense and payment" class="flex-1 overflow-y-auto p-5 sm:p-6 page-content" style="background:var(--surface-alt);">
+    <div class="mx-auto  space-y-5">
+        <div class="flex items-center justify-between gap-3">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{% if object %}Update Purchase{% else %}Add Purchase{% endif %}</h2>
+            <a href="{% url 'product:purchase_list' %}" class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200"><i class="fas fa-arrow-left mr-2"></i> Back</a>
         </div>
 
-        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
-            <form method="post" class="p-6 md:p-8 space-y-8">
-                {% csrf_token %}
+        <form method="post" enctype="multipart/form-data" class="space-y-5">
+            {% csrf_token %}
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <section class="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
-                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Supplier</label>
+                        <label class="block text-xs font-semibold uppercase mb-1">Supplier</label>
                         {{ form.supplier_name }}
-                        <div class="mt-3 flex justify-end gap-2">
-                            <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="supplier" data-field-name="supplier_name">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="supplier" data-field-name="supplier_name">
-                                <i class="fas fa-pen"></i>
-                            </button>
+                        <div class="mt-2 flex gap-2">
+                            <button type="button" class="related-create-btn related-icon-btn related-icon-btn-create" data-model="supplier" data-field-name="supplier_name"><i class="fas fa-plus"></i></button>
+                            <button type="button" class="related-edit-btn related-icon-btn related-icon-btn-edit" data-model="supplier" data-field-name="supplier_name"><i class="fas fa-pen"></i></button>
                         </div>
                     </div>
-
                     <div>
-                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Purchase Date</label>
+                        <label class="block text-xs font-semibold uppercase mb-1">Reference No</label>
+                        {{ form.reference_no }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase mb-1">Purchase Date</label>
                         {{ form.purchase_date }}
                     </div>
-
                     <div>
-                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Total Amount</label>
-                        {{ form.total_amount }}
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Purchase Status</label>
+                        <label class="block text-xs font-semibold uppercase mb-1">Purchase Status</label>
                         {{ form.purchase_status }}
                     </div>
-
+                    <div>
+                        <label class="block text-xs font-semibold uppercase mb-1">Business Location</label>
+                        {{ form.business_location }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase mb-1">Pay Term</label>
+                        {{ form.pay_term }}
+                    </div>
                     <div class="md:col-span-2">
-                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300">Vendor Cheque Details</label>
+                        <label class="block text-xs font-semibold uppercase mb-1">Attach Document</label>
+                        {{ form.attach_document }}
+                    </div>
+                    <div class="md:col-span-4">
+                        <label class="block text-xs font-semibold uppercase mb-1">Vendor Cheque Details</label>
                         {{ form.vendor_cheque_details }}
                     </div>
                 </div>
+            </section>
 
-                <div class="pt-4 border-t border-gray-200 dark:border-slate-700">
-                    <div class="mb-4 flex items-center justify-between">
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Purchase Items</h3>
-                        <button type="button"
-                                class="modal-trigger inline-flex items-center rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 text-sm font-semibold"
-                                data-modal-url="{% url 'purchase_item_quick_create' %}">
-                            <i class="fas fa-plus mr-2"></i> Add Item
-                        </button>
-                    </div>
-
-                    <div id="purchase-item-list" class="space-y-3">
-                        {% for item in items %}
-                            <div class="rounded-xl border border-gray-200 dark:border-slate-700 p-4 flex items-center justify-between">
-                                <div>
-                                    <div class="font-semibold text-gray-900 dark:text-white">{{ item.purchase_product }}</div>
-                                    <div class="text-sm text-gray-500 dark:text-slate-400">{{ item.purchase_product_variation }} | Qty: {{ item.qty }} | Price: {{ item.unit_price }}</div>
-                                </div>
-                                <input type="hidden" name="purchaseitem_ids" value="{{ item.id }}">
-                            </div>
-                        {% empty %}
-                            <div class="rounded-xl border border-dashed border-gray-300 dark:border-slate-700 p-6 text-center text-sm text-gray-500 dark:text-slate-400">
-                                No purchase items added yet.
-                            </div>
-                        {% endfor %}
-                    </div>
+            <section class="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+                <div class="flex flex-wrap items-center gap-2 mb-3">
+                    <button type="button" id="add-item-row" class="inline-flex items-center rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 text-sm font-semibold">+ Add New Product</button>
+                    <input id="purchase-product-search" type="text" placeholder="Enter product name / SKU / scan barcode" class="flex-1 min-w-[260px] rounded-xl border border-gray-300 dark:border-slate-700 px-4 py-2 text-sm bg-white dark:bg-slate-950">
+                    <button type="button" id="search-product-btn" class="rounded-xl border border-gray-300 dark:border-slate-700 px-4 py-2 text-sm">Search</button>
                 </div>
+                <div id="purchase-search-results" class="hidden mb-3 rounded-xl border border-gray-200 dark:border-slate-700 max-h-52 overflow-auto"></div>
 
-                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
-                    <a href="{% url 'purchase_list' %}"
-                       class="px-5 py-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200">
-                        Cancel
-                    </a>
-                    <button type="submit"
-                            class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold">
-                        {% if object %}Update Purchase{% else %}Create Purchase{% endif %}
-                    </button>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[1700px] border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden text-xs">
+                        <thead class="bg-emerald-500 text-white uppercase">
+                            <tr>
+                                <th class="px-2 py-2 text-left">Product Name</th>
+                                <th class="px-2 py-2 text-left">Purchase Qty</th>
+                                <th class="px-2 py-2 text-left">Unit Cost (Before Tax)</th>
+                                <th class="px-2 py-2 text-left">Discount %</th>
+                                <th class="px-2 py-2 text-left">Unit Cost Tax %</th>
+                                <th class="px-2 py-2 text-left">Unit Cost (After Tax)</th>
+                                <th class="px-2 py-2 text-left">Subtotal</th>
+                                <th class="px-2 py-2 text-left">Product Tax</th>
+                                <th class="px-2 py-2 text-left">Net Cost</th>
+                                <th class="px-2 py-2 text-left">Line Total</th>
+                                <th class="px-2 py-2 text-left">Profit Margin %</th>
+                                <th class="px-2 py-2 text-left">Unit Selling Price (Inc. Tax)</th>
+                                <th class="px-2 py-2 text-left">IMEI/Serial</th>
+                                <th class="px-2 py-2 text-left">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="purchase-item-rows" class="divide-y divide-gray-200 dark:divide-slate-700">
+                            {% for row in item_rows %}
+                            <tr class="purchase-item-row">
+                                <td class="px-2 py-2 min-w-[260px]">
+                                    <select name="item_product" class="item-product js-enhanced-select w-full" data-force-search="1" data-placeholder="Search product">
+                                        <option value="">Select product</option>
+                                        {% for product in products %}
+                                        <option value="{{ product.id }}" {% if row.product_id|stringformat:'s' == product.id|stringformat:'s' %}selected{% endif %}>{{ product.name }} ({{ product.sku }})</option>
+                                        {% endfor %}
+                                    </select>
+                                    <select name="item_variation" class="item-variation js-enhanced-select w-full mt-1" data-force-search="1" data-placeholder="Variation" data-selected="{{ row.variation_id }}"><option value="">Select variation</option></select>
+                                </td>
+                                <td class="px-2 py-2"><input type="number" min="1" name="item_qty" value="{{ row.qty|default:'1' }}" class="item-qty w-24 rounded-lg border border-gray-300 px-2 py-1"></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_unit_price" value="{{ row.unit_price|default:'0' }}" class="item-unit-price w-28 rounded-lg border border-gray-300 px-2 py-1"></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_discount_percent" value="{{ row.discount_percent|default:'0' }}" class="item-discount-percent w-24 rounded-lg border border-gray-300 px-2 py-1"></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_tax_percent" value="{{ row.unit_tax_percent|default:'0' }}" class="item-tax-percent w-24 rounded-lg border border-gray-300 px-2 py-1"></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_unit_cost_after_tax" value="{{ row.unit_cost_after_tax|default:'0' }}" class="item-unit-after-tax w-28 rounded-lg border border-gray-300 px-2 py-1" readonly></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_subtotal" value="{{ row.subtotal|default:'0' }}" class="item-subtotal w-28 rounded-lg border border-gray-300 px-2 py-1" readonly></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_product_tax" value="{{ row.product_tax|default:'0' }}" class="item-product-tax w-24 rounded-lg border border-gray-300 px-2 py-1" readonly></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_net_cost" value="{{ row.net_cost|default:'0' }}" class="item-net-cost w-28 rounded-lg border border-gray-300 px-2 py-1" readonly></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_line_total" value="{{ row.line_total|default:'0' }}" class="item-line-total w-28 rounded-lg border border-gray-300 px-2 py-1" readonly></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_margin_percent" value="{{ row.margin_percent|default:'0' }}" class="item-margin w-24 rounded-lg border border-gray-300 px-2 py-1"></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_selling_inc_tax" value="{{ row.selling_inc_tax|default:'0' }}" class="item-selling-inc w-28 rounded-lg border border-gray-300 px-2 py-1"></td>
+                                <td class="px-2 py-2">
+                                    <div class="imei-wrapper hidden">
+                                        <textarea name="item_imei_or_serial" rows="2" class="item-imei w-56 rounded-lg border border-gray-300 px-2 py-1" placeholder="IMEI/serial (one per line)">{{ row.imei_or_serial|default:'' }}</textarea>
+                                        <div class="mt-1 flex gap-1">
+                                            <input type="text" class="imei-scanner-input w-40 rounded border border-gray-300 px-2 py-1" placeholder="Scan barcode">
+                                            <button type="button" class="imei-add-btn rounded bg-blue-600 text-white px-2 py-1">Add</button>
+                                        </div>
+                                    </div>
+                                    <span class="imei-disabled text-[11px] text-gray-400">IMEI disabled</span>
+                                </td>
+                                <td class="px-2 py-2"><button type="button" class="remove-item-row rounded bg-red-600 text-white px-2 py-1">X</button></td>
+                            </tr>
+                            {% empty %}
+                            <tr class="purchase-item-row">
+                                <td class="px-2 py-2 min-w-[260px]"><select name="item_product" class="item-product js-enhanced-select w-full" data-force-search="1" data-placeholder="Search product"><option value="">Select product</option>{% for product in products %}<option value="{{ product.id }}">{{ product.name }} ({{ product.sku }})</option>{% endfor %}</select><select name="item_variation" class="item-variation js-enhanced-select w-full mt-1" data-force-search="1" data-placeholder="Variation"><option value="">Select variation</option></select></td>
+                                <td class="px-2 py-2"><input type="number" min="1" name="item_qty" value="1" class="item-qty w-24 rounded-lg border border-gray-300 px-2 py-1"></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_unit_price" value="0" class="item-unit-price w-28 rounded-lg border border-gray-300 px-2 py-1"></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_discount_percent" value="0" class="item-discount-percent w-24 rounded-lg border border-gray-300 px-2 py-1"></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_tax_percent" value="0" class="item-tax-percent w-24 rounded-lg border border-gray-300 px-2 py-1"></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_unit_cost_after_tax" value="0" class="item-unit-after-tax w-28 rounded-lg border border-gray-300 px-2 py-1" readonly></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_subtotal" value="0" class="item-subtotal w-28 rounded-lg border border-gray-300 px-2 py-1" readonly></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_product_tax" value="0" class="item-product-tax w-24 rounded-lg border border-gray-300 px-2 py-1" readonly></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_net_cost" value="0" class="item-net-cost w-28 rounded-lg border border-gray-300 px-2 py-1" readonly></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_line_total" value="0" class="item-line-total w-28 rounded-lg border border-gray-300 px-2 py-1" readonly></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_margin_percent" value="0" class="item-margin w-24 rounded-lg border border-gray-300 px-2 py-1"></td>
+                                <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_selling_inc_tax" value="0" class="item-selling-inc w-28 rounded-lg border border-gray-300 px-2 py-1"></td>
+                                <td class="px-2 py-2">
+                                    <div class="imei-wrapper hidden">
+                                        <textarea name="item_imei_or_serial" rows="2" class="item-imei w-56 rounded-lg border border-gray-300 px-2 py-1" placeholder="IMEI/serial (one per line)"></textarea>
+                                        <div class="mt-1 flex gap-1">
+                                            <input type="text" class="imei-scanner-input w-40 rounded border border-gray-300 px-2 py-1" placeholder="Scan barcode">
+                                            <button type="button" class="imei-add-btn rounded bg-blue-600 text-white px-2 py-1">Add</button>
+                                        </div>
+                                    </div>
+                                    <span class="imei-disabled text-[11px] text-gray-400">IMEI disabled</span>
+                                </td>
+                                <td class="px-2 py-2"><button type="button" class="remove-item-row rounded bg-red-600 text-white px-2 py-1">X</button></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-            </form>
-        </div>
+                <div class="mt-3 text-right text-sm font-semibold">Total Items: <span id="ui-total-items">0</span> | Net Total Amount: <span id="ui-net-total-amount">0.00</span></div>
+            </section>
+
+            <section class="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Discount Type</label>
+                    {{ form.discount_type }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Discount Amount</label>
+                    {{ form.discount_amount }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Purchase Tax</label>
+                    {{ form.purchase_tax_rate }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Purchase Tax Amount</label>
+                    {{ form.purchase_tax_amount }}
+                </div>
+                <div class="md:col-span-4">
+                    <label class="block text-xs font-semibold uppercase mb-1">Additional Notes</label>
+                    {{ form.additional_notes }}
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-semibold uppercase mb-1">Shipping Details</label>
+                    {{ form.shipping_details }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Additional Shipping Charges</label>
+                    {{ form.additional_shipping_charges }}
+                </div>
+                <div></div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Additional Expense Name</label>
+                    {{ form.additional_expense_name_1 }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Amount</label>
+                    {{ form.additional_expense_amount_1 }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Additional Expense Name</label>
+                    {{ form.additional_expense_name_2 }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Amount</label>
+                    {{ form.additional_expense_amount_2 }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Additional Expense Name</label>
+                    {{ form.additional_expense_name_3 }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Amount</label>
+                    {{ form.additional_expense_amount_3 }}
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Advance Balance</label>
+                    {{ form.advance_balance }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Amount</label>
+                    {{ form.payment_amount }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Paid On</label>
+                    {{ form.paid_on }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Payment Method</label>
+                    {{ form.payment_method }}
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-semibold uppercase mb-1">Payment Account</label>
+                    {{ form.payment_account }}
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-semibold uppercase mb-1">Payment Note</label>
+                    {{ form.payment_note }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Purchase Total</label>
+                    {{ form.total_amount }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Payment Due</label>
+                    {{ form.payment_due }}
+                </div>
+            </section>
+
+            <div class="flex justify-center">
+                <button type="submit" class="px-8 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-semibold">Save</button>
+            </div>
+        </form>
     </div>
 </div>
-</div>
+
+<template id="purchase-item-row-template">
+    <tr class="purchase-item-row">
+        <td class="px-2 py-2 min-w-[260px]"><select name="item_product" class="item-product js-enhanced-select w-full" data-force-search="1" data-placeholder="Search product"><option value="">Select product</option>{% for product in products %}<option value="{{ product.id }}">{{ product.name }} ({{ product.sku }})</option>{% endfor %}</select><select name="item_variation" class="item-variation js-enhanced-select w-full mt-1" data-force-search="1" data-placeholder="Variation"><option value="">Select variation</option></select></td>
+        <td class="px-2 py-2"><input type="number" min="1" name="item_qty" value="1" class="item-qty w-24 rounded-lg border border-gray-300 px-2 py-1"></td>
+        <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_unit_price" value="0" class="item-unit-price w-28 rounded-lg border border-gray-300 px-2 py-1"></td>
+        <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_discount_percent" value="0" class="item-discount-percent w-24 rounded-lg border border-gray-300 px-2 py-1"></td>
+        <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_tax_percent" value="0" class="item-tax-percent w-24 rounded-lg border border-gray-300 px-2 py-1"></td>
+        <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_unit_cost_after_tax" value="0" class="item-unit-after-tax w-28 rounded-lg border border-gray-300 px-2 py-1" readonly></td>
+        <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_subtotal" value="0" class="item-subtotal w-28 rounded-lg border border-gray-300 px-2 py-1" readonly></td>
+        <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_product_tax" value="0" class="item-product-tax w-24 rounded-lg border border-gray-300 px-2 py-1" readonly></td>
+        <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_net_cost" value="0" class="item-net-cost w-28 rounded-lg border border-gray-300 px-2 py-1" readonly></td>
+        <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_line_total" value="0" class="item-line-total w-28 rounded-lg border border-gray-300 px-2 py-1" readonly></td>
+        <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_margin_percent" value="0" class="item-margin w-24 rounded-lg border border-gray-300 px-2 py-1"></td>
+        <td class="px-2 py-2"><input type="number" min="0" step="0.01" name="item_selling_inc_tax" value="0" class="item-selling-inc w-28 rounded-lg border border-gray-300 px-2 py-1"></td>
+        <td class="px-2 py-2">
+            <div class="imei-wrapper hidden">
+                <textarea name="item_imei_or_serial" rows="2" class="item-imei w-56 rounded-lg border border-gray-300 px-2 py-1" placeholder="IMEI/serial (one per line)"></textarea>
+                <div class="mt-1 flex gap-1">
+                    <input type="text" class="imei-scanner-input w-40 rounded border border-gray-300 px-2 py-1" placeholder="Scan barcode">
+                    <button type="button" class="imei-add-btn rounded bg-blue-600 text-white px-2 py-1">Add</button>
+                </div>
+            </div>
+            <span class="imei-disabled text-[11px] text-gray-400">IMEI disabled</span>
+        </td>
+        <td class="px-2 py-2"><button type="button" class="remove-item-row rounded bg-red-600 text-white px-2 py-1">X</button></td>
+    </tr>
+</template>
+
+<script>
+(() => {
+    const rowsContainer = document.getElementById("purchase-item-rows");
+    const addRowBtn = document.getElementById("add-item-row");
+    const rowTemplate = document.getElementById("purchase-item-row-template");
+    const productSearchInput = document.getElementById("purchase-product-search");
+    const searchBtn = document.getElementById("search-product-btn");
+    const searchResults = document.getElementById("purchase-search-results");
+    let productSearchCache = [];
+
+    const totalInput = document.getElementById("id_total_amount");
+    const discountTypeInput = document.getElementById("id_discount_type");
+    const discountAmountInput = document.getElementById("id_discount_amount");
+    const purchaseTaxInput = document.getElementById("id_purchase_tax_amount");
+    const shippingInput = document.getElementById("id_additional_shipping_charges");
+    const expense1 = document.getElementById("id_additional_expense_amount_1");
+    const expense2 = document.getElementById("id_additional_expense_amount_2");
+    const expense3 = document.getElementById("id_additional_expense_amount_3");
+    const paymentAmountInput = document.getElementById("id_payment_amount");
+    const advanceBalanceInput = document.getElementById("id_advance_balance");
+    const paymentDueInput = document.getElementById("id_payment_due");
+    const purchaseTaxRate = document.getElementById("id_purchase_tax_rate");
+
+    function toNum(v) {
+        const n = parseFloat(v || "0");
+        return Number.isFinite(n) ? n : 0;
+    }
+
+    function getSelectedTaxRatePercent() {
+        const option = purchaseTaxRate?.selectedOptions?.[0];
+        if (!option || !option.value) return 0;
+        const txt = option.textContent || "";
+        const match = txt.match(/(\d+(?:\.\d+)?)%/);
+        return match ? toNum(match[1]) : 0;
+    }
+
+    function setImeiVisibility(row, enabled) {
+        const wrapper = row.querySelector(".imei-wrapper");
+        const disabled = row.querySelector(".imei-disabled");
+        if (!wrapper || !disabled) return;
+        if (enabled) {
+            wrapper.classList.remove("hidden");
+            disabled.classList.add("hidden");
+        } else {
+            wrapper.classList.add("hidden");
+            disabled.classList.remove("hidden");
+            const imeiField = row.querySelector(".item-imei");
+            if (imeiField) imeiField.value = "";
+        }
+    }
+
+    function addScannedImei(row, token) {
+        const imeiField = row.querySelector(".item-imei");
+        if (!imeiField) return;
+        const clean = String(token || "").trim();
+        if (!clean) return;
+        const values = imeiField.value.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+        if (!values.includes(clean)) {
+            values.push(clean);
+            imeiField.value = values.join("\n");
+        }
+    }
+
+    function updateRowFromVariation(row, variation, fallbackProduct = null) {
+        if (!variation) {
+            setImeiVisibility(row, !!(fallbackProduct && fallbackProduct.enable_imei_or_serial));
+            return;
+        }
+
+        if (row.querySelector(".item-unit-price")) {
+            row.querySelector(".item-unit-price").value = toNum(variation.purchase_price_exc_tax).toFixed(2);
+        }
+        if (row.querySelector(".item-tax-percent")) {
+            row.querySelector(".item-tax-percent").value = toNum(variation.applicable_tax_percent).toFixed(2);
+        }
+        if (row.querySelector(".item-margin")) {
+            row.querySelector(".item-margin").value = toNum(variation.margin_percent).toFixed(2);
+        }
+        if (row.querySelector(".item-selling-inc")) {
+            row.querySelector(".item-selling-inc").value = toNum(variation.selling_price_inc_tax).toFixed(2);
+        }
+
+        setImeiVisibility(row, !!variation.imei_enabled);
+    }
+
+    function syncVariationSelectOptions(variationSelect, variations, selectedValue = "") {
+        if (!variationSelect) return;
+
+        const normalizedSelected = String(selectedValue || "").trim();
+        const byId = {};
+
+        variationSelect.innerHTML = '<option value="">Select variation</option>';
+        (variations || []).forEach((item) => {
+            const id = String(item.id);
+            byId[id] = item;
+            const option = document.createElement("option");
+            option.value = id;
+            option.textContent = item.text || item.name || id;
+            option.dataset.payload = JSON.stringify(item);
+            variationSelect.appendChild(option);
+        });
+        variationSelect.__variationById = byId;
+
+        const resolvedSelected = byId[normalizedSelected]
+            ? normalizedSelected
+            : ((variations && variations.length === 1) ? String(variations[0].id) : "");
+
+        variationSelect.value = resolvedSelected;
+        variationSelect.dataset.selected = resolvedSelected;
+
+        if (variationSelect.tomselect) {
+            const ts = variationSelect.tomselect;
+            ts.clearOptions();
+            ts.addOption({ value: "", text: "Select variation" });
+            (variations || []).forEach((item) => {
+                ts.addOption({ value: String(item.id), text: item.text || item.name || String(item.id) });
+            });
+            if (resolvedSelected) {
+                ts.setValue(resolvedSelected, true);
+            } else {
+                ts.clear(true);
+            }
+            ts.refreshItems();
+            ts.refreshOptions(false);
+        }
+    }
+
+    async function loadVariationOptions(row) {
+        const productSelect = row.querySelector(".item-product");
+        const variationSelect = row.querySelector(".item-variation");
+        const selected = variationSelect.dataset.selected || variationSelect.value || "";
+        const productId = productSelect?.value || "";
+
+        syncVariationSelectOptions(variationSelect, [], "");
+        if (!productId) {
+            setImeiVisibility(row, false);
+            return;
+        }
+
+        try {
+            const response = await fetch(`/product/ajax/options/variations/?product_id=${encodeURIComponent(productId)}`);
+            const payload = await response.json();
+            const results = payload.results || [];
+            syncVariationSelectOptions(variationSelect, results, selected);
+
+            const selectedId = String(variationSelect.value || "");
+            const selectedPayload = variationSelect.__variationById?.[selectedId] || null;
+            if (selectedPayload) {
+                updateRowFromVariation(row, selectedPayload);
+            } else {
+                setImeiVisibility(row, false);
+            }
+        } catch (e) {
+            console.error("variation load failed", e);
+        }
+    }
+
+    function recalcRow(row) {
+        const qty = toNum(row.querySelector(".item-qty")?.value);
+        const beforeTax = toNum(row.querySelector(".item-unit-price")?.value);
+        const discountPercent = toNum(row.querySelector(".item-discount-percent")?.value);
+        const taxPercent = toNum(row.querySelector(".item-tax-percent")?.value);
+
+        const subtotal = qty * beforeTax;
+        const discountAmount = subtotal * (discountPercent / 100);
+        const taxable = subtotal - discountAmount;
+        const productTax = taxable * (taxPercent / 100);
+        const netCost = taxable + productTax;
+        const unitAfterTax = beforeTax * (1 + taxPercent / 100);
+
+        row.querySelector(".item-subtotal").value = subtotal.toFixed(2);
+        row.querySelector(".item-product-tax").value = productTax.toFixed(2);
+        row.querySelector(".item-net-cost").value = netCost.toFixed(2);
+        row.querySelector(".item-line-total").value = netCost.toFixed(2);
+        row.querySelector(".item-unit-after-tax").value = unitAfterTax.toFixed(2);
+    }
+
+    function recalcSummary() {
+        const rows = rowsContainer.querySelectorAll(".purchase-item-row");
+        let lineTotal = 0;
+        rows.forEach((row) => {
+            recalcRow(row);
+            lineTotal += toNum(row.querySelector(".item-line-total")?.value);
+        });
+
+        const discountType = discountTypeInput?.value || "none";
+        let discountValue = toNum(discountAmountInput?.value);
+        if (discountType === "percent") {
+            discountValue = lineTotal * discountValue / 100;
+        }
+
+        const taxableBase = Math.max(lineTotal - discountValue, 0);
+        const purchaseTax = taxableBase * (getSelectedTaxRatePercent() / 100);
+        if (purchaseTaxInput) purchaseTaxInput.value = purchaseTax.toFixed(2);
+
+        const charges = toNum(shippingInput?.value) + toNum(expense1?.value) + toNum(expense2?.value) + toNum(expense3?.value);
+        const total = taxableBase + purchaseTax + charges;
+        const due = total - (toNum(paymentAmountInput?.value) + toNum(advanceBalanceInput?.value));
+
+        if (totalInput) totalInput.value = total.toFixed(2);
+        if (paymentDueInput) paymentDueInput.value = due.toFixed(2);
+
+        document.getElementById("ui-total-items").textContent = rows.length.toString();
+        document.getElementById("ui-net-total-amount").textContent = total.toFixed(2);
+    }
+
+    function bindRow(row) {
+        const product = row.querySelector(".item-product");
+        const variation = row.querySelector(".item-variation");
+        const qty = row.querySelector(".item-qty");
+        const unit = row.querySelector(".item-unit-price");
+        const disc = row.querySelector(".item-discount-percent");
+        const tax = row.querySelector(".item-tax-percent");
+        const imeiScanner = row.querySelector(".imei-scanner-input");
+        const imeiAddBtn = row.querySelector(".imei-add-btn");
+        const removeBtn = row.querySelector(".remove-item-row");
+
+        product?.addEventListener("change", async () => {
+            await loadVariationOptions(row);
+            recalcSummary();
+        });
+        variation?.addEventListener("change", () => {
+            const selectedPayload = variation.__variationById?.[String(variation.value || "")];
+            if (selectedPayload) updateRowFromVariation(row, selectedPayload);
+            recalcSummary();
+        });
+        [variation, qty, unit, disc, tax].forEach((el) => el?.addEventListener("input", recalcSummary));
+        [variation, qty, unit, disc, tax].forEach((el) => el?.addEventListener("change", recalcSummary));
+        imeiScanner?.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                addScannedImei(row, imeiScanner.value);
+                imeiScanner.value = "";
+            }
+        });
+        imeiAddBtn?.addEventListener("click", () => {
+            addScannedImei(row, imeiScanner?.value);
+            if (imeiScanner) imeiScanner.value = "";
+        });
+        removeBtn?.addEventListener("click", () => {
+            if (rowsContainer.querySelectorAll(".purchase-item-row").length > 1) {
+                row.remove();
+                recalcSummary();
+            }
+        });
+
+        loadVariationOptions(row);
+    }
+
+    function addItemRowAndFill(product) {
+        const clone = rowTemplate.content.cloneNode(true);
+        const row = clone.querySelector(".purchase-item-row");
+        rowsContainer.appendChild(row);
+        bindRow(row);
+
+        if (product) {
+            const productSelect = row.querySelector(".item-product");
+            const opt = document.createElement("option");
+            opt.value = String(product.id);
+            opt.textContent = `${product.name} (${product.sku})`;
+            productSelect.appendChild(opt);
+            productSelect.value = String(product.id);
+
+            const firstVariation = (product.variations || [])[0];
+            if (firstVariation) {
+                const varSelect = row.querySelector(".item-variation");
+                varSelect.dataset.selected = String(firstVariation.id);
+                updateRowFromVariation(row, firstVariation, product);
+            } else {
+                setImeiVisibility(row, !!product.enable_imei_or_serial);
+                row.querySelector(".item-tax-percent").value = Number(product.vat_rate || 0).toFixed(2);
+                row.querySelector(".item-unit-price").value = Number(product.default_purchase_price_exc_tax || 0).toFixed(2);
+            }
+
+            loadVariationOptions(row).then(recalcSummary);
+        } else {
+            setImeiVisibility(row, false);
+        }
+
+        if (window.initializeDynamicUI) window.initializeDynamicUI(row);
+        recalcSummary();
+    }
+
+    async function runProductSearch() {
+        const q = (productSearchInput?.value || "").trim();
+        if (!q) {
+            searchResults.classList.add("hidden");
+            return;
+        }
+
+        try {
+            const response = await fetch(`/product/ajax/options/purchase-products/?q=${encodeURIComponent(q)}`);
+            const payload = await response.json();
+            const results = payload.results || [];
+            productSearchCache = results;
+
+            if (!results.length) {
+                searchResults.innerHTML = '<div class="px-3 py-2 text-sm text-gray-500">No product found</div>';
+                searchResults.classList.remove("hidden");
+                return;
+            }
+
+            const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (s) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s]));
+
+            searchResults.innerHTML = results.map((item, idx) => {
+                return `
+                    <button type="button" class="search-result-item w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-800" data-index="${idx}">
+                        <div class="font-semibold text-sm">${escapeHtml(item.name)} (${escapeHtml(item.sku)})</div>
+                        <div class="text-xs text-gray-500">${escapeHtml(item.category || "")}${item.subcategory ? " / " + escapeHtml(item.subcategory) : ""}</div>
+                    </button>
+                `;
+            }).join("");
+            searchResults.classList.remove("hidden");
+
+            searchResults.querySelectorAll(".search-result-item").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const index = Number(btn.dataset.index || "-1");
+                    const selectedProduct = index >= 0 ? productSearchCache[index] : null;
+                    if (!selectedProduct) return;
+                    addItemRowAndFill(selectedProduct);
+                    if (productSearchInput) productSearchInput.value = "";
+                    searchResults.classList.add("hidden");
+                });
+            });
+        } catch (e) {
+            console.error("search failed", e);
+        }
+    }
+
+    addRowBtn?.addEventListener("click", () => addItemRowAndFill(null));
+    searchBtn?.addEventListener("click", runProductSearch);
+    productSearchInput?.addEventListener("input", () => {
+        const q = (productSearchInput.value || "").trim();
+        if (q.length >= 2) runProductSearch();
+        if (!q) searchResults.classList.add("hidden");
+    });
+    productSearchInput?.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            runProductSearch();
+        }
+    });
+
+    [discountTypeInput, discountAmountInput, purchaseTaxRate, shippingInput, expense1, expense2, expense3, paymentAmountInput, advanceBalanceInput]
+        .forEach((el) => el?.addEventListener("input", recalcSummary));
+    [discountTypeInput, purchaseTaxRate]
+        .forEach((el) => el?.addEventListener("change", recalcSummary));
+
+    rowsContainer.querySelectorAll(".purchase-item-row").forEach(bindRow);
+    if (window.initializeDynamicUI) window.initializeDynamicUI(document.getElementById("main-content") || document);
+    recalcSummary();
+})();
+</script>
 {% endblock %}
