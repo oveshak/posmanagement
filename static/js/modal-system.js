@@ -487,6 +487,10 @@
             // Skip hidden selects used only for transport.
             if (el.type === "hidden") return;
 
+            if (["purchase_product", "purchase_product_variation"].includes(el.name) && !el.dataset.forceSearch) {
+                el.dataset.forceSearch = "1";
+            }
+
             seedSingleSelectFromData(el);
 
             const initialValues = getInitialSelectValues(el);
@@ -893,11 +897,37 @@
         }
     }
 
+    async function reloadPurchaseVariations(container) {
+        const productField = getFieldInContainer(container, ["purchase_product"]);
+        const variationField = getFieldInContainer(container, ["purchase_product_variation"]);
+        if (!variationField) return;
+
+        const selectedVariationFromControl = getSelectedValues(variationField);
+        const selectedVariationFromData = (variationField.dataset.selectedValue || "")
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean);
+        const previousVariationSelection = selectedVariationFromControl.length
+            ? selectedVariationFromControl
+            : selectedVariationFromData;
+
+        const productId = productField?.value ? String(productField.value).trim() : "";
+        const query = productId ? `?product_id=${encodeURIComponent(productId)}` : "";
+
+        try {
+            const data = await fetchJSON(`${appPrefix()}/ajax/options/variations/${query}`);
+            replaceSelectOptions(variationField, data.results || [], previousVariationSelection);
+        } catch (error) {
+            console.warn("Failed to reload purchase variations", error);
+        }
+    }
+
     async function syncDependentDropdowns(container) {
         if (!container) return;
         await reloadAreasForBranch(container);
         await reloadSubcategoriesForCategory(container);
         await reloadCustomerGroups(container);
+        await reloadPurchaseVariations(container);
     }
 
     function initializeDependentHandlers(root = document) {
@@ -943,6 +973,18 @@
 
                 categoryField.addEventListener("change", async () => {
                     await reloadSubcategoriesForCategory(container);
+                });
+            });
+
+            root.querySelectorAll('select[name="purchase_product"]').forEach((productField) => {
+                const container = getDependentContainer(productField);
+                containersToInit.add(container);
+
+                if (productField.dataset.boundDependentPurchaseVariation === "1") return;
+                productField.dataset.boundDependentPurchaseVariation = "1";
+
+                productField.addEventListener("change", async () => {
+                    await reloadPurchaseVariations(container);
                 });
             });
         }
@@ -1004,10 +1046,11 @@
 
     function clearBindingMarkers(root) {
         if (!root?.querySelectorAll) return;
-        root.querySelectorAll("[data-bound-click], [data-bound-dependent], [data-bound-dependent-subcategory], [data-submit-guard-bound], [data-main-ajax-bound], [data-submitting], [data-original-text]").forEach((el) => {
+        root.querySelectorAll("[data-bound-click], [data-bound-dependent], [data-bound-dependent-subcategory], [data-bound-dependent-purchase-variation], [data-submit-guard-bound], [data-main-ajax-bound], [data-submitting], [data-original-text]").forEach((el) => {
             el.removeAttribute("data-bound-click");
             el.removeAttribute("data-bound-dependent");
             el.removeAttribute("data-bound-dependent-subcategory");
+            el.removeAttribute("data-bound-dependent-purchase-variation");
             el.removeAttribute("data-submit-guard-bound");
             el.removeAttribute("data-main-ajax-bound");
             el.removeAttribute("data-submitting");
