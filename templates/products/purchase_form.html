@@ -67,6 +67,7 @@
                         <button type="button"
                                 class="modal-trigger inline-flex items-center rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 text-sm font-semibold"
                                 {% if purchase_item_quick_create_url %}data-modal-url="{{ purchase_item_quick_create_url }}"{% endif %}
+                                {% if not purchase_item_quick_create_url %}title="Add item is unavailable because purchase item route is not configured"{% endif %}
                                 {% if not purchase_item_quick_create_url %}disabled{% endif %}>
                             <i class="fas fa-plus mr-2"></i> Add Item
                         </button>

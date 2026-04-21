@@ -17,7 +17,8 @@ class PurchaseTemplateRenderTests(SimpleTestCase):
             {"form": self.PurchaseFormStub(), "items": [], "object": None},
         )
 
-        self.assertIn('href="#"', html)
+        self.assertRegex(html, r'<a href="#"[^>]*>\s*<i class="fas fa-arrow-left mr-2"></i> Back\s*</a>')
+        self.assertRegex(html, r'<a href="#"[^>]*>\s*Cancel\s*</a>')
         self.assertIn("Add Item", html)
         self.assertIn("disabled", html)
 
